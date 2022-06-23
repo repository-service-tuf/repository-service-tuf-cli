@@ -1,0 +1,31 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+rich-click = "==1.2.1"
+securesystemslib = "==0.22.0"
+cryptography = "==36.0.2"
+cffi = "==1.15.0"
+click = "==8.0.4"
+commonmark = "==0.9.1"
+pycparser = "==2.21"
+rich = "==12.0.1"
+PyNaCl = "==1.5.0"
+Pygments = "==2.11.2"
+requests = "*"
+types-requests = "*"
+
+[dev-packages]
+black = "*"
+isort = "*"
+flake8 = "*"
+tox = "*"
+pytest = "*"
+coverage = "*"
+mypy = "*"
+pip = "*"
+
+[requires]
+python_version = "3.8"
