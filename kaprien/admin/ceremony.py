@@ -1,9 +1,9 @@
 #
 # Ceremony
 #
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 import rich_click as click  # type: ignore
 from rich import box, markdown, prompt, table  # type: ignore
@@ -19,6 +19,7 @@ from securesystemslib.interface import (  # type: ignore
 )
 
 from kaprien.admin import admin
+from kaprien.helpers.tuf import RolesKeysInput, initialize_metadata
 
 METADATA_CEREMONY_INTRO = """
 # Metadata Initialization Ceremony
@@ -125,29 +126,17 @@ class RoleSettings:
     expiration: int
     threshold: int
     keys: int
+    offline_keys: bool
 
 
 default_settings = {
-    Roles.ROOT.value: RoleSettings(356, 1, 2),
-    Roles.TARGETS.value: RoleSettings(365, 1, 2),
-    Roles.SNAPSHOT.value: RoleSettings(1, 1, 1),
-    Roles.TIMESTAMP.value: RoleSettings(1, 1, 1),
-    Roles.BIN.value: RoleSettings(365, 1, 1),
-    Roles.BINS.value: RoleSettings(1, 1, 1),
+    Roles.ROOT.value: RoleSettings(356, 1, 2, True),
+    Roles.TARGETS.value: RoleSettings(365, 1, 2, True),
+    Roles.SNAPSHOT.value: RoleSettings(1, 1, 1, False),
+    Roles.TIMESTAMP.value: RoleSettings(1, 1, 1, False),
+    Roles.BIN.value: RoleSettings(365, 1, 1, True),
+    Roles.BINS.value: RoleSettings(1, 1, 1, False),
 }
-
-
-@dataclass
-class RolesKeysInput:
-    expiration: int = 1
-    num_of_keys: int = 1
-    threshold: int = 1
-    keys: Dict[str, Any] = field(default_factory=dict)
-    paths: Optional[List[str]] = None
-    number_hash_prefixes: Optional[int] = None
-
-    def to_dict(self):
-        return asdict(self)
 
 
 @dataclass
@@ -193,11 +182,12 @@ def _configure_role(rolename: str, role: RolesKeysInput) -> None:
     role.keys.clear()
 
     role.threshold = default_settings[rolename].threshold
+    role.offline_keys = default_settings[rolename].offline_keys
 
-    role.expiration = prompt.IntPrompt.ask(  # type: ignore
+    role.expiration = prompt.IntPrompt.ask(
         (
             f"\nWhat [green]Metadata expiration[/] for [cyan]{rolename}[/]"
-            " role?(Days)",
+            " role?(Days)"
         ),
         default=default_settings[rolename].expiration,
         show_default=True,
@@ -339,7 +329,7 @@ def ceremony():
                     ":white_heavy_check_mark:",
                 )
 
-            if rolename in OFFLINE_KEYS:
+            if role.offline_keys is True:
                 key_type = "[red]offline[/red]"
             else:
                 key_type = "[green]online[/]"
@@ -388,4 +378,21 @@ def ceremony():
                 _configure_keys(rolename, role)
             else:
                 break
-    print("FIM")
+
+    metadata = initialize_metadata(ROLES_SETTINGS)
+
+    json_payload: Dict[str, Any] = dict()
+    for role, data in ROLES_SETTINGS.items():
+        if data.offline_keys is True:
+            data.keys.clear()
+
+        if "settings" not in json_payload:
+            json_payload["settings"] = {role: data.to_dict()}
+        else:
+            json_payload["settings"][role] = data.to_dict()
+
+    json_payload["metadata"] = {
+        key: data.to_dict() for key, data in metadata.items()
+    }
+
+    return json_payload
