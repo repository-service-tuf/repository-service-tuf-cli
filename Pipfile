@@ -17,9 +17,10 @@ Pygments = "==2.11.2"
 requests = "*"
 types-requests = "*"
 tuf = "*"
+kaprien = {editable = true, path = "."}
 
 [dev-packages]
-black = "*"
+black = "==22.3.0"
 isort = "*"
 flake8 = "*"
 tox = "*"
@@ -27,6 +28,7 @@ pytest = "*"
 coverage = "*"
 mypy = "*"
 pip = "*"
+pretend = "*"
 
 [requires]
-python_version = "3.8"
+python_version = "3.10"
