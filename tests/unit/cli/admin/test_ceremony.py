@@ -1,4 +1,4 @@
-from kaprien.admin.ceremony import ceremony  # type: ignore
+from kaprien.cli.admin.ceremony import ceremony  # type: ignore
 
 
 class TestCeremonyGroupCLI:

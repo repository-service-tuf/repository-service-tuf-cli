@@ -18,7 +18,7 @@ from securesystemslib.interface import (  # type: ignore
     import_ed25519_privatekey_from_file,
 )
 
-from kaprien.admin import admin
+from kaprien.cli.admin import admin
 from kaprien.helpers.tuf import RolesKeysInput, initialize_metadata
 
 METADATA_CEREMONY_INTRO = """
