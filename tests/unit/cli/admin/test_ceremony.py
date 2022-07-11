@@ -1,3 +1,6 @@
+import pretend  # type: ignore
+from securesystemslib.keys import generate_ed25519_key  # type: ignore
+
 from kaprien.cli.admin.ceremony import ceremony  # type: ignore
 
 
@@ -12,80 +15,199 @@ class TestCeremonyGroupCLI:
         assert "Ceremony aborted." in test_result.output
         assert test_result.exit_code == 1
 
-    def test_ceremony_start_yes(self, client):
-        test_result = client.invoke(ceremony, input="y\n")
-        assert "STEP 1: " in test_result.output
+    def test_ceremony_start_not_ready_load_the_keys(self, client):
+        input_step1 = [
+            "y",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "y",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+        ]
+        input_step2 = ["n"]
+        test_result = client.invoke(
+            ceremony, input="\n".join(input_step1 + input_step2)
+        )
+        assert "Ceremony aborted." in test_result.output
         assert test_result.exit_code == 1
 
-    # TODO: test multiple input sequence
-    # def test_ceremony_start_yes_skip(self, client):
-    #     input_sequence = "y\nskip\n"
-    #     test_result = client.invoke(ceremony,  input=input_sequence)
-    #     breakpoint()
-    #     assert "STEP 2: " in test_result.output
-    #     assert test_result.exit_code == 1
+    def test_ceremony_start_default_values(self, client, monkeypatch):
+        input_step1 = [
+            "y",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "y",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+        ]
+        input_step2 = [
+            "Y",
+            "tests/files/JimiHendrix.key",
+            "strongPass",
+            "tests/files/JanisJoplin.key",
+            "strongPass",
+            "tests/files/ChrisCornel.key",
+            "strongPass",
+            "tests/files/KurtCobain.key",
+            "strongPass",
+            "tests/files/snapshot1.key",
+            "strongPass",
+            "tests/files/timestamp1.key",
+            "strongPass",
+            "tests/files/JoeCocker.key",
+            "strongPass",
+            "tests/files/bins1.key",
+            "strongPass",
+            "y",
+            "y",
+            "y",
+            "y",
+            "y",
+            "y",
+        ]
 
-    # @mock.patch("kaprien.ceremony._load_key")
-    # def test_ceremony_start_yes_skip_step_2_all_keys_ok(
-    #     self, mock__load_key, client
-    # ):
-    #     input_sequence = (
-    #         "y"  # Start the Ceremony
-    #         "\nskip"  # Skip STEP 1
-    #         "\ny"  # Start loading keys
-    #         "\njimi_hendrix.key"  # keys...
-    #         "\nHey_Joe"
-    #         "\njanis_joplin.key"
-    #         "\nHey_Joe"
-    #         "\nsnapshot.key"
-    #         "\nsnapshot_pass"
-    #         "\ntimestamp.key"
-    #         "\ntimestamp_pass"
-    #         "\njoe_cocker.key"
-    #         "\nLittle_Help_Hrom_My_Friends"
-    #         "\nbins.key"
-    #         "\nbins_pass"
-    #         "\ny"  # root OK
-    #         "\ny"  # targets OK
-    #         "\ny"  # snapshot OK
-    #         "\ny"  # timestamp OK
-    #         "\ny"  # bin OK
-    #         "\ny"  # bins OK
-    #     )
+        class FakeKey:
+            def __init__(self):
+                self.error = None
+                self.key = generate_ed25519_key()
 
-    #     mock__load_key.side_effect = [
-    #         Key({"keyid": "fake_key_id_1"}),
-    #         Key({"keyid": "fake_key_id_2"}),
-    #         Key({"keyid": "fake_key_id_3"}),
-    #         Key({"keyid": "fake_key_id_4"}),
-    #         Key({"keyid": "fake_key_id_5"}),
-    #         Key({"keyid": "fake_key_id_6"}),
-    #     ]
-    #     test_result = client.invoke(ceremony,  input_sequence)
-    #     assert test_result.exit_code == 0
-    #     assert "Role: root" in test_result.output
-    #     assert "Number of Keys: 1" in test_result.output
-    #     assert "Threshold: 1" in test_result.output
-    #     assert "Keys Type: offline" in test_result.output
-    #     assert "jimi_hendrix.key" in test_result.output
-    #     assert "fake_key_id_1" in test_result.output
-    #     assert "Role: targets" in test_result.output
-    #     assert "Number of Keys: 1" in test_result.output
-    #     assert "janis_joplin.key" in test_result.output
-    #     assert "fake_key_id_2" in test_result.output
-    #     assert "Role: snapshot" in test_result.output
-    #     assert "Keys Type: online" in test_result.output
-    #     assert "fake_key_id_3" in test_result.output
-    #     assert "Role: timestamp" in test_result.output
-    #     assert "timestamp.key" in test_result.output
-    #     assert "fake_key_id_4" in test_result.output
-    #     assert "joe_cocker.key" in test_result.output
-    #     assert "fake_key_id_5" in test_result.output
-    #     assert "bins.key" in test_result.output
-    #     assert "fake_key_id_6" in test_result.output
-    #     # passwords not shown in output
-    #     assert "Hey_Joe" not in test_result.output
-    #     assert "snapshot_pass" not in test_result.output
-    #     assert "timestamp_pass" not in test_result.output
-    #     assert "Little_Help_Hrom_My_Friends" not in test_result.output
-    #     assert "bins_pass" not in test_result.output
+        fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
+        monkeypatch.setattr(
+            "kaprien.cli.admin.ceremony._load_key", fake__load_key
+        )
+
+        test_result = client.invoke(
+            ceremony, input="\n".join(input_step1 + input_step2)
+        )
+        assert test_result.exit_code == 0
+        assert "Role: root" in test_result.output
+        assert "Number of Keys: 1" in test_result.output
+        assert "Threshold: 1" in test_result.output
+        assert "Keys Type: offline" in test_result.output
+        assert "JimiHendrix.key" in test_result.output
+        assert "Role: targets" in test_result.output
+        assert "Number of Keys: 1" in test_result.output
+        assert "JanisJoplin.key" in test_result.output
+        assert "ChrisCornel.key" in test_result.output
+        assert "Role: snapshot" in test_result.output
+        assert "Keys Type: online" in test_result.output
+        assert "Role: timestamp" in test_result.output
+        assert "KurtCobain.key" in test_result.output
+        assert "JoeCocker.key" in test_result.output
+        assert "bins1.key" in test_result.output
+        # passwords not shown in output
+        assert "strongPass" not in test_result.output
+
+    def test_ceremony_start_default_values_reconfigure_one_role(
+        self, client, monkeypatch
+    ):
+        input_step1 = [
+            "y",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "y",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+        ]
+        input_step2 = [
+            "Y",
+            "tests/files/JimiHendrix.key",
+            "strongPass",
+            "tests/files/JanisJoplin.key",
+            "strongPass",
+            "tests/files/ChrisCornel.key",
+            "strongPass",
+            "tests/files/KurtCobain.key",
+            "strongPass",
+            "tests/files/snapshot1.key",
+            "strongPass",
+            "tests/files/timestamp1.key",
+            "strongPass",
+            "tests/files/JoeCocker.key",
+            "strongPass",
+            "tests/files/bins1.key",
+            "strongPass",
+            "y",
+            "y",
+            "n",
+            "",
+            "",
+            "",
+            "tests/files/snapshot1.key",
+            "strongPass",
+            "y",
+            "y",
+            "y",
+            "y",
+        ]
+
+        class FakeKey:
+            def __init__(self):
+                self.error = None
+                self.key = generate_ed25519_key()
+
+        fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
+        monkeypatch.setattr(
+            "kaprien.cli.admin.ceremony._load_key", fake__load_key
+        )
+
+        test_result = client.invoke(
+            ceremony, input="\n".join(input_step1 + input_step2)
+        )
+        assert test_result.exit_code == 0
+        assert "Role: root" in test_result.output
+        assert "Number of Keys: 1" in test_result.output
+        assert "Threshold: 1" in test_result.output
+        assert "Keys Type: offline" in test_result.output
+        assert "JimiHendrix.key" in test_result.output
+        assert "Role: targets" in test_result.output
+        assert "Number of Keys: 1" in test_result.output
+        assert "JanisJoplin.key" in test_result.output
+        assert "ChrisCornel.key" in test_result.output
+        assert "Role: snapshot" in test_result.output
+        assert "Keys Type: online" in test_result.output
+        assert "Role: timestamp" in test_result.output
+        assert "KurtCobain.key" in test_result.output
+        assert "JoeCocker.key" in test_result.output
+        assert "bins1.key" in test_result.output
+        # passwords not shown in output
+        assert "strongPass" not in test_result.output
