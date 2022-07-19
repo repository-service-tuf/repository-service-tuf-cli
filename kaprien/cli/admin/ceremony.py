@@ -5,7 +5,9 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
 
+import requests
 import rich_click as click  # type: ignore
+from click import ClickException
 from rich import box, markdown, prompt, table  # type: ignore
 from rich.console import Console  # type: ignore
 from securesystemslib.exceptions import (  # type: ignore
@@ -145,6 +147,11 @@ class Key:
     error: Optional[str] = None
 
 
+class Methods(Enum):
+    get = "get"
+    post = "post"
+
+
 OFFLINE_KEYS = {Roles.ROOT.value, Roles.TARGETS.value, Roles.BIN.value}
 
 # generate the basic data structure
@@ -278,11 +285,57 @@ def _configure_keys(rolename: str, role: RolesKeysInput) -> None:
         key_count += 1
 
 
+def _request_server(
+    server: str,
+    url: str,
+    method: Methods,
+    payload: Optional[Dict[str, Any]] = None,
+) -> Optional[requests.Response]:
+
+    if method == Methods.get:
+        response = requests.get(f"{server}/{url}", json=payload)
+        return response
+
+    elif method == Methods.post:
+        response = requests.post(f"{server}/{url}", json=payload)
+        return response
+
+    else:
+        raise ValueError("Invalid Method")
+
+
 @admin.command()
-def ceremony():
+@click.option(
+    "-b",
+    "--bootstrap",
+    "server",
+    help=(
+        "Bootstrap a Kaprien Server using the Repository Metadata after"
+        "Ceremony"
+    ),
+    required=False,
+)
+def ceremony(server):
     """
     Start a new Metadata Ceremony.
     """
+    if server:
+        try:
+            response = _request_server(
+                server, "api/v1/bootstrap/", Methods.get
+            )
+        except requests.exceptions.ConnectionError:
+            raise ClickException(f"Failed to connect to {server}")
+
+        if response.status_code != 200:
+            raise ClickException(
+                f"Error: {response.status_code} | {response.text}"
+            )
+
+        json_response = response.json()
+        if json_response.get("bootstrap") is True:
+            raise ClickException(f"{json_response.get('message')}")
+
     console.print(markdown.Markdown(METADATA_CEREMONY_INTRO), width=100)
     start_ceremony = prompt.Confirm.ask("\nDo you want start the ceremony?")
 
@@ -395,4 +448,16 @@ def ceremony():
         key: data.to_dict() for key, data in metadata.items()
     }
 
-    return json_payload
+    while True:
+        if server:
+            response = _request_server(
+                server, "api/v1/bootstrap", Methods.post, json_payload
+            )
+
+            if response.status_code != 201:
+                raise ClickException(response.text)
+            else:
+                console.print("Ceremony and Bootstrap done.")
+                break
+        else:
+            break
