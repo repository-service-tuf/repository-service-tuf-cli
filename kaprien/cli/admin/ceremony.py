@@ -1,7 +1,7 @@
 #
 # Ceremony
 #
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
 
@@ -147,6 +147,20 @@ class Key:
     error: Optional[str] = None
 
 
+@dataclass
+class ServiceSettings:
+    targets_base_url: str
+
+    def to_dict(self):
+        return asdict(self)
+
+
+@dataclass
+class PayloadSettings:
+    roles: Dict[str, RolesKeysInput]
+    service: ServiceSettings
+
+
 class Methods(Enum):
     get = "get"
     post = "post"
@@ -155,11 +169,14 @@ class Methods(Enum):
 OFFLINE_KEYS = {Roles.ROOT.value, Roles.TARGETS.value, Roles.BIN.value}
 
 # generate the basic data structure
-ROLES_SETTINGS = {role.value: RolesKeysInput() for role in Roles}
+SETTINGS = PayloadSettings(
+    roles={role.value: RolesKeysInput() for role in Roles},
+    service=ServiceSettings(targets_base_url=""),
+)
 
 
 def _key_is_duplicated(key: Dict[str, Any]) -> bool:
-    for role in ROLES_SETTINGS.values():
+    for role in SETTINGS.roles.values():
         if any(k for k in role.keys.values() if key == k.get("key")):
             return True
         if any(k for k in role.keys.values() if key == k.get("path")):
@@ -230,6 +247,15 @@ def _configure_role(rolename: str, role: RolesKeysInput) -> None:
         show_example = prompt.Confirm.ask("Show example", default="y")
         if show_example:
             console.print(markdown.Markdown(PATHS_EXAMPLE), width=100)
+
+        targets_base_url = click.prompt(
+            "\nWhat is the Base URL (i.e.: https://www.example.com/downloads/)"
+        )
+        if targets_base_url.endswith("/") is False:
+            targets_base_url = targets_base_url + "/"
+
+        SETTINGS.service.targets_base_url = targets_base_url
+
         input_paths = prompt.Prompt.ask(
             f"\nWhat [green]paths[/] [cyan]{rolename}[/] delegates?",
             default="*, */*",
@@ -343,7 +369,7 @@ def ceremony(server):
         raise click.ClickException("Ceremony aborted.")
 
     console.print(markdown.Markdown(STEP_1), width=80)
-    for rolename, role in ROLES_SETTINGS.items():
+    for rolename, role in SETTINGS.roles.items():
         _configure_role(rolename, role)
 
     console.print(markdown.Markdown(STEP_2), width=100)
@@ -354,12 +380,12 @@ def ceremony(server):
     if start_ceremony is False:
         raise click.ClickException("Ceremony aborted.")
 
-    for rolename, role in ROLES_SETTINGS.items():
+    for rolename, role in SETTINGS.roles.items():
         _configure_keys(rolename, role)
 
     console.print(markdown.Markdown(STEP_3), width=100)
 
-    for rolename, role in ROLES_SETTINGS.items():
+    for rolename, role in SETTINGS.roles.items():
         while True:
             role_table = table.Table()
             role_table.add_column(
@@ -399,7 +425,11 @@ def ceremony(server):
             )
 
             if rolename == Roles.TARGETS.value:
-                delegations_row = "\nhttp(s)://{URL}/".join(["", *role.paths])
+                delegations_row = (
+                    f"\n{SETTINGS.service.targets_base_url}".join(
+                        ["", *role.paths]
+                    )
+                )
                 role_table.add_row(
                     (
                         "\n"
@@ -432,17 +462,19 @@ def ceremony(server):
             else:
                 break
 
-    metadata = initialize_metadata(ROLES_SETTINGS)
+    metadata = initialize_metadata(SETTINGS.roles)
 
     json_payload: Dict[str, Any] = dict()
-    for role, data in ROLES_SETTINGS.items():
+
+    json_payload["settings"] = {"service": SETTINGS.service.to_dict()}
+    for role, data in SETTINGS.roles.items():
         if data.offline_keys is True:
             data.keys.clear()
 
-        if "settings" not in json_payload:
-            json_payload["settings"] = {role: data.to_dict()}
+        if "roles" not in json_payload["settings"]:
+            json_payload["settings"]["roles"] = {role: data.to_dict()}
         else:
-            json_payload["settings"][role] = data.to_dict()
+            json_payload["settings"]["roles"][role] = data.to_dict()
 
     json_payload["metadata"] = {
         key: data.to_dict() for key, data in metadata.items()
