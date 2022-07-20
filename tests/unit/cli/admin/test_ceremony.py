@@ -12,15 +12,19 @@ class TestCeremonyGroupCLI:
     def test_ceremony(self, client):
         test_result = client.invoke(ceremony)
         assert test_result.exit_code == 1
-        assert "Metadata Initialization Ceremony" in test_result.output
+        assert (
+            "Repository Metadata and Settings for Kaprien"
+            in test_result.output
+        )
 
     def test_ceremony_start_no(self, client):
-        test_result = client.invoke(ceremony, input="n\n")
+        test_result = client.invoke(ceremony, input="n\nn\n")
         assert "Ceremony aborted." in test_result.output
         assert test_result.exit_code == 1
 
     def test_ceremony_start_not_ready_load_the_keys(self, client):
         input_step1 = [
+            "n",
             "y",
             "",
             "",
@@ -51,6 +55,7 @@ class TestCeremonyGroupCLI:
 
     def test_ceremony_start_default_values(self, client, monkeypatch):
         input_step1 = [
+            "y",
             "y",
             "",
             "",
@@ -134,6 +139,7 @@ class TestCeremonyGroupCLI:
         self, client, monkeypatch
     ):
         input_step1 = [
+            "y",
             "y",
             "",
             "",
@@ -256,6 +262,7 @@ class TestCeremonyGroupCLI:
 
     def test_ceremony_with_flag_bootstrap(self, client, monkeypatch):
         input_step1 = [
+            "y",
             "y",
             "",
             "",
@@ -407,6 +414,7 @@ class TestCeremonyGroupCLI:
         self, client, monkeypatch
     ):
         input_step1 = [
+            "y",
             "y",
             "",
             "",
