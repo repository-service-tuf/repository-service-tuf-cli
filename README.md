@@ -43,8 +43,7 @@ pipenv install <package>
 
 Update all project requirements
 ```shell
-$ pipenv lock -r -d > requirements-dev.txt
-$ pipenv lock -r > requirements.txt
+$ make requirements
 ```
 
 ### Tests
