@@ -4,3 +4,11 @@ reformat:
 
 tests:
 	tox -r
+
+requirements:
+	pipenv lock -r > requirements.txt
+	pipenv lock -r -d > requirements-dev.txt
+
+coverage:
+	coverage report
+	coverage html -i
