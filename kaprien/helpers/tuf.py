@@ -1,19 +1,6 @@
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-from copy import deepcopy
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from securesystemslib.signer import Signer, SSlibSigner  # type: ignore
 from tuf.api.metadata import (
@@ -27,15 +14,17 @@ from tuf.api.metadata import (
     Role,
     Root,
     Snapshot,
+    SuccinctRoles,
     Targets,
     Timestamp,
 )
 
-from kaprien.helpers.hash_bins import HashBins
-
 SPEC_VERSION: str = ".".join(SPECIFICATION_VERSION)
 BIN: str = "bin"
 BINS: str = "bins"
+
+
+repository_metadata: Dict[str, Metadata] = {}
 
 
 @dataclass
@@ -55,166 +44,204 @@ class RolesKeysInput:
 def initialize_metadata(
     settings: Dict[str, RolesKeysInput]
 ) -> Dict[str, Metadata]:
-    def _role_expire(role_name: str) -> datetime:
-        """Get role expire date calculated
+    """
+    Creates development TUF top-level role metadata (root, targets, snapshot,
+    timestamp).
+    """
 
-        Args:
-            role_name: Role name
-
-        Return: datetime expire date
+    def _load(role_name: str) -> Metadata:
         """
-        return datetime.now().replace(microsecond=0) + timedelta(
-            days=settings[role_name].expiration
-        )
+        Loads latest version of metadata for rolename from metadata_repository
+        dict
+        """
+        if role_name == Timestamp.type:
+            filename = f"{role_name}"
+        else:
+            filenames = [
+                filename
+                for filename in repository_metadata
+                if role_name in filename
+            ]
+            versions = [
+                int(name.split("/")[-1].split(".", 1)[0]) for name in filenames
+            ]
+            try:
+                version = max(versions)
+            except ValueError:
+                version = 1
 
-    # creates the base TUF Metadata
-    metadata: Dict[str, Metadata] = dict()
-    signers: Dict[str, Signer] = dict()
-    for rolename, details in settings.items():
-        signers[rolename] = [
-            SSlibSigner(keys["key"]) for keys in details.keys.values()
+            filename = f"{version}.{role_name}"
+
+        return repository_metadata[filename]
+
+    def _signers(role_name: str) -> List[Signer]:
+        """Returns all Signers from the settings for a specific role name"""
+        return [
+            SSlibSigner(key["key"])
+            for key in settings[role_name].keys.values()
         ]
 
-    targets = Targets(1, SPEC_VERSION, _role_expire(Targets.type), {}, None)
-    metadata[Targets.type] = Metadata(targets, {})
+    def _sign(role: Metadata, role_name: str) -> None:
+        """Re-signs metadata with role-specific key from global key store.
+        The metadata role type is used as default key id. This is only allowed
+        for top-level roles.
+        """
+        role.signatures.clear()
+        for signer in _signers(role_name):
+            role.sign(signer, append=True)
 
-    meta = {"targets.json": MetaFile(targets.version)}
-    snapshot = Snapshot(1, SPEC_VERSION, _role_expire(Snapshot.type), meta)
-    metadata[Snapshot.type] = Metadata(snapshot, {})
+    def _persist(role: Metadata, role_name: str) -> None:
+        """Persists metadata using the configured storage backend.
+        The metadata role type is used as default role name. This is only
+        allowed for top-level roles. All names but 'timestamp' are prefixed
+        with a version number.
+        """
+        filename = f"{role_name}"
 
-    snapshot_meta = MetaFile(snapshot.version)
-    timestamp = Timestamp(
-        1,
-        SPEC_VERSION,
-        _role_expire(Timestamp.type),
-        snapshot_meta,
-    )
-    metadata[Timestamp.type] = Metadata(timestamp, {})
+        if role_name != Timestamp.type:
+            filename = f"{role.signed.version}.{filename}"
 
-    roles = {
-        role_name: Role([], settings[role_name].threshold)
-        for role_name in TOP_LEVEL_ROLE_NAMES
-    }
-    root = Root(1, SPEC_VERSION, _role_expire(Root.type), {}, roles, True)
-    metadata[Root.type] = Metadata(root, {})
+        repository_metadata[filename] = role
 
-    # sign all top level roles metadata
-    for role in TOP_LEVEL_ROLE_NAMES:
-        if settings[role].threshold > len(signers[role]):
-            raise ValueError(
-                f"Role {role} has missing Key(s) "
-                f"to match to defined threshold "
-                f"{settings[f'tuf.{role}.threshold']}."
+    def _bump_expiry(role: Metadata, expiry_id: str) -> None:
+        """Bumps metadata expiration date by role-specific interval.
+        The metadata role type is used as default expiry id. This is only
+        allowed for top-level roles.
+        """
+        # FIXME: Review calls to _bump_expiry. Currently, it is called in
+        # every update-sign-persist cycle.
+        # PEP 458 is unspecific about when to bump expiration, e.g. in the
+        # course of a consistent snapshot only 'timestamp' is bumped:
+        # https://www.python.org/dev/peps/pep-0458/#producing-consistent-snapshots
+        role.signed.expires = datetime.now().replace(
+            microsecond=0
+        ) + timedelta(seconds=settings[expiry_id].expiration)
+
+    def _bump_version(role: Metadata) -> None:
+        """Bumps metadata version by 1."""
+        role.signed.version += 1
+
+    def _update_timestamp(snapshot_version: int):
+        """Loads 'timestamp', updates meta info about passed 'snapshot'
+        metadata, bumps version and expiration, signs and persists."""
+        timestamp = _load(Timestamp.type)
+        timestamp.signed.snapshot_meta = MetaFile(version=snapshot_version)
+
+        _bump_version(timestamp)
+        _bump_expiry(timestamp, Timestamp.type)
+        _sign(timestamp, Timestamp.type)
+        _persist(timestamp, Timestamp.type)
+
+    def _update_snapshot(
+        targets_meta: List[Tuple[str, int]]
+    ) -> Metadata[Snapshot]:
+        """Loads 'snapshot', updates meta info about passed 'targets'
+        metadata, bumps version and expiration, signs and persists. Returns
+        new snapshot version, e.g. to update 'timestamp'."""
+        snapshot = _load(Snapshot.type)
+
+        for name, version in targets_meta:
+            snapshot.signed.meta[f"{name}.json"] = MetaFile(version=version)
+
+        _bump_expiry(snapshot, Snapshot.type)
+        _bump_version(snapshot)
+        _sign(snapshot, Snapshot.type)
+        _persist(snapshot, Snapshot.type)
+
+        return snapshot.signed.version
+
+    # Bootstrap default top-level metadata to be updated below if necessary
+    targets = Targets()
+    snapshot = Snapshot()
+    timestamp = Timestamp()
+    root = Root()
+
+    # Populate public key store, and define trusted signing keys and required
+    # signature thresholds for each top-level role in 'root'.
+    for role_name in TOP_LEVEL_ROLE_NAMES:
+        threshold = settings[role_name].threshold
+        signers = _signers(role_name)
+
+        # FIXME: Is this a meaningful check? Should we check more than just
+        # the threshold? And maybe in a different place, e.g. independently of
+        # bootstrapping the metadata, because in production we do not have
+        # access to all top-level role signing keys at the time of
+        # bootstrapping the metadata.
+        assert len(signers) >= threshold, (
+            f"not enough keys ({len(signers)}) for "
+            f"signing threshold '{threshold}'"
+        )
+
+        root.roles[role_name] = Role([], threshold)
+        for signer in signers:
+            root.add_key(
+                Key.from_securesystemslib_key(signer.key_dict), role_name
             )
 
-        for signer in signers[role]:
-            root.add_key(role, Key.from_securesystemslib_key(signer.key_dict))
-            metadata[role].sign(signer, append=True)
+    # Add signature wrapper, bump expiration, and sign and persist
+    for role in [targets, snapshot, timestamp, root]:
+        metadata = Metadata(role)
+        _bump_expiry(metadata, role.type)
+        _sign(metadata, role.type)
+        _persist(metadata, role.type)
 
-    # create the delegations
-    # 1. Targets -> BIN
-    metadata["2." + Targets.type] = deepcopy(metadata[Targets.type])
-    metadata["2." + Snapshot.type] = deepcopy(metadata[Snapshot.type])
-    metadata[BIN] = Metadata(
-        Targets(1, SPEC_VERSION, _role_expire(BIN), {}, None), {}
-    )
-    delegated_bin = DelegatedRole(
+    # Track names and versions of new and updated targets for 'snapshot'
+    # update
+    targets_meta = []
+
+    # Update top-level 'targets' role, to delegate trust for all target files
+    # to 'bins' role, defining target path patterns, trusted signing keys and
+    # required signature thresholds.
+    targets = _load(Targets.type)
+    targets.signed.delegations = Delegations(keys={}, roles={})
+    targets.signed.delegations.roles[BIN] = DelegatedRole(
         name=BIN,
-        keyids=[signer.key_dict["keyid"] for signer in signers[BIN]],
+        keyids=[],
         threshold=settings[BIN].threshold,
         terminating=False,
-        paths=settings[Targets.type].paths,
+        paths=["*/*", "*/*/*/*"],
     )
 
-    metadata["2." + Targets.type].signed.delegations = Delegations(
-        {
-            signer.key_dict["keyid"]: Key.from_securesystemslib_key(
-                signer.key_dict
-            )
-            for signer in signers[BIN]
-        },
-        {BIN: delegated_bin},
-    )
-    for signer in signers[BIN]:
-        metadata["2." + Targets.type].signed.add_key(
-            BIN, Key.from_securesystemslib_key(signer.key_dict)
-        )
-        metadata[BIN].sign(signer, append=True)
-
-    metadata["2." + Targets.type].signed.version += 1
-    metadata["2." + Targets.type].signed.expires = _role_expire(Targets.type)
-    for signer in signers[Targets.type]:
-        metadata["2." + Targets.type].sign(signer, append=True)
-
-    metadata["2." + Snapshot.type].signed.meta[f"{BIN}.json"] = MetaFile(
-        version=metadata[BIN].signed.version
-    )
-    metadata["2." + Snapshot.type].signed.meta[
-        f"{Targets.type}.json"
-    ] = MetaFile(version=metadata["2." + Targets.type].signed.version)
-    metadata["2." + Snapshot.type].signed.version += 1
-    metadata["2." + Snapshot.type].signed.expires = _role_expire(Snapshot.type)
-    for signer in signers[Snapshot.type]:
-        metadata["2." + Snapshot.type].sign(signer, append=True)
-
-    # 2. BIN -> BINS (Hash Bins)
-    num_prefixes: int = settings[BINS].number_hash_prefixes  # type: ignore
-    hash_bins = HashBins(num_prefixes)
-
-    metadata["2." + BIN] = deepcopy(metadata[BIN])
-    metadata["3." + Snapshot.type] = deepcopy(metadata["2." + Snapshot.type])
-
-    for bin_n_name, bin_n_hash_prefixes in hash_bins.generate():
-        metadata[bin_n_name] = Metadata(
-            Targets(1, SPEC_VERSION, _role_expire(BIN), {}, None), {}
-        )
-        delegated_bins = DelegatedRole(
-            bin_n_name,
-            [signer.key_dict["keyid"] for signer in signers[BINS]],
-            settings[BINS].threshold,
-            False,
-            path_hash_prefixes=bin_n_hash_prefixes,
+    for signer in _signers(BIN):
+        targets.signed.add_key(
+            Key.from_securesystemslib_key(signer.key_dict), BIN
         )
 
-        if metadata["2." + BIN].signed.delegations is None:
-            metadata["2." + BIN].signed.delegations = Delegations(
-                {
-                    signer.key_dict["keyid"]: Key.from_securesystemslib_key(
-                        signer.key_dict
-                    )
-                    for signer in signers[BINS]
-                },
-                {bin_n_name: delegated_bins},
-            )
+    # Bump version and expiration, and sign and persist updated 'targets'.
+    _bump_version(targets)
+    _bump_expiry(targets, Targets.type)
+    _sign(targets, Targets.type)
+    _persist(targets, Targets.type)
 
-        else:
-            metadata["2." + BIN].signed.delegations.roles[
-                bin_n_name
-            ] = delegated_bins
+    targets_meta.append((Targets.type, targets.signed.version))
 
-        for signer in signers[BINS]:
-            metadata["2." + BIN].signed.add_key(
-                bin_n_name, Key.from_securesystemslib_key(signer.key_dict)
-            )
-            metadata[bin_n_name].sign(signer, append=True)
-
-        metadata["3." + Snapshot.type].signed.meta[
-            f"{bin_n_name}.json"
-        ] = MetaFile(version=metadata[bin_n_name].signed.version)
-
-    metadata["2." + BIN].signed.version += 1
-    metadata["2." + BIN].signed.expires = _role_expire(Targets.type)
-    for signer in signers[BIN]:
-        metadata["2." + BIN].sign(signer, append=True)
-
-    metadata["3." + Snapshot.type].signed.version += 1
-    metadata["3." + Snapshot.type].signed.expires = _role_expire(Snapshot.type)
-    metadata["3." + Snapshot.type].signed.meta[f"{BIN}.json"] = MetaFile(
-        version=metadata["2." + BIN].signed.version
+    succinct_roles = SuccinctRoles(
+        [], 1, settings[BINS].number_hash_prefixes, BINS
     )
-    for signer in signers[Snapshot.type]:
-        metadata["3." + Snapshot.type].sign(signer, append=True)
+    # Create new 'bins' role and delegate trust from 'bins' for all target
+    # files to 'bin-n' roles based on file path hash prefixes, a.k.a hash bin
+    # delegation.
+    bin = Metadata(Targets())
+    bin.signed.delegations = Delegations(
+        keys={}, succinct_roles=succinct_roles
+    )
+    for delegated_name in succinct_roles.get_roles():
+        for signer in _signers(BINS):
+            bin.signed.add_key(
+                Key.from_securesystemslib_key(signer.key_dict), delegated_name
+            )
+        bin_n = Metadata(Targets())
+        _bump_expiry(bin_n, BINS)
+        _sign(bin_n, BINS)
+        _persist(bin_n, delegated_name)
 
-    signers.clear()
+    # Bump expiration, and sign and persist new 'bins' role.
+    _bump_expiry(bin, BIN)
+    _sign(bin, BIN)
+    _persist(bin, BIN)
 
-    return metadata
+    targets_meta.append((BIN, bin.signed.version))
+
+    _update_timestamp(_update_snapshot(targets_meta))
+
+    return repository_metadata
