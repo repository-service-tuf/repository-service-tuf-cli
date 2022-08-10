@@ -74,7 +74,7 @@ class TestCeremonyGroupCLI:
             "",
             "",
             "",
-            "",
+            "4",
             "",
         ]
         input_step2 = [

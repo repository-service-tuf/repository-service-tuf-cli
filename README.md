@@ -41,11 +41,19 @@ pipenv install -d <package>
 pipenv install <package>
 ```
 
+#### MacOS running on Macbooks M1
+For developers, after above command, run
+```shell
+$ pip uninstall cryptography cffi -y
+$ pip cache purge
+$ LDFLAGS=-L$(brew --prefix libffi)/lib CFLAGS=-I$(brew --prefix libffi)/include pip install cffi cryptography
+
+```
+
 Update all project requirements
 ```shell
 $ pipenv lock -r -d > requirements-dev.txt
 $ pipenv lock -r > requirements.txt
-```
 
 ### Tests
 
