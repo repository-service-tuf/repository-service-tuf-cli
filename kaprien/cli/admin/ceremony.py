@@ -1,6 +1,7 @@
 #
 # Ceremony
 #
+import json
 from dataclasses import asdict, dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
@@ -374,7 +375,7 @@ def _configure_role(rolename: str, role: RolesKeysInput) -> None:
     elif rolename == Roles.BINS.value:
         role.number_hash_prefixes = prompt.IntPrompt.ask(
             f"[green]Number of hashed bins[/] for [cyan]{rolename}[/]?",
-            default=64,
+            default=8,
             show_default=True,
         )
 
