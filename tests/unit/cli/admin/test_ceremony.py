@@ -116,6 +116,7 @@ class TestCeremonyGroupCLI:
         test_result = client.invoke(
             ceremony, input="\n".join(input_step1 + input_step2)
         )
+
         assert test_result.exit_code == 0
         assert "Role: root" in test_result.output
         assert "Number of Keys: 1" in test_result.output
