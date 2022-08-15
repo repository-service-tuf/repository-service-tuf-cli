@@ -115,7 +115,7 @@ def initialize_metadata(
         # https://www.python.org/dev/peps/pep-0458/#producing-consistent-snapshots
         role.signed.expires = datetime.now().replace(
             microsecond=0
-        ) + timedelta(seconds=settings[expiry_id].expiration)
+        ) + timedelta(days=settings[expiry_id].expiration)
 
     def _bump_version(role: Metadata) -> None:
         """Bumps metadata version by 1."""
@@ -230,10 +230,11 @@ def initialize_metadata(
             bin.signed.add_key(
                 Key.from_securesystemslib_key(signer.key_dict), delegated_name
             )
-        bin_n = Metadata(Targets())
-        _bump_expiry(bin_n, BINS)
-        _sign(bin_n, BINS)
-        _persist(bin_n, delegated_name)
+        bins_hash_role = Metadata(Targets())
+        _bump_expiry(bins_hash_role, BINS)
+        _sign(bins_hash_role, BINS)
+        _persist(bins_hash_role, delegated_name)
+        targets_meta.append((delegated_name, bins_hash_role.signed.version))
 
     # Bump expiration, and sign and persist new 'bins' role.
     _bump_expiry(bin, BIN)
