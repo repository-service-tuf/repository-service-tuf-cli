@@ -444,12 +444,24 @@ def _request_server(
     "--bootstrap",
     "server",
     help=(
-        "Bootstrap a Kaprien Server using the Repository Metadata after"
+        "Bootstrap a Kaprien Server using the Repository Metadata after "
         "Ceremony"
     ),
     required=False,
 )
-def ceremony(server):
+@click.option(
+    "-f",
+    "--file",
+    "file",
+    default="payload.json",
+    help=(
+        "Generate specific JSON Payload compatible with Kaprien Server "
+        "bootstrap after Ceremony"
+    ),
+    show_default=True,
+    required=False,
+)
+def ceremony(server, file):
     """
     Start a new Metadata Ceremony.
     """
@@ -598,6 +610,10 @@ def ceremony(server):
     json_payload["metadata"] = {
         key: data.to_dict() for key, data in metadata.items()
     }
+
+    if file:
+        with open(file, "w") as f:
+            f.write(json.dumps(json_payload, indent=2))
 
     while True:
         if server:
