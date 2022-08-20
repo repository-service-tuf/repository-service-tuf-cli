@@ -1,28 +1,28 @@
 from unittest.mock import MagicMock
 
 import pretend  # type: ignore
-import pytest
-import requests  # type: ignore
 from securesystemslib.keys import generate_ed25519_key  # type: ignore
 
-from kaprien.cli.admin.ceremony import Methods, _request_server, ceremony
+from kaprien.cli.admin.ceremony import ceremony
 
 
 class TestCeremonyGroupCLI:
-    def test_ceremony(self, client):
-        test_result = client.invoke(ceremony)
+    def test_ceremony(self, client, test_context):
+        test_result = client.invoke(ceremony, obj=test_context)
         assert test_result.exit_code == 1
         assert (
             "Repository Metadata and Settings for Kaprien"
             in test_result.output
         )
 
-    def test_ceremony_start_no(self, client):
-        test_result = client.invoke(ceremony, input="n\nn\n")
+    def test_ceremony_start_no(self, client, test_context):
+        test_result = client.invoke(ceremony, input="n\nn\n", obj=test_context)
         assert "Ceremony aborted." in test_result.output
         assert test_result.exit_code == 1
 
-    def test_ceremony_start_not_ready_load_the_keys(self, client):
+    def test_ceremony_start_not_ready_load_the_keys(
+        self, client, test_context
+    ):
         input_step1 = [
             "n",
             "y",
@@ -48,12 +48,16 @@ class TestCeremonyGroupCLI:
         ]
         input_step2 = ["n"]
         test_result = client.invoke(
-            ceremony, input="\n".join(input_step1 + input_step2)
+            ceremony,
+            input="\n".join(input_step1 + input_step2),
+            obj=test_context,
         )
         assert "Ceremony aborted." in test_result.output
         assert test_result.exit_code == 1
 
-    def test_ceremony_start_default_values(self, client, monkeypatch):
+    def test_ceremony_start_default_values(
+        self, client, monkeypatch, test_context
+    ):
         input_step1 = [
             "y",
             "y",
@@ -114,7 +118,9 @@ class TestCeremonyGroupCLI:
         )
 
         test_result = client.invoke(
-            ceremony, input="\n".join(input_step1 + input_step2)
+            ceremony,
+            input="\n".join(input_step1 + input_step2),
+            obj=test_context,
         )
 
         assert test_result.exit_code == 0
@@ -137,7 +143,7 @@ class TestCeremonyGroupCLI:
         assert "strongPass" not in test_result.output
 
     def test_ceremony_start_default_values_reconfigure_one_role(
-        self, client, monkeypatch
+        self, client, monkeypatch, test_context
     ):
         input_step1 = [
             "y",
@@ -205,7 +211,9 @@ class TestCeremonyGroupCLI:
         )
 
         test_result = client.invoke(
-            ceremony, input="\n".join(input_step1 + input_step2)
+            ceremony,
+            input="\n".join(input_step1 + input_step2),
+            obj=test_context,
         )
         assert test_result.exit_code == 0
         assert "Role: root" in test_result.output
@@ -226,42 +234,9 @@ class TestCeremonyGroupCLI:
         # passwords not shown in output
         assert "strongPass" not in test_result.output
 
-    def test__request_server_get(self, monkeypatch):
-        fake_requests = pretend.stub(
-            get=pretend.call_recorder(lambda *a, **kw: "FakeResponse")
-        )
-        monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony.requests", fake_requests
-        )
-
-        _request_server("http://server", "url", Methods.get)
-
-        assert fake_requests.get.calls == [
-            pretend.call("http://server/url", json=None)
-        ]
-
-    def test__request_server_post(self, monkeypatch):
-        fake_requests = pretend.stub(
-            post=pretend.call_recorder(lambda *a, **kw: "FakeResponse")
-        )
-        monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony.requests", fake_requests
-        )
-
-        _request_server("http://server", "url", Methods.post, {"k": "v"})
-
-        assert fake_requests.post.calls == [
-            pretend.call("http://server/url", json={"k": "v"})
-        ]
-
-    def test__request_server_invalid_method(self, monkeypatch):
-
-        with pytest.raises(ValueError) as err:
-            _request_server("http://server", "url", "Invalid", {"k": "v"})
-
-        assert "Invalid Method" in str(err.value)
-
-    def test_ceremony_with_flag_bootstrap(self, client, monkeypatch):
+    def test_ceremony_with_flag_bootstrap(
+        self, client, monkeypatch, test_context
+    ):
         input_step1 = [
             "y",
             "y",
@@ -311,18 +286,32 @@ class TestCeremonyGroupCLI:
             "y",
         ]
 
-        fake__request_server_get = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(lambda: {"bootstrap": False}),
+        mocked_check_server = pretend.call_recorder(
+            lambda s: {"Authorization": "Bearer test"}
         )
-        fake__request_server_post = pretend.stub(status_code=201)
+        monkeypatch.setattr(
+            "kaprien.cli.admin.ceremony._check_server", mocked_check_server
+        )
+
+        fake_response_get = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(lambda: {"boostrap": False}),
+        )
+        fake_response_post = pretend.stub(
+            status_code=202,
+            json=pretend.call_recorder(
+                lambda: {"message": "Bootstrap accepted."}
+            ),
+        )
         mocked_request_server = MagicMock()
         mocked_request_server.side_effect = [
-            fake__request_server_get,
-            fake__request_server_post,
+            fake_response_get,
+            fake_response_post,
         ]
+
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony._request_server", mocked_request_server
+            "kaprien.cli.admin.ceremony.request_server",
+            mocked_request_server,
         )
 
         class FakeKey:
@@ -335,22 +324,33 @@ class TestCeremonyGroupCLI:
             "kaprien.cli.admin.ceremony._load_key", fake__load_key
         )
 
+        # simulate the settings file
+        test_context["settings"].SERVER = "fake-server"
+        test_context["settings"].TOKEN = "test-token"
+        # write settings
         test_result = client.invoke(
             ceremony,
-            ["--bootstrap", "http://fakeserver"],
+            ["--bootstrap"],
             input="\n".join(input_step1 + input_step2),
+            obj=test_context,
         )
 
         assert test_result.exit_code == 0
         assert "Ceremony and Bootstrap done" in test_result.output
-        assert fake__request_server_get.json.calls == [pretend.call()]
         # passwords not shown in output
         assert "strongPass" not in test_result.output
 
     def test_ceremony_with_flag_bootstrap_already_done(
-        self, client, monkeypatch
+        self, client, monkeypatch, test_context
     ):
-        fake__request_server_get = pretend.stub(
+        mocked_check_server = pretend.call_recorder(
+            lambda s: {"Authorization": "Bearer test"}
+        )
+        monkeypatch.setattr(
+            "kaprien.cli.admin.ceremony._check_server", mocked_check_server
+        )
+
+        mocked_request_server = pretend.stub(
             status_code=200,
             json=pretend.call_recorder(
                 lambda: {
@@ -359,60 +359,60 @@ class TestCeremonyGroupCLI:
                 }
             ),
         )
+
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony._request_server",
-            lambda *a: fake__request_server_get,
+            "kaprien.cli.admin.ceremony.request_server",
+            lambda *a, **kw: mocked_request_server,
         )
 
+        # simulate the settings file
+        test_context["settings"].SERVER = "fake-server"
+        test_context["settings"].TOKEN = "test-token"
+
         test_result = client.invoke(
-            ceremony, ["--bootstrap", "http://fakeserver"]
+            ceremony, ["--bootstrap"], obj=test_context
         )
 
         assert test_result.exit_code == 1
         assert "System already has a Metadata." in test_result.output
-        assert fake__request_server_get.json.calls == [pretend.call()]
 
-    def test_ceremony_with_flag_bootstrap_connection_error(
-        self, client, monkeypatch
+    def test_ceremony_with_flag_bootstrap_forbidden(
+        self, client, monkeypatch, test_context
     ):
-
+        mocked_check_server = pretend.call_recorder(
+            lambda s: {"Authorization": "Bearer test"}
+        )
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony._request_server",
-            pretend.raiser(requests.exceptions.ConnectionError),
+            "kaprien.cli.admin.ceremony._check_server", mocked_check_server
         )
 
-        test_result = client.invoke(
-            ceremony, ["--bootstrap", "http://fakeserver"]
-        )
-
-        assert test_result.exit_code == 1
-        assert "Failed to connect to http://fakeserver" in test_result.output
-
-    def test_ceremony_with_flag_bootstrap_wrong_status_code(
-        self, client, monkeypatch
-    ):
-        fake__request_server_get = pretend.stub(
-            status_code=404,
-            text=pretend.call_recorder(
+        mocked_request_server = pretend.stub(
+            status_code=401,
+            json=pretend.call_recorder(
                 lambda: {
-                    "detail": "URL not found",
+                    "detail": "Unauthorized.",
                 }
             ),
         )
+
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony._request_server",
-            lambda *a: fake__request_server_get,
+            "kaprien.cli.admin.ceremony.request_server",
+            lambda *a, **kw: mocked_request_server,
         )
 
+        # simulate the settings file
+        test_context["settings"].SERVER = "fake-server"
+        test_context["settings"].TOKEN = "test-token"
+
         test_result = client.invoke(
-            ceremony, ["--bootstrap", "http://fakeserver"]
+            ceremony, ["--bootstrap"], obj=test_context
         )
 
         assert test_result.exit_code == 1
-        assert "Error: 404" in test_result.output
+        assert "Error 401 Unauthorized." in test_result.output
 
     def test_ceremony_with_flag_bootstrap_failed_post(
-        self, client, monkeypatch
+        self, client, monkeypatch, test_context
     ):
         input_step1 = [
             "y",
@@ -463,20 +463,30 @@ class TestCeremonyGroupCLI:
             "y",
         ]
 
-        fake__request_server_get = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(lambda: {"bootstrap": False}),
+        mocked_check_server = pretend.call_recorder(
+            lambda s: {"Authorization": "Bearer test"}
         )
-        fake__request_server_post = pretend.stub(
-            status_code=200, text="Failed!"
+        monkeypatch.setattr(
+            "kaprien.cli.admin.ceremony._check_server", mocked_check_server
+        )
+
+        fake_response_get = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(lambda: {"boostrap": False}),
+        )
+        fake_response_post = pretend.stub(
+            status_code=403,
+            json=pretend.call_recorder(lambda: {"detail": "Forbidden"}),
         )
         mocked_request_server = MagicMock()
         mocked_request_server.side_effect = [
-            fake__request_server_get,
-            fake__request_server_post,
+            fake_response_get,
+            fake_response_post,
         ]
+
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony._request_server", mocked_request_server
+            "kaprien.cli.admin.ceremony.request_server",
+            mocked_request_server,
         )
 
         class FakeKey:
@@ -489,12 +499,123 @@ class TestCeremonyGroupCLI:
             "kaprien.cli.admin.ceremony._load_key", fake__load_key
         )
 
+        # simulate the settings file
+        test_context["settings"].SERVER = "fake-server"
+        test_context["settings"].TOKEN = "test-token"
+        # write settings
         test_result = client.invoke(
             ceremony,
-            ["--bootstrap", "http://fakeserver"],
+            ["--bootstrap"],
             input="\n".join(input_step1 + input_step2),
+            obj=test_context,
         )
 
         assert test_result.exit_code == 1
-        assert "Failed" in test_result.output
-        assert fake__request_server_get.json.calls == [pretend.call()]
+        assert "Error 403 Forbidden" in test_result.output
+
+    def test_ceremony_with_flag_bootstrap_unexpected_error(
+        self, client, monkeypatch, test_context
+    ):
+        input_step1 = [
+            "y",
+            "y",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "y",
+            "http://www.example.com/repository",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+        ]
+        input_step2 = [
+            "Y",
+            "tests/files/JimiHendrix.key",
+            "strongPass",
+            "tests/files/JanisJoplin.key",
+            "strongPass",
+            "tests/files/ChrisCornel.key",
+            "strongPass",
+            "tests/files/KurtCobain.key",
+            "strongPass",
+            "tests/files/snapshot1.key",
+            "strongPass",
+            "tests/files/timestamp1.key",
+            "strongPass",
+            "tests/files/JoeCocker.key",
+            "strongPass",
+            "tests/files/bins1.key",
+            "strongPass",
+            "y",
+            "y",
+            "y",
+            "y",
+            "y",
+            "y",
+        ]
+
+        mocked_check_server = pretend.call_recorder(
+            lambda s: {"Authorization": "Bearer test"}
+        )
+        monkeypatch.setattr(
+            "kaprien.cli.admin.ceremony._check_server", mocked_check_server
+        )
+
+        fake_response_get = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(lambda: {"boostrap": False}),
+        )
+        fake_response_post = pretend.stub(
+            status_code=202,
+            json=pretend.call_recorder(
+                lambda: {
+                    "detail": "Unexpected error, message queue connection"
+                }
+            ),
+            text="<200> 'detail': 'Unexpected error, queue connection'",
+        )
+        mocked_request_server = MagicMock()
+        mocked_request_server.side_effect = [
+            fake_response_get,
+            fake_response_post,
+        ]
+
+        monkeypatch.setattr(
+            "kaprien.cli.admin.ceremony.request_server",
+            mocked_request_server,
+        )
+
+        class FakeKey:
+            def __init__(self):
+                self.error = None
+                self.key = generate_ed25519_key()
+
+        fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
+        monkeypatch.setattr(
+            "kaprien.cli.admin.ceremony._load_key", fake__load_key
+        )
+
+        # simulate the settings file
+        test_context["settings"].SERVER = "fake-server"
+        test_context["settings"].TOKEN = "test-token"
+        # write settings
+        test_result = client.invoke(
+            ceremony,
+            ["--bootstrap"],
+            input="\n".join(input_step1 + input_step2),
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 1
+        assert "Unexpected error, queue connection" in test_result.output

@@ -28,17 +28,8 @@ $ pipenv shell
 
 Install requirements from Pipfile.lock
 The flag -d will install the development requirements
-```Shell
+```shell
 $ pipenv install -d
-```
-
-### How to install new requirements
-
-Install requirements package
-The flag -d will install the development requirements
-```Shell
-pipenv install -d <package>
-pipenv install <package>
 ```
 
 #### MacOS running on Macbooks M1
@@ -50,12 +41,21 @@ $ LDFLAGS=-L$(brew --prefix libffi)/lib CFLAGS=-I$(brew --prefix libffi)/include
 
 ```
 
+### How to install new requirements
+
+Install requirements package
+
+The flag -d will install the development requirements
+```shell
+pipenv install -d <package>
+pipenv install <package>
+```
+
+
 Update all project requirements
 ```shell
-$ pipenv lock -r -d > requirements-dev.txt
-$ pipenv lock -r > requirements.txt
-
-### Tests
+$ make requirements
+```
 
 Perform automated testing with the TOX tool.
 ```shell
