@@ -6,7 +6,6 @@ from dataclasses import asdict, dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
 
-import requests
 import rich_click as click  # type: ignore
 from click import ClickException
 from rich import box, markdown, prompt, table  # type: ignore
@@ -22,6 +21,7 @@ from securesystemslib.interface import (  # type: ignore
 )
 
 from kaprien.cli.admin import admin
+from kaprien.helpers.api_client import URL, Methods, is_logged, request_server
 from kaprien.helpers.tuf import RolesKeysInput, initialize_metadata
 
 CEREMONY_INTRO = """
@@ -269,11 +269,6 @@ class PayloadSettings:
     service: ServiceSettings
 
 
-class Methods(Enum):
-    get = "get"
-    post = "post"
-
-
 OFFLINE_KEYS = {Roles.ROOT.value, Roles.TARGETS.value, Roles.BIN.value}
 
 # generate the basic data structure
@@ -419,35 +414,46 @@ def _configure_keys(rolename: str, role: RolesKeysInput) -> None:
         key_count += 1
 
 
-def _request_server(
-    server: str,
-    url: str,
-    method: Methods,
-    payload: Optional[Dict[str, Any]] = None,
-) -> Optional[requests.Response]:
+def _check_server(settings):
+    server = settings.get("SERVER")
+    token = settings.get("TOKEN")
+    if server and token:
+        token_access_check = is_logged(server, token)
+        if token_access_check.state is False:
+            raise ClickException(
+                f"{str(token_access_check.json('detail'))}"
+                "\n\nTry re-login: 'kaprien admin login'"
+            )
 
-    if method == Methods.get:
-        response = requests.get(f"{server}/{url}", json=payload)
-        return response
-
-    elif method == Methods.post:
-        response = requests.post(f"{server}/{url}", json=payload)
-        return response
-
+        expired_admin = token_access_check.json().get("data").get("expired")
+        if expired_admin is True:
+            raise ClickException("Token expired. Run 'kaprien admin login'")
+        else:
+            headers = {"Authorization": f"Bearer {token}"}
+            response = request_server(
+                server, URL.bootstrap.value, Methods.get, headers=headers
+            )
+            if response.status_code != 200 and (
+                response.json().get("bootstrap") is True or None
+            ):
+                raise ClickException(f"{response.json().get('message')}")
     else:
-        raise ValueError("Invalid Method")
+        raise ClickException("Login first. Run 'kaprien admin login'")
+
+    return headers
 
 
 @admin.command()
 @click.option(
     "-b",
     "--bootstrap",
-    "server",
+    "bootstrap",
     help=(
         "Bootstrap a Kaprien Server using the Repository Metadata after "
         "Ceremony"
     ),
     required=False,
+    is_flag=True,
 )
 @click.option(
     "-f",
@@ -461,26 +467,25 @@ def _request_server(
     show_default=True,
     required=False,
 )
-def ceremony(server, file):
+@click.pass_context
+def ceremony(context, bootstrap, file):
     """
     Start a new Metadata Ceremony.
     """
-    if server:
-        try:
-            response = _request_server(
-                server, "api/v1/bootstrap/", Methods.get
-            )
-        except requests.exceptions.ConnectionError:
-            raise ClickException(f"Failed to connect to {server}")
-
-        if response.status_code != 200:
+    settings = context.obj["settings"]
+    if bootstrap:
+        headers = _check_server(settings)
+        bs_response = request_server(
+            settings.SERVER, URL.bootstrap, Methods.get, headers=headers
+        )
+        bs_data = bs_response.json()
+        if bs_response.status_code != 200:
             raise ClickException(
-                f"Error: {response.status_code} | {response.text}"
+                f"Error {bs_response.status_code} {bs_data.get('detail')}"
             )
 
-        json_response = response.json()
-        if json_response.get("bootstrap") is True:
-            raise ClickException(f"{json_response.get('message')}")
+        if bs_data.get("bootstrap") is True or None:
+            raise ClickException(f"{bs_data.get('message')}")
 
     console.print(markdown.Markdown(CEREMONY_INTRO), width=100)
 
@@ -615,16 +620,24 @@ def ceremony(server, file):
         with open(file, "w") as f:
             f.write(json.dumps(json_payload, indent=2))
 
-    while True:
-        if server:
-            response = _request_server(
-                server, "api/v1/bootstrap", Methods.post, json_payload
-            )
+    if bootstrap:
+        response = request_server(
+            settings.SERVER,
+            "api/v1/bootstrap",
+            Methods.post,
+            json_payload,
+            headers=headers,
+        )
+        response_data = response.json()
 
-            if response.status_code != 201:
-                raise ClickException(response.text)
-            else:
-                console.print("Ceremony and Bootstrap done.")
-                break
+        if response.status_code != 202:
+            raise ClickException(
+                f"Error {response.status_code} {response_data.get('detail')}"
+            )
+        elif (
+            response_data.get("message") is None
+            or response_data.get("message") != "Bootstrap accepted."
+        ):
+            raise ClickException(response.text)
         else:
-            break
+            console.print("Ceremony and Bootstrap done.")
