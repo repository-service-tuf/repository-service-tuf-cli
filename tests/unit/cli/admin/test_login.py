@@ -15,12 +15,12 @@ class TestLoginGroupCLI:
             )
         )
         test_data = {"k", "v"}
-        result = login._login(server="fake_server", data=test_data, expires=1)
+        result = login._login(server="fake_server", data=test_data)
         assert result == expected_response
         assert login.request_server.calls == [
             pretend.call(
                 "fake_server",
-                "api/v1/token/?expires=1",
+                "api/v1/token/",
                 login.Methods.post,
                 data=test_data,
             )
@@ -38,13 +38,13 @@ class TestLoginGroupCLI:
         test_data = {"k", "v"}
 
         with pytest.raises(login.click.ClickException) as err:
-            login._login(server="fake_server", data=test_data, expires=1)
+            login._login(server="fake_server", data=test_data)
 
         assert "Unauthorized" in str(err)
         assert login.request_server.calls == [
             pretend.call(
                 "fake_server",
-                "api/v1/token/?expires=1",
+                "api/v1/token/",
                 login.Methods.post,
                 data=test_data,
             )
