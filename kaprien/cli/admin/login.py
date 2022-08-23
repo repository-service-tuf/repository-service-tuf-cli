@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict
 
 import click
 from dynaconf import loaders
@@ -11,10 +11,11 @@ from kaprien.helpers.api_client import URL, Methods, is_logged, request_server
 console = Console()
 
 
-def _login(server: str, data: Dict[str, str], expires: Optional[int] = None):
+def _login(server: str, data: Dict[str, str]):
 
-    url = f"{URL.token.value}?expires={expires}"
-    token_response = request_server(server, url, Methods.post, data=data)
+    token_response = request_server(
+        server, URL.token.value, Methods.post, data=data
+    )
     if token_response.status_code != 200:
         raise click.ClickException(token_response.json()["detail"])
 
@@ -33,17 +34,19 @@ def _run_login(context):
         width=100,
     )
     while True:
-        server = prompt.Prompt.ask("\nServer Address    ")
+        server = prompt.Prompt.ask("\nServer Address")
         if server.startswith("http") is False:
             console.print(
                 f"Please use 'http://{server}' or 'https://{server}'"
             )
         else:
             break
-    username = prompt.Prompt.ask("Username          ")
-    password = click.prompt("Password          ", hide_input=True)
+    username = prompt.Prompt.ask(
+        "Username", default="admin", show_default=True
+    )
+    password = click.prompt("Password", hide_input=True)
     expires = prompt.IntPrompt.ask(
-        "Expire (in hours) ", default=24, show_default=False
+        "Expire (in hours)", default=24, show_default=False
     )
 
     data = {
@@ -57,9 +60,10 @@ def _run_login(context):
             "read:settings "
             "read:token "
         ),
+        "expires": expires,
     }
 
-    token = _login(server, data, expires)
+    token = _login(server, data)
     settings.SERVER = server
     settings.TOKEN = token["access_token"]
     loaders.write(context.obj.get("config"), settings.to_dict())

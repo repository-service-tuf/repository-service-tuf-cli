@@ -29,7 +29,7 @@ def request_server(
     payload: Optional[Dict[str, Any]] = None,
     data: Optional[Dict[str, Any]] = None,
     headers: Optional[Dict[str, str]] = None,
-) -> Optional[requests.Response]:
+) -> requests.Response:
     try:
         if method == Methods.get:
             response = requests.get(
