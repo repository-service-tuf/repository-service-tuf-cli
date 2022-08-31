@@ -18,6 +18,7 @@ from tuf.api.metadata import (
     Targets,
     Timestamp,
 )
+from tuf.api.serialization.json import JSONSerializer
 
 SPEC_VERSION: str = ".".join(SPECIFICATION_VERSION)
 BIN: str = "bin"
@@ -42,7 +43,7 @@ class RolesKeysInput:
 
 
 def initialize_metadata(
-    settings: Dict[str, RolesKeysInput]
+    settings: Dict[str, RolesKeysInput], save=True
 ) -> Dict[str, Metadata]:
     """
     Creates development TUF top-level role metadata (root, targets, snapshot,
@@ -90,7 +91,7 @@ def initialize_metadata(
         for signer in _signers(role_name):
             role.sign(signer, append=True)
 
-    def _persist(role: Metadata, role_name: str) -> None:
+    def _add_payload(role: Metadata, role_name: str) -> None:
         """Persists metadata using the configured storage backend.
         The metadata role type is used as default role name. This is only
         allowed for top-level roles. All names but 'timestamp' are prefixed
@@ -102,6 +103,9 @@ def initialize_metadata(
             filename = f"{role.signed.version}.{filename}"
 
         repository_metadata[filename] = role
+
+        if save:
+            role.to_file(f"metadata/{filename}", JSONSerializer())
 
     def _bump_expiry(role: Metadata, expiry_id: str) -> None:
         """Bumps metadata expiration date by role-specific interval.
@@ -130,7 +134,7 @@ def initialize_metadata(
         _bump_version(timestamp)
         _bump_expiry(timestamp, Timestamp.type)
         _sign(timestamp, Timestamp.type)
-        _persist(timestamp, Timestamp.type)
+        _add_payload(timestamp, Timestamp.type)
 
     def _update_snapshot(
         targets_meta: List[Tuple[str, int]]
@@ -146,7 +150,7 @@ def initialize_metadata(
         _bump_expiry(snapshot, Snapshot.type)
         _bump_version(snapshot)
         _sign(snapshot, Snapshot.type)
-        _persist(snapshot, Snapshot.type)
+        _add_payload(snapshot, Snapshot.type)
 
         return snapshot.signed.version
 
@@ -183,7 +187,7 @@ def initialize_metadata(
         metadata = Metadata(role)
         _bump_expiry(metadata, role.type)
         _sign(metadata, role.type)
-        _persist(metadata, role.type)
+        _add_payload(metadata, role.type)
 
     # Track names and versions of new and updated targets for 'snapshot'
     # update
@@ -199,7 +203,7 @@ def initialize_metadata(
         keyids=[],
         threshold=settings[BIN].threshold,
         terminating=False,
-        paths=["*/*", "*/*/*/*"],
+        paths=settings[Targets.type].paths,
     )
 
     for signer in _signers(BIN):
@@ -211,7 +215,7 @@ def initialize_metadata(
     _bump_version(targets)
     _bump_expiry(targets, Targets.type)
     _sign(targets, Targets.type)
-    _persist(targets, Targets.type)
+    _add_payload(targets, Targets.type)
 
     targets_meta.append((Targets.type, targets.signed.version))
 
@@ -233,13 +237,13 @@ def initialize_metadata(
         bins_hash_role = Metadata(Targets())
         _bump_expiry(bins_hash_role, BINS)
         _sign(bins_hash_role, BINS)
-        _persist(bins_hash_role, delegated_name)
+        _add_payload(bins_hash_role, delegated_name)
         targets_meta.append((delegated_name, bins_hash_role.signed.version))
 
     # Bump expiration, and sign and persist new 'bins' role.
     _bump_expiry(bin, BIN)
     _sign(bin, BIN)
-    _persist(bin, BIN)
+    _add_payload(bin, BIN)
 
     targets_meta.append((BIN, bin.signed.version))
 

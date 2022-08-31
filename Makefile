@@ -1,3 +1,5 @@
+.PHONY: all docs
+
 reformat:
 	black -l 79 .
 	isort -l79 --profile black .
@@ -12,3 +14,6 @@ requirements:
 coverage:
 	coverage report
 	coverage html -i
+
+docs:
+	tox -e docs
