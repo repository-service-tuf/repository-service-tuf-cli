@@ -3,7 +3,8 @@ from enum import Enum
 from typing import Any, Dict, Optional
 
 import requests
-from click.exceptions import ClickException
+
+from kaprien.cli import click
 
 
 class URL(Enum):
@@ -45,10 +46,10 @@ def request_server(
             raise ValueError("Internal Error. Invalid HTTP/S Method.")
 
     except requests.exceptions.ConnectionError:
-        raise ClickException(f"Failed to connect to {server}")
+        raise click.ClickException(f"Failed to connect to {server}")
 
     if response.status_code == 404:
-        raise ClickException(
+        raise click.ClickException(
             f"Error: {response.status_code} {server}{url} url "
             f"{response.json()['detail']}"
         )
@@ -69,6 +70,6 @@ def is_logged(server: str, token: str):
             return Login(state=True, data=data)
 
     else:
-        ClickException(
+        click.ClickException(
             f"Error {response.status_code} {response.json()['detail']}"
         )

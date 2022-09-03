@@ -2,12 +2,11 @@
 # Ceremony
 #
 import json
+import os
 from dataclasses import asdict, dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
 
-import rich_click as click  # type: ignore
-from click import ClickException
 from rich import box, markdown, prompt, table  # type: ignore
 from rich.console import Console  # type: ignore
 from securesystemslib.exceptions import (  # type: ignore
@@ -20,6 +19,7 @@ from securesystemslib.interface import (  # type: ignore
     import_ed25519_privatekey_from_file,
 )
 
+from kaprien.cli import click
 from kaprien.cli.admin import admin
 from kaprien.helpers.api_client import URL, Methods, is_logged, request_server
 from kaprien.helpers.tuf import RolesKeysInput, initialize_metadata
@@ -153,17 +153,13 @@ Key Owner: DevOps Team
 """
 
 STEP_1 = """
-# STEP 1: Configure the number of keys and the threshold
+# STEP 1: Configure the Roles
 
 The TUF roles supports multiple keys and the threshold (quorun trust)
 defines the minimal number of the keys required to take actions using
 specific Role.
 
 Reference: [TUF](https://theupdateframework.github.io/specification/latest/#goals-for-pki)
-
-
-Skipping this Step will set all roles with number of keys as *one*
-and threshold as *one*.
 
 """  # noqa
 
@@ -420,14 +416,16 @@ def _check_server(settings):
     if server and token:
         token_access_check = is_logged(server, token)
         if token_access_check.state is False:
-            raise ClickException(
-                f"{str(token_access_check.json('detail'))}"
+            raise click.ClickException(
+                f"{str(token_access_check.data)}"
                 "\n\nTry re-login: 'kaprien admin login'"
             )
 
-        expired_admin = token_access_check.json().get("data").get("expired")
+        expired_admin = token_access_check.data.get("expired")
         if expired_admin is True:
-            raise ClickException("Token expired. Run 'kaprien admin login'")
+            raise click.ClickException(
+                "Token expired. Run 'kaprien admin login'"
+            )
         else:
             headers = {"Authorization": f"Bearer {token}"}
             response = request_server(
@@ -436,11 +434,34 @@ def _check_server(settings):
             if response.status_code != 200 and (
                 response.json().get("bootstrap") is True or None
             ):
-                raise ClickException(f"{response.json().get('message')}")
+                raise click.ClickException(f"{response.json().get('message')}")
     else:
-        raise ClickException("Login first. Run 'kaprien admin login'")
+        raise click.ClickException("Login first. Run 'kaprien admin login'")
 
     return headers
+
+
+def _bootstrap(server, headers, json_payload):
+    response = request_server(
+        server,
+        URL.bootstrap.value,
+        Methods.post,
+        json_payload,
+        headers=headers,
+    )
+    response_data = response.json()
+
+    if response.status_code != 202:
+        raise click.ClickException(
+            f"Error {response.status_code} {response_data.get('detail')}"
+        )
+    elif (
+        response_data.get("message") is None
+        or response_data.get("message") != "Bootstrap accepted."
+    ):
+        raise click.ClickException(response.text)
+    else:
+        console.print("Ceremony and Bootstrap done.")
 
 
 @admin.command()
@@ -467,177 +488,202 @@ def _check_server(settings):
     show_default=True,
     required=False,
 )
+@click.option(
+    "-u",
+    "--upload",
+    help=(
+        "Upload existent payload 'file'. Requires '-b/--bootstrap'. "
+        "Optional '-f/--file' to use non default file."
+    ),
+    required=False,
+    is_flag=True,
+)
+@click.option(
+    "-s",
+    "--save",
+    help=(
+        "Save a copy of the metadata localy. This option saves the metadata "
+        "files (json) in the 'metadata' dir."
+    ),
+    show_default=True,
+    is_flag=True,
+)
 @click.pass_context
-def ceremony(context, bootstrap, file):
+def ceremony(context, bootstrap, file, upload, save):
     """
     Start a new Metadata Ceremony.
     """
+
+    if save:
+        try:
+            os.makedirs("metadata", exist_ok=True)
+        except OSError as err:
+            raise click.ClickException(str(err))
+
+    if upload is True and bootstrap is False:
+        raise click.ClickException("Requires '-b/--bootstrap' option.")
+
     settings = context.obj["settings"]
     if bootstrap:
         headers = _check_server(settings)
         bs_response = request_server(
-            settings.SERVER, URL.bootstrap, Methods.get, headers=headers
+            settings.SERVER, URL.bootstrap.value, Methods.get, headers=headers
         )
         bs_data = bs_response.json()
         if bs_response.status_code != 200:
-            raise ClickException(
+            raise click.ClickException(
                 f"Error {bs_response.status_code} {bs_data.get('detail')}"
             )
 
         if bs_data.get("bootstrap") is True or None:
-            raise ClickException(f"{bs_data.get('message')}")
+            raise click.ClickException(f"{bs_data.get('message')}")
 
-    console.print(markdown.Markdown(CEREMONY_INTRO), width=100)
+    if upload is False:
+        console.print(markdown.Markdown(CEREMONY_INTRO), width=100)
 
-    ceramony_detailed = prompt.Confirm.ask(
-        "\nDo you want more information about Roles and Responsabilities?"
-    )
-    if ceramony_detailed is True:
-        with console.pager():
-            console.print(
-                markdown.Markdown(CEREMONY_INTRO_ROLES_RESPONSABILITIES),
-                width=100,
-            )
-
-    start_ceremony = prompt.Confirm.ask("\nDo you want start the ceremony?")
-
-    if start_ceremony is False:
-        raise click.ClickException("Ceremony aborted.")
-
-    console.print(markdown.Markdown(STEP_1), width=80)
-    for rolename, role in SETTINGS.roles.items():
-        _configure_role(rolename, role)
-
-    console.print(markdown.Markdown(STEP_2), width=100)
-    start_ceremony = prompt.Confirm.ask(
-        "\nReady to start loading the keys? Passwords will be "
-        "required for keys"
-    )
-    if start_ceremony is False:
-        raise click.ClickException("Ceremony aborted.")
-
-    for rolename, role in SETTINGS.roles.items():
-        _configure_keys(rolename, role)
-
-    console.print(markdown.Markdown(STEP_3), width=100)
-
-    for rolename, role in SETTINGS.roles.items():
-        while True:
-            role_table = table.Table()
-            role_table.add_column(
-                "ROLE SUMMARY",
-                style="yellow",
-                justify="center",
-                vertical="middle",
-            )
-            role_table.add_column("KEYS", justify="center", vertical="middle")
-            keys_table = table.Table(box=box.MINIMAL)
-            keys_table.add_column(
-                "path", justify="right", style="cyan", no_wrap=True
-            )
-            keys_table.add_column("id", justify="center")
-            keys_table.add_column("verified", justify="center")
-            for key in role.keys.values():
-                keys_table.add_row(
-                    key.get("filename"),
-                    key.get("key").get("keyid"),
-                    ":white_heavy_check_mark:",
-                )
-
-            if role.offline_keys is True:
-                key_type = "[red]offline[/red]"
-            else:
-                key_type = "[green]online[/]"
-
-            role_table.add_row(
-                (
-                    f"Role: [cyan]{rolename}[/]"
-                    f"\nNumber of Keys: {len(role.keys)}"
-                    f"\nThreshold: {role.threshold}"
-                    f"\nKeys Type: {key_type}"
-                    f"\nRole Expiration: {role.expiration} days"
-                ),
-                keys_table,
-            )
-
-            if rolename == Roles.TARGETS.value:
-                delegations_row = (
-                    f"\n{SETTINGS.service.targets_base_url}".join(
-                        ["", *role.paths]
-                    )
-                )
-                role_table.add_row(
-                    (
-                        "\n"
-                        "\n[orange1]DELEGATIONS[/]"
-                        f"\n[aquamarine3]{rolename} -> bin[/]"
-                        f"{delegations_row}"
-                    ),
-                    "",
-                )
-
-            if rolename == Roles.BINS.value:
-                role_table.add_row(
-                    (
-                        "\n"
-                        "\n[orange1]DELEGATIONS[/]"
-                        f"\n[aquamarine3]{rolename} -> bins[/]"
-                        f"\nNumber bins: {role.number_hash_prefixes}"
-                    ),
-                    "",
-                )
-
-            console.print(role_table)
-            confirm_config = prompt.Confirm.ask(
-                f"Configuration correct for {rolename}?"
-            )
-            if not confirm_config:
-                # reconfigure role and keys
-                _configure_role(rolename, role)
-                _configure_keys(rolename, role)
-            else:
-                break
-
-    metadata = initialize_metadata(SETTINGS.roles)
-
-    json_payload: Dict[str, Any] = dict()
-
-    json_payload["settings"] = {"service": SETTINGS.service.to_dict()}
-    for role, data in SETTINGS.roles.items():
-        if data.offline_keys is True:
-            data.keys.clear()
-
-        if "roles" not in json_payload["settings"]:
-            json_payload["settings"]["roles"] = {role: data.to_dict()}
-        else:
-            json_payload["settings"]["roles"][role] = data.to_dict()
-
-    json_payload["metadata"] = {
-        key: data.to_dict() for key, data in metadata.items()
-    }
-
-    if file:
-        with open(file, "w") as f:
-            f.write(json.dumps(json_payload, indent=2))
-
-    if bootstrap:
-        response = request_server(
-            settings.SERVER,
-            "api/v1/bootstrap",
-            Methods.post,
-            json_payload,
-            headers=headers,
+        ceramony_detailed = prompt.Confirm.ask(
+            "\nDo you want more information about Roles and Responsabilities?"
         )
-        response_data = response.json()
+        if ceramony_detailed is True:
+            with console.pager():
+                console.print(
+                    markdown.Markdown(CEREMONY_INTRO_ROLES_RESPONSABILITIES),
+                    width=100,
+                )
 
-        if response.status_code != 202:
-            raise ClickException(
-                f"Error {response.status_code} {response_data.get('detail')}"
-            )
-        elif (
-            response_data.get("message") is None
-            or response_data.get("message") != "Bootstrap accepted."
-        ):
-            raise ClickException(response.text)
-        else:
-            console.print("Ceremony and Bootstrap done.")
+        start_ceremony = prompt.Confirm.ask(
+            "\nDo you want start the ceremony?"
+        )
+
+        if start_ceremony is False:
+            raise click.ClickException("Ceremony aborted.")
+
+        console.print(markdown.Markdown(STEP_1), width=80)
+        for rolename, role in SETTINGS.roles.items():
+            _configure_role(rolename, role)
+
+        console.print(markdown.Markdown(STEP_2), width=100)
+        start_ceremony = prompt.Confirm.ask(
+            "\nReady to start loading the keys? Passwords will be "
+            "required for keys"
+        )
+        if start_ceremony is False:
+            raise click.ClickException("Ceremony aborted.")
+
+        for rolename, role in SETTINGS.roles.items():
+            _configure_keys(rolename, role)
+
+        console.print(markdown.Markdown(STEP_3), width=100)
+
+        for rolename, role in SETTINGS.roles.items():
+            while True:
+                role_table = table.Table()
+                role_table.add_column(
+                    "ROLE SUMMARY",
+                    style="yellow",
+                    justify="center",
+                    vertical="middle",
+                )
+                role_table.add_column(
+                    "KEYS", justify="center", vertical="middle"
+                )
+                keys_table = table.Table(box=box.MINIMAL)
+                keys_table.add_column(
+                    "path", justify="right", style="cyan", no_wrap=True
+                )
+                keys_table.add_column("id", justify="center")
+                keys_table.add_column("verified", justify="center")
+                for key in role.keys.values():
+                    keys_table.add_row(
+                        key.get("filename"),
+                        key.get("key").get("keyid"),
+                        ":white_heavy_check_mark:",
+                    )
+
+                if role.offline_keys is True:
+                    key_type = "[red]offline[/red]"
+                else:
+                    key_type = "[green]online[/]"
+
+                role_table.add_row(
+                    (
+                        f"Role: [cyan]{rolename}[/]"
+                        f"\nNumber of Keys: {len(role.keys)}"
+                        f"\nThreshold: {role.threshold}"
+                        f"\nKeys Type: {key_type}"
+                        f"\nRole Expiration: {role.expiration} days"
+                    ),
+                    keys_table,
+                )
+
+                if rolename == Roles.TARGETS.value:
+                    delegations_row = (
+                        f"\n{SETTINGS.service.targets_base_url}".join(
+                            ["", *role.paths]
+                        )
+                    )
+                    role_table.add_row(
+                        (
+                            "\n"
+                            "\n[orange1]DELEGATIONS[/]"
+                            f"\n[aquamarine3]{rolename} -> bin[/]"
+                            f"{delegations_row}"
+                        ),
+                        "",
+                    )
+
+                if rolename == Roles.BINS.value:
+                    role_table.add_row(
+                        (
+                            "\n"
+                            "\n[orange1]DELEGATIONS[/]"
+                            f"\n[aquamarine3]{rolename} -> bins[/]"
+                            f"\nNumber bins: {role.number_hash_prefixes}"
+                        ),
+                        "",
+                    )
+
+                console.print(role_table)
+                confirm_config = prompt.Confirm.ask(
+                    f"Configuration correct for {rolename}?"
+                )
+                if not confirm_config:
+                    # reconfigure role and keys
+                    _configure_role(rolename, role)
+                    _configure_keys(rolename, role)
+                else:
+                    break
+
+        metadata = initialize_metadata(SETTINGS.roles, save=save)
+
+        json_payload: Dict[str, Any] = dict()
+
+        json_payload["settings"] = {"service": SETTINGS.service.to_dict()}
+        for role, data in SETTINGS.roles.items():
+            if data.offline_keys is True:
+                data.keys.clear()
+
+            if "roles" not in json_payload["settings"]:
+                json_payload["settings"]["roles"] = {role: data.to_dict()}
+            else:
+                json_payload["settings"]["roles"][role] = data.to_dict()
+
+        json_payload["metadata"] = {
+            key: data.to_dict() for key, data in metadata.items()
+        }
+
+        if file:
+            with open(file, "w") as f:
+                f.write(json.dumps(json_payload, indent=2))
+
+        if bootstrap is True:
+            _bootstrap(settings.SERVER, headers, json_payload)
+
+    elif bootstrap is True and upload is True:
+        try:
+            with open(file) as payload_file:
+                json_payload = json.load(payload_file)
+        except OSError:
+            click.ClickException(f"Invalid file {file}")
+
+        _bootstrap(settings.SERVER, headers, json_payload)

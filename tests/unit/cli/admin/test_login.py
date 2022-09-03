@@ -177,8 +177,8 @@ class TestLoginGroupCLI:
 
         assert test_result.exit_code == 0
         assert (
-            "Already logged. Valid until '2022-08-23T09:10:14'"
-            in test_result.output
+            "Already logged to http://test-kaprien."
+            " Valid until '2022-08-23T09:10:14'" in test_result.output
         )
         assert login.is_logged.calls == [
             pretend.call(test_context["settings"].SERVER, "fake-token")

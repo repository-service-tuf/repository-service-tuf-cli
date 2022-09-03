@@ -1,4 +1,4 @@
-from kaprien import kaprien
+from kaprien.cli import kaprien
 
 
 @kaprien.group()

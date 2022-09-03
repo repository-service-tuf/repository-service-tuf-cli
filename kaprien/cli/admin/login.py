@@ -1,10 +1,10 @@
 from typing import Dict
 
-import click
 from dynaconf import loaders
 from rich import markdown, prompt  # type: ignore
 from rich.console import Console  # type: ignore
 
+from kaprien.cli import click
 from kaprien.cli.admin import admin
 from kaprien.helpers.api_client import URL, Methods, is_logged, request_server
 
@@ -34,7 +34,12 @@ def _run_login(context):
         width=100,
     )
     while True:
-        server = prompt.Prompt.ask("\nServer Address")
+        server = prompt.Prompt.ask(
+            "\nServer Address",
+            default=settings.get("SERVER"),
+            show_default=True,
+        )
+
         if server.startswith("http") is False:
             console.print(
                 f"Please use 'http://{server}' or 'https://{server}'"
@@ -59,6 +64,7 @@ def _run_login(context):
             "read:bootstrap "
             "read:settings "
             "read:token "
+            "write:token "
         ),
         "expires": expires,
     }
@@ -94,7 +100,8 @@ def login(context, force):
             data = response.data
             if response.data.get("expired") is False:
                 console.print(
-                    f"Already logged. Valid until '{data['expiration']}'"
+                    f"Already logged to {server}. "
+                    f"Valid until '{data['expiration']}'"
                 )
 
     else:
