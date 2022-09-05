@@ -1,11 +1,21 @@
-###########
+===========
 Kaprien CLI
-###########
+===========
 
 ``kaprien`` is a Command Line Interface for Kaprien Server.
 
+Installation
+============
+
+Using pip:
+
+.. code:: shell
+
+    $ pip install kaprien
+
+
 Administration (``admin``)
-##########################
+==========================
 
 It executes administrative commands to the Kaprien Server.
 
@@ -28,7 +38,7 @@ It executes administrative commands to the Kaprien Server.
 
 
 Login to Server (``login``)
-===========================
+--------------------------
 
 This command will log in to Kaprien Server and give you a token to run other commands such as Ceremony, Token Generation, etc.
 
@@ -52,8 +62,9 @@ This command will log in to Kaprien Server and give you a token to run other com
 
     Login successfuly.
 
+
 Ceremony (``ceremony``)
-=======================
+-----------------------
 
 The Kaprien Metadata uses the following Roles: ``Root``, ``Timestamp``,
 ``Snapshot``, ``Targets``, ``bin``, and ``bins`` to build the Repository
@@ -337,7 +348,7 @@ Using another computer with access to ``kaprien-rest-api``.
 3.  Run ``kaprien admin ceremony -b [-u filename]``
 
 Token (``token``)
-=================
+-----------------
 
 Token Management
 
