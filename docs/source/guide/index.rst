@@ -38,7 +38,7 @@ It executes administrative commands to the Kaprien Server.
 
 
 Login to Server (``login``)
---------------------------
+---------------------------
 
 This command will log in to Kaprien Server and give you a token to run other commands such as Ceremony, Token Generation, etc.
 
