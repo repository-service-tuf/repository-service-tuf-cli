@@ -90,10 +90,7 @@ def inspect(context, token):
         headers=headers,
     )
 
-    if (
-        response.status_code != 200
-        or response.json().get("data") is None
-    ):
+    if response.status_code != 200 or response.json().get("data") is None:
         raise click.ClickException(
             f"Error: {response.status_code} {response.text}"
         )
