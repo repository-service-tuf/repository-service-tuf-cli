@@ -1,4 +1,4 @@
-.PHONY: all docs
+.PHONY: all docs tests coverage reformat requirements
 
 reformat:
 	black -l 79 .
