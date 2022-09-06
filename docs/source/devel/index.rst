@@ -1,13 +1,13 @@
-############################
-kaprien-rest-api Development
-############################
+=======================
+kaprien-cli Development
+=======================
 
 
 .. include:: design.rst
 
 
-kaprien-rest-api component level
---------------------------------
+kaprien-cli component level
+---------------------------
 
 .. uml:: ../../diagrams/kaprien-cli-C3.puml
 .. toctree::
