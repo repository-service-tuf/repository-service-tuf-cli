@@ -20,10 +20,10 @@ jobs:
     - name: Install tox and coverage
       run: pip install tox tox-gh-actions
 
-    - name: Install Plantuml for docs
-      run: |
-        sudo apt update
-        sudo apt install -y plantuml
+    # - name: Install Plantuml for docs
+    #   run: |
+    #     sudo apt update
+    #     sudo apt install -y plantuml
 
     - name: Run Python tests
       run: make tests
