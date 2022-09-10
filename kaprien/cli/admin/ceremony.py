@@ -434,7 +434,7 @@ def _check_server(settings):
             if response.status_code != 200 and (
                 response.json().get("bootstrap") is True or None
             ):
-                raise click.ClickException(f"{response.json().get('message')}")
+                raise click.ClickException(f"{response.json().get('detail')}")
     else:
         raise click.ClickException("Login first. Run 'kaprien admin login'")
 
@@ -530,6 +530,10 @@ def ceremony(context, bootstrap, file, upload, save):
             settings.SERVER, URL.bootstrap.value, Methods.get, headers=headers
         )
         bs_data = bs_response.json()
+        if bs_response.status_code == 404:
+            raise click.ClickException(
+                f"Server {settings.SERVER} doesn't allow bootstrap"
+            )
         if bs_response.status_code != 200:
             raise click.ClickException(
                 f"Error {bs_response.status_code} {bs_data.get('detail')}"

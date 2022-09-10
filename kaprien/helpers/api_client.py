@@ -48,12 +48,6 @@ def request_server(
     except requests.exceptions.ConnectionError:
         raise click.ClickException(f"Failed to connect to {server}")
 
-    if response.status_code == 404:
-        raise click.ClickException(
-            f"Error: {response.status_code} {server}{url} url "
-            f"{response.json()['detail']}"
-        )
-
     return response
 
 
