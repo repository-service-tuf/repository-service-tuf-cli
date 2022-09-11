@@ -336,7 +336,7 @@ class TestCeremonyGroupCLI:
         )
 
         assert test_result.exit_code == 0
-        assert "Ceremony and Bootstrap done" in test_result.output
+        assert "Ceremony done." in test_result.output
         # passwords not shown in output
         assert "strongPass" not in test_result.output
 

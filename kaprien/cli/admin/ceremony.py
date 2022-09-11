@@ -3,6 +3,7 @@
 #
 import json
 import os
+import time
 from dataclasses import asdict, dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
@@ -461,7 +462,42 @@ def _bootstrap(server, headers, json_payload):
     ):
         raise click.ClickException(response.text)
     else:
-        console.print("Ceremony and Bootstrap done.")
+        task_id = response_data.get("task_id", None)
+        console.print(f"Boostrap status: ACCEPTED ({task_id})")
+
+    return task_id
+
+
+def _bootstrap_status(task_id, server, headers):
+    received_status = []
+    while True:
+        status_response = request_server(
+            server, f"{URL.task.value}{task_id}", Methods.get, headers=headers
+        )
+        if status_response.status_code != 200:
+            raise click.ClickException(
+                f"Unexpected response {status_response.text}"
+            )
+
+        status = status_response.json().get("data").get("status")
+        if status not in received_status:
+            console.print(f"Boostrap status: {status}")
+            received_status.append(status)
+
+        if status == "SUCCESS":
+            result = status_response.json().get("data").get("result")
+            if result is not True:
+                raise click.ClickException(
+                    f"Something went wrong, result: {result}"
+                )
+
+            console.print("[green]Bootstrap finished.[/]")
+            break
+
+        elif status == "FAILURE":
+            raise click.ClickException(f"Failed: {status_response.text}")
+
+        time.sleep(2)
 
 
 @admin.command()
@@ -688,6 +724,14 @@ def ceremony(context, bootstrap, file, upload, save):
             with open(file) as payload_file:
                 json_payload = json.load(payload_file)
         except OSError:
-            click.ClickException(f"Invalid file {file}")
+            raise click.ClickException(f"Invalid file {file}")
 
-        _bootstrap(settings.SERVER, headers, json_payload)
+        console.print("Starting online bootstrap")
+        task_id = _bootstrap(settings.SERVER, headers, json_payload)
+
+        if task_id is None:
+            raise click.ClickException("task id wasn't received")
+
+        _bootstrap_status(task_id, settings.SERVER, headers)
+
+    console.print("\nCeremony done. 🔐 🎉")

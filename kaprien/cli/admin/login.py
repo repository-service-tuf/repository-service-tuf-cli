@@ -64,6 +64,7 @@ def _run_login(context):
             "read:bootstrap "
             "read:settings "
             "read:token "
+            "read:tasks "
             "write:token "
         ),
         "expires": expires,
