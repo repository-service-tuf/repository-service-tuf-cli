@@ -10,6 +10,7 @@ from kaprien.cli import click
 class URL(Enum):
     token = "api/v1/token/"
     bootstrap = "api/v1/bootstrap/"
+    task = "api/v1/task/?task_id="
 
 
 class Methods(Enum):
