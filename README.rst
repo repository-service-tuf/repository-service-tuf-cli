@@ -2,7 +2,14 @@
 Kaprien Command Line Interface
 ##############################
 
-This is a Command Line Interface for Kaprien
+|Test Docker Image build| |Tests and Lint| |Coverage|
+
+.. |Tests and Lint| image:: https://github.com/kaprien/kaprien-cli/actions/workflows/ci.yml/badge.svg
+  :target: https://github.com/kaprien/kaprien-cli/actions/workflows/ci.yml
+.. |Coverage| image:: https://codecov.io/gh/kaprien/kaprien-cli/branch/main/graph/badge.svg
+  :target: https://codecov.io/gh/kaprien/kaprien-cli
+
+Kaprien Command Line Interface (CLI). Kaprien CLI is part of Kaprien.
 
 .. note::
 

@@ -20,10 +20,13 @@ jobs:
     - name: Install tox and coverage
       run: pip install tox tox-gh-actions
 
-    # - name: Install Plantuml for docs
-    #   run: |
-    #     sudo apt update
-    #     sudo apt install -y plantuml
-
     - name: Run Python tests
       run: make tests
+
+    - name: Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV}}
+        files: coverage.xml
+        fail_ci_if_error: false
+        verbose: true
