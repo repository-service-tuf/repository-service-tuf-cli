@@ -2,7 +2,7 @@
 Kaprien Command Line Interface
 ##############################
 
-|Test Docker Image build| |Tests and Lint| |Coverage|
+|Tests and Lint| |Coverage|
 
 .. |Tests and Lint| image:: https://github.com/kaprien/kaprien-cli/actions/workflows/ci.yml/badge.svg
   :target: https://github.com/kaprien/kaprien-cli/actions/workflows/ci.yml
