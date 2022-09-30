@@ -1,7 +1,7 @@
 import pretend
 import pytest
 
-from kaprien.helpers.api_client import Methods, request_server
+from tuf_repository_service.helpers.api_client import Methods, request_server
 
 
 class TestAPICLient:
@@ -15,7 +15,7 @@ class TestAPICLient:
             get=pretend.call_recorder(lambda *a, **kw: fake_response)
         )
         monkeypatch.setattr(
-            "kaprien.helpers.api_client.requests", fake_requests
+            "tuf_repository_service.helpers.api_client.requests", fake_requests
         )
 
         request_server("http://server", "url", Methods.get)
@@ -35,7 +35,7 @@ class TestAPICLient:
             post=pretend.call_recorder(lambda *a, **kw: fake_response)
         )
         monkeypatch.setattr(
-            "kaprien.helpers.api_client.requests", fake_requests
+            "tuf_repository_service.helpers.api_client.requests", fake_requests
         )
 
         request_server("http://server", "url", Methods.post, {"k": "v"})

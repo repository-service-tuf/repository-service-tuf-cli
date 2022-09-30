@@ -4,9 +4,14 @@ from dynaconf import loaders
 from rich import markdown, prompt  # type: ignore
 from rich.console import Console  # type: ignore
 
-from kaprien.cli import click
-from kaprien.cli.admin import admin
-from kaprien.helpers.api_client import URL, Methods, is_logged, request_server
+from tuf_repository_service.cli import click
+from tuf_repository_service.cli.admin import admin
+from tuf_repository_service.helpers.api_client import (
+    URL,
+    Methods,
+    is_logged,
+    request_server,
+)
 
 console = Console()
 
@@ -26,7 +31,7 @@ def _run_login(context):
     settings = context.obj.get("settings")
     console.print(
         markdown.Markdown(
-            f"""# Login to Kaprien Server\n
+            f"""# Login to TUF Repository Service\n
             The server and token will generate a token and it will be
             stored in {context.obj.get('config')}
             """
@@ -86,7 +91,7 @@ def _run_login(context):
 @click.pass_context
 def login(context, force):
     """
-    Login to Kaprien Server (API).
+    Login to TUF Repository Service (API).
     """
     settings = context.obj.get("settings")
     server = settings.get("SERVER")

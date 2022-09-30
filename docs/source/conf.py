@@ -15,11 +15,11 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../../"))
 
-from kaprien.__version__ import author, copyright, version
+from tuf_repository_service.__version__ import author, copyright, version
 
 # -- Project information -----------------------------------------------------
 
-project = "kaprien-cli"
+project = "TUF Repository Service CLI"
 copyright = copyright
 author = author
 

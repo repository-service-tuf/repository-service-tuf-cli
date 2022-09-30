@@ -1,7 +1,7 @@
 import pretend
 import pytest
 
-from kaprien.cli.admin import login
+from tuf_repository_service.cli.admin import login
 
 
 class TestLoginGroupCLI:
@@ -52,7 +52,7 @@ class TestLoginGroupCLI:
 
     def test_login(self, client, test_context):
         steps = [
-            "http://test-kaprien",
+            "http://test-trs",
             "admin",
             "pass",
             "1",
@@ -83,7 +83,7 @@ class TestLoginGroupCLI:
         test_context["settings"].TOKEN = "test-token"
 
         steps = [
-            "http://test-kaprien",
+            "http://test-trs",
             "admin",
             "pass",
             "1",
@@ -110,11 +110,11 @@ class TestLoginGroupCLI:
     def test_login_expired_token(self, client, test_context):
 
         # simulate the settings file with invalid/expired token
-        test_context["settings"].SERVER = "http://test-kaprien"
+        test_context["settings"].SERVER = "http://test-trs"
         test_context["settings"].TOKEN = "fake-token"
 
         steps = [
-            "http://test-kaprien",
+            "http://test-trs",
             "admin",
             "pass",
             "1",
@@ -148,11 +148,11 @@ class TestLoginGroupCLI:
     def test_login_already_logged(self, client, test_context):
 
         # simulate the settings file with invalid/expired token
-        test_context["settings"].SERVER = "http://test-kaprien"
+        test_context["settings"].SERVER = "http://test-trs"
         test_context["settings"].TOKEN = "fake-token"
 
         steps = [
-            "http://test-kaprien",
+            "http://test-trs",
             "admin",
             "pass",
             "1",
@@ -177,7 +177,7 @@ class TestLoginGroupCLI:
 
         assert test_result.exit_code == 0
         assert (
-            "Already logged to http://test-kaprien."
+            "Already logged to http://test-trs."
             " Valid until '2022-08-23T09:10:14'" in test_result.output
         )
         assert login.is_logged.calls == [
@@ -188,8 +188,8 @@ class TestLoginGroupCLI:
         self, monkeypatch, client, test_context
     ):
         steps = [
-            "test-kaprien",
-            "http://test-kaprien",
+            "test-trs",
+            "http://test-trs",
             "admin",
             "pass",
             "1",

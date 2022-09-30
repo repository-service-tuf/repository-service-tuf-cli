@@ -5,7 +5,7 @@ from pathlib import Path
 
 import rich_click as click  # type: ignore
 
-from kaprien import Dynaconf
+from tuf_repository_service import Dynaconf
 
 HOME = str(Path.home())
 
@@ -15,14 +15,14 @@ HOME = str(Path.home())
     "-c",
     "--config",
     "config",
-    default=os.path.join(HOME, ".kaprien.ini"),
-    help="Kaprien config file",
+    default=os.path.join(HOME, ".trs.ini"),
+    help="TUF Repository Service config file",
     required=False,
 )
 @click.pass_context
-def kaprien(context, config):
+def trs(context, config):
     """
-    KAPRIEN Command Line Interface (CLI) helps you to manage your KAPRIEN.
+    TUF Repository Service Command Line Interface (CLI).
     """
     context.obj = {
         "settings": Dynaconf(settings_files=[config]),

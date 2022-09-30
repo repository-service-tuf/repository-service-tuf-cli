@@ -163,7 +163,7 @@
             "markers": "python_version >= '3.5'",
             "version": "==3.3"
         },
-        "kaprien": {
+        "tuf-repository-service": {
             "editable": true,
             "path": "."
         },

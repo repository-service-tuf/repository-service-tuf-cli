@@ -1,8 +1,8 @@
-===========
-Kaprien CLI
-===========
+==========================
+TUF Repository Service CLI
+==========================
 
-``kaprien`` is a Command Line Interface for Kaprien Server.
+``tuf-repository-service`` is a Command Line Interface for TUF Repository Service.
 
 Installation
 ============
@@ -11,19 +11,19 @@ Using pip:
 
 .. code:: shell
 
-    $ pip install kaprien
+    $ pip install tuf_repository_service
 
 
 Administration (``admin``)
 ==========================
 
-It executes administrative commands to the Kaprien Server.
+It executes administrative commands to the TUF Repository Service.
 
 .. code:: shell
 
-    ❯ kaprien admin
+    ❯ trs-cli admin
 
-    Usage: kaprien admin [OPTIONS] COMMAND [ARGS]...
+    Usage: trs-cli admin [OPTIONS] COMMAND [ARGS]...
 
     Administrative Commands
 
@@ -32,7 +32,7 @@ It executes administrative commands to the Kaprien Server.
     ╰──────────────────────────────────────────────────────────────────────────────────────╯
     ╭─ Commands ───────────────────────────────────────────────────────────────────────────╮
     │  ceremony  Start a new Metadata Ceremony.                                            │
-    │  login     Login to Kaprien Server (API).                                            │
+    │  login     Login to TUF Repository Service (API).                                            │
     │  token     Token Management.                                                         │
     ╰──────────────────────────────────────────────────────────────────────────────────────╯
 
@@ -40,25 +40,25 @@ It executes administrative commands to the Kaprien Server.
 Login to Server (``login``)
 ---------------------------
 
-This command will log in to Kaprien Server and give you a token to run other commands such as Ceremony, Token Generation, etc.
+This command will log in to TUF Repository Service and give you a token to run other commands such as Ceremony, Token Generation, etc.
 
 .. code:: shell
 
-    ❯ kaprien admin login
+    ❯ trs-cli admin login
     ╔══════════════════════════════════════════════════════════════════════════════════════╗
-    ║                                     Login to Kaprien Serve                           ║
+    ║                                     Login to TUF Repository Service Serve            ║
     ╚══════════════════════════════════════════════════════════════════════════════════════╝
 
     ┌──────────────────────────────────────────────────────────────────────────────────────┐
     │         The server and token will generate a token and it will be                    │
-    │         stored in /Users/kairoaraujo/.kaprien.ini                                    │
+    │         stored in /Users/kairoaraujo/.tuf_repository_service.ini                                    │
     └──────────────────────────────────────────────────────────────────────────────────────┘
 
     Server Address: http://192.168.1.199
     Username (admin): admin
     Password:
     Expire (in hours): 2
-    Token stored in /Users/kairoaraujo/.kaprien.ini
+    Token stored in /Users/kairoaraujo/.tuf_repository_service.ini
 
     Login successfuly.
 
@@ -66,26 +66,26 @@ This command will log in to Kaprien Server and give you a token to run other com
 Ceremony (``ceremony``)
 -----------------------
 
-The Kaprien Metadata uses the following Roles: ``Root``, ``Timestamp``,
+The TUF Repository Service Metadata uses the following Roles: ``Root``, ``Timestamp``,
 ``Snapshot``, ``Targets``, ``bin``, and ``bins`` to build the Repository
 Metadata. (For more details, check out TUF Specification and PEP 458)
 
-The Ceremony is a complex process that Kaprien CLI tries to simplify.
+The Ceremony is a complex process that TUF Repository Service CLI tries to simplify.
 You can do the Ceremony offline. It means on a disconnected computer
 (recommended once you will manage the keys).
 
 
 .. code:: shell
 
-    ❯ kaprien admin ceremony --help
+    ❯ trs-cli admin ceremony --help
                                                                                                                             
-    Usage: kaprien admin ceremony [OPTIONS]                                                                                  
+    Usage: trs-cli admin ceremony [OPTIONS]                                                                                  
                                                                                                                             
     Start a new Metadata Ceremony.                                                                                           
                                                                                                                             
     ╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │  --bootstrap  -b        Bootstrap a Kaprien Server using the Repository Metadata after Ceremony                        │
-    │  --file       -f  TEXT  Generate specific JSON Payload compatible with Kaprien Server bootstrap after Ceremony         │
+    │  --bootstrap  -b        Bootstrap a TUF Repository Service using the Repository Metadata after Ceremony                │
+    │  --file       -f  TEXT  Generate specific JSON Payload compatible with TUF Repository Service bootstrap after Ceremony │
     │                         [default: payload.json]                                                                        │
     │  --upload     -u        Upload existent payload 'file'. Requires '-b/--bootstrap'. Optional '-f/--file' to use non     │
     │                         default file.                                                                                  │
@@ -99,7 +99,7 @@ There are three steps in the Ceremony
 
 .. note::
 
-    We recommend running the ``kaprien admin ceremony`` to simulate and check
+    We recommend running the ``trs-cli admin ceremony`` to simulate and check
     the details of the instructions. It is more detailed.
 
 
@@ -108,7 +108,7 @@ Step 1: Configure the Roles
 
 .. code:: shell
 
-    ❯ kaprien admin ceremony
+    ❯ trs-cli admin ceremony
 
     (...)
     Do you want start the ceremony? [y/n]: y
@@ -339,13 +339,13 @@ Finishing
 .........
 
 If you choose ``-b/--bootstrap`` it will automatically send the bootstrap to
-``kaprien-rest-api``, no actions necessary
+``tuf-repository-service-api``, no actions necessary
 
 If you did the ceremony in a disconnected computer.
-Using another computer with access to ``kaprien-rest-api``.
+Using another computer with access to ``tuf-repository-service-api``.
 1.  Get the generated ``payload.json`` (or the custom name you choose).
-2.  Install ``kaprien-cli``
-3.  Run ``kaprien admin ceremony -b [-u filename]``
+2.  Install ``tuf-repository-service``
+3.  Run ``trs-cli admin ceremony -b [-u filename]``
 
 Token (``token``)
 -----------------
@@ -354,9 +354,9 @@ Token Management
 
 .. code:: shell
 
-    ❯ kaprien admin token
+    ❯ trs-cli admin token
                                                                                                                             
-    Usage: kaprien admin token [OPTIONS] COMMAND [ARGS]...                                                                   
+    Usage: trs-cli admin token [OPTIONS] COMMAND [ARGS]...                                                                   
                                                                                                                             
     Token Management.                                                                                                        
                                                                                                                             
@@ -374,9 +374,9 @@ Generate tokens to use in integrations
 
 .. code:: shell
 
-    ❯ kaprien admin token generate -h
+    ❯ trs-cli admin token generate -h
                                                                                                         
-    Usage: kaprien admin token generate [OPTIONS]                                                      
+    Usage: trs-cli admin token generate [OPTIONS]                                                      
                                                                                                         
     Generate new token.                                                                                
                                                                                                         
@@ -392,7 +392,7 @@ Example of usage:
 
 .. code:: shell
 
-    ❯ kaprien admin token generate -s write:targets
+    ❯ trs-cli admin token generate -s write:targets
     {
         "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyX
         zFfNTNiYTY4MzAwNTk3NGY2NWIxMDQ5NzczMjIiwicGFzc3dvcmQiOiJiJyQyYiQxMiRxT0
@@ -411,9 +411,9 @@ Show token detailed information.
 
 .. code:: shell
 
-    ❯ kaprien admin token inspect -h
+    ❯ trs-cli admin token inspect -h
                                                                                                                             
-    Usage: kaprien admin token inspect [OPTIONS] TOKEN                                                                       
+    Usage: trs-cli admin token inspect [OPTIONS] TOKEN                                                                       
                                                                                                                             
     Show token information details.                                                                                          
                                                                                                                             
@@ -421,7 +421,7 @@ Show token detailed information.
     │  --help  -h    Show this message and exit.                                                                             │
     ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-    ❯ kaprien admin token inspect eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1...PDwwY
+    ❯ trs-cli admin token inspect eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1...PDwwY
     {
     "data": {
         "scopes": [

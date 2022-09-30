@@ -1,29 +1,29 @@
-kaprien-cli design
-==================
+Design
+======
 
-kaprien-cli context level
--------------------------
+Context level
+-------------
 
-The ``kaprien-cli``, in the context perspective, is a command line tool. It sends
-HTTP requests to ``kaprien-rest-api``.
+The ``tuf-repository-service``, in the context perspective, is a command line tool. It sends
+HTTP requests to ``tuf-repository-service-api``.
 
-.. uml:: ../../diagrams/kaprien-cli-C1.puml
+.. uml:: ../../diagrams/tuf-repository-service-cli-C1.puml
 
 
-kaprien-cli container level
----------------------------
+Container level
+---------------
 
-The ``kaprien-cli``, in the container perspective, is a command line tool that
-interacts to the ``kaprien-rest-api``.
+The ``tuf-repository-service``, in the container perspective, is a command line tool that
+interacts to the ``tuf-repository-service-api``.
 
-``kaprien-cli`` writes a settings configuration in the file
-``$HOME/.kaprien.ini`` with ``login`` subcommand.
+``tuf-repository-service`` writes a settings configuration in the file
+``$HOME/.trs.ini`` with ``login`` subcommand.
 
-``kaprien-cli`` writes the ``payload.json`` or the specified file with
+``tuf-repository-service`` writes the ``payload.json`` or the specified file with
 option ``-f/--file`` with ``ceremony`` subcommand.
 
-``kaprien-cli`` writes also upon request all the metadata files in
+``tuf-repository-service`` writes also upon request all the metadata files in
 ``metadata`` folder if used ``-s/--save``with ``ceremony`` subcommand.
 
 
-.. uml:: ../../diagrams/kaprien-cli-C2.puml
+.. uml:: ../../diagrams/tuf-repository-service-cli-C2.puml
