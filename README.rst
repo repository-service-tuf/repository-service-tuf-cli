@@ -4,10 +4,10 @@ TUF Repository Service Command Line Interface
 
 |Tests and Lint| |Coverage|
 
-.. |Tests and Lint| image:: https://github.com/kaprien/kaprien-cli/actions/workflows/ci.yml/badge.svg
-  :target: https://github.com/kaprien/kaprien-cli/actions/workflows/ci.yml
-.. |Coverage| image:: https://codecov.io/gh/kaprien/kaprien-cli/branch/main/graph/badge.svg
-  :target: https://codecov.io/gh/kaprien/kaprien-cli
+.. |Tests and Lint| image:: https://github.com/kaprien/tuf-repository-service-cli/actions/workflows/ci.yml/badge.svg
+  :target: https://github.com/kaprien/tuf-repository-service-cli/actions/workflows/ci.yml
+.. |Coverage| image:: https://codecov.io/gh/kaprien/tuf-repository-service-cli/branch/main/graph/badge.svg
+  :target: https://codecov.io/gh/kaprien/tuf-repository-service-cli
 
 TUF Repository Service Command Line Interface (CLI). This CLI is part of TUF
 Repository Service (TRS).
