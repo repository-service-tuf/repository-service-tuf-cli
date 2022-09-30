@@ -20,18 +20,27 @@ from securesystemslib.interface import (  # type: ignore
     import_ed25519_privatekey_from_file,
 )
 
-from kaprien.cli import click
-from kaprien.cli.admin import admin
-from kaprien.helpers.api_client import URL, Methods, is_logged, request_server
-from kaprien.helpers.tuf import RolesKeysInput, initialize_metadata
+from tuf_repository_service.cli import click
+from tuf_repository_service.cli.admin import admin
+from tuf_repository_service.helpers.api_client import (
+    URL,
+    Methods,
+    is_logged,
+    request_server,
+)
+from tuf_repository_service.helpers.tuf import (
+    RolesKeysInput,
+    initialize_metadata,
+)
 
 CEREMONY_INTRO = """
-# Repository Metadata and Settings for Kaprien
+# Repository Metadata and Settings for TUF Repository Service
 
 Create a new Repository Metadata and Settings
 
-Kaprien is an implementation for The Update Framework (TUF) as a Service to be
-deployed in Cloud or on premisses, protecting your target files repository.
+TUF Repository Service is an implementation for The Update Framework (TUF) as a
+Service to be deployed in Cloud or on premisses, protecting your target files
+repository.
 
 TUF helps developers maintain the security of software update systems,
 providing protection even against attackers that compromise the repository or
@@ -44,11 +53,11 @@ More about TUF access https://theupdateframework.io
 CEREMONY_INTRO_ROLES_RESPONSABILITIES = """
 
 ## Roles and Responsabilities
-Kaprien implements Roles and Responsibilities based on TUF top roles (`root`,
-`targets`, `timestamp`, and `snapshot`) and implements the **delegated roles**
-`bin` and `bins`.
+TUF Repository Service implements Roles and Responsibilities based on TUF top
+roles (`root`, `targets`, `timestamp`, and `snapshot`) and implements the
+**delegated roles** `bin` and `bins`.
 
-The inspiration for Kaprien is the
+The inspiration for TUF Repository Service is the
 [Python Enhancement Proposal 458](https://peps.python.org/pep-0458/).
 
 
@@ -419,13 +428,13 @@ def _check_server(settings):
         if token_access_check.state is False:
             raise click.ClickException(
                 f"{str(token_access_check.data)}"
-                "\n\nTry re-login: 'kaprien admin login'"
+                "\n\nTry re-login: 'TUF Repository Service admin login'"
             )
 
         expired_admin = token_access_check.data.get("expired")
         if expired_admin is True:
             raise click.ClickException(
-                "Token expired. Run 'kaprien admin login'"
+                "Token expired. Run 'TUF Repository Service admin login'"
             )
         else:
             headers = {"Authorization": f"Bearer {token}"}
@@ -437,7 +446,7 @@ def _check_server(settings):
             ):
                 raise click.ClickException(f"{response.json().get('detail')}")
     else:
-        raise click.ClickException("Login first. Run 'kaprien admin login'")
+        raise click.ClickException("Login first. Run 'trs-cli admin login'")
 
     return headers
 
@@ -506,8 +515,8 @@ def _bootstrap_status(task_id, server, headers):
     "--bootstrap",
     "bootstrap",
     help=(
-        "Bootstrap a Kaprien Server using the Repository Metadata after "
-        "Ceremony"
+        "Bootstrap a TUF Repository Service using the Repository Metadata "
+        "after Ceremony"
     ),
     required=False,
     is_flag=True,
@@ -518,8 +527,8 @@ def _bootstrap_status(task_id, server, headers):
     "file",
     default="payload.json",
     help=(
-        "Generate specific JSON Payload compatible with Kaprien Server "
-        "bootstrap after Ceremony"
+        "Generate specific JSON Payload compatible with TUF Repository "
+        "Service bootstrap after Ceremony"
     ),
     show_default=True,
     required=False,

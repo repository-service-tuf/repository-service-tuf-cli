@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 import pretend  # type: ignore
 from securesystemslib.keys import generate_ed25519_key  # type: ignore
 
-from kaprien.cli.admin.ceremony import ceremony
+from tuf_repository_service.cli.admin.ceremony import ceremony
 
 
 class TestCeremonyGroupCLI:
@@ -11,7 +11,7 @@ class TestCeremonyGroupCLI:
         test_result = client.invoke(ceremony, obj=test_context)
         assert test_result.exit_code == 1
         assert (
-            "Repository Metadata and Settings for Kaprien"
+            "Repository Metadata and Settings for TUF Repository Service"
             in test_result.output
         )
 
@@ -68,7 +68,7 @@ class TestCeremonyGroupCLI:
             "",
             "",
             "y",
-            "https://github.com/KAPRIEN",
+            "https://github.com/kaprien",
             "*, */*, */*/*, */*/*/*, */*/*/*/*, */*/*/*/*/*",
             "",
             "",
@@ -114,7 +114,8 @@ class TestCeremonyGroupCLI:
 
         fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony._load_key", fake__load_key
+            "tuf_repository_service.cli.admin.ceremony._load_key",
+            fake__load_key,
         )
 
         test_result = client.invoke(
@@ -207,7 +208,8 @@ class TestCeremonyGroupCLI:
 
         fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony._load_key", fake__load_key
+            "tuf_repository_service.cli.admin.ceremony._load_key",
+            fake__load_key,
         )
 
         test_result = client.invoke(
@@ -290,7 +292,8 @@ class TestCeremonyGroupCLI:
             lambda s: {"Authorization": "Bearer test"}
         )
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony._check_server", mocked_check_server
+            "tuf_repository_service.cli.admin.ceremony._check_server",
+            mocked_check_server,
         )
 
         fake_response_get = pretend.stub(
@@ -310,7 +313,7 @@ class TestCeremonyGroupCLI:
         ]
 
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony.request_server",
+            "tuf_repository_service.cli.admin.ceremony.request_server",
             mocked_request_server,
         )
 
@@ -321,7 +324,8 @@ class TestCeremonyGroupCLI:
 
         fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony._load_key", fake__load_key
+            "tuf_repository_service.cli.admin.ceremony._load_key",
+            fake__load_key,
         )
 
         # simulate the settings file
@@ -347,7 +351,8 @@ class TestCeremonyGroupCLI:
             lambda s: {"Authorization": "Bearer test"}
         )
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony._check_server", mocked_check_server
+            "tuf_repository_service.cli.admin.ceremony._check_server",
+            mocked_check_server,
         )
 
         mocked_request_server = pretend.stub(
@@ -361,7 +366,7 @@ class TestCeremonyGroupCLI:
         )
 
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony.request_server",
+            "tuf_repository_service.cli.admin.ceremony.request_server",
             lambda *a, **kw: mocked_request_server,
         )
 
@@ -383,7 +388,8 @@ class TestCeremonyGroupCLI:
             lambda s: {"Authorization": "Bearer test"}
         )
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony._check_server", mocked_check_server
+            "tuf_repository_service.cli.admin.ceremony._check_server",
+            mocked_check_server,
         )
 
         mocked_request_server = pretend.stub(
@@ -396,7 +402,7 @@ class TestCeremonyGroupCLI:
         )
 
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony.request_server",
+            "tuf_repository_service.cli.admin.ceremony.request_server",
             lambda *a, **kw: mocked_request_server,
         )
 
@@ -467,7 +473,8 @@ class TestCeremonyGroupCLI:
             lambda s: {"Authorization": "Bearer test"}
         )
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony._check_server", mocked_check_server
+            "tuf_repository_service.cli.admin.ceremony._check_server",
+            mocked_check_server,
         )
 
         fake_response_get = pretend.stub(
@@ -485,7 +492,7 @@ class TestCeremonyGroupCLI:
         ]
 
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony.request_server",
+            "tuf_repository_service.cli.admin.ceremony.request_server",
             mocked_request_server,
         )
 
@@ -496,7 +503,8 @@ class TestCeremonyGroupCLI:
 
         fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony._load_key", fake__load_key
+            "tuf_repository_service.cli.admin.ceremony._load_key",
+            fake__load_key,
         )
 
         # simulate the settings file
@@ -569,7 +577,8 @@ class TestCeremonyGroupCLI:
             lambda s: {"Authorization": "Bearer test"}
         )
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony._check_server", mocked_check_server
+            "tuf_repository_service.cli.admin.ceremony._check_server",
+            mocked_check_server,
         )
 
         fake_response_get = pretend.stub(
@@ -592,7 +601,7 @@ class TestCeremonyGroupCLI:
         ]
 
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony.request_server",
+            "tuf_repository_service.cli.admin.ceremony.request_server",
             mocked_request_server,
         )
 
@@ -603,7 +612,8 @@ class TestCeremonyGroupCLI:
 
         fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
         monkeypatch.setattr(
-            "kaprien.cli.admin.ceremony._load_key", fake__load_key
+            "tuf_repository_service.cli.admin.ceremony._load_key",
+            fake__load_key,
         )
 
         # simulate the settings file

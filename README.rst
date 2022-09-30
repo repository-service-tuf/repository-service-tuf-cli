@@ -1,6 +1,6 @@
-##############################
-Kaprien Command Line Interface
-##############################
+#############################################
+TUF Repository Service Command Line Interface
+#############################################
 
 |Tests and Lint| |Coverage|
 
@@ -9,7 +9,8 @@ Kaprien Command Line Interface
 .. |Coverage| image:: https://codecov.io/gh/kaprien/kaprien-cli/branch/main/graph/badge.svg
   :target: https://codecov.io/gh/kaprien/kaprien-cli
 
-Kaprien Command Line Interface (CLI). Kaprien CLI is part of Kaprien.
+TUF Repository Service Command Line Interface (CLI). This CLI is part of TUF
+Repository Service (TRS).
 
 .. note::
 
@@ -21,10 +22,32 @@ Development
 Requirements:
 =============
 
-These are the minimum requirements for the Kaprien program to work
-
 - Python >=3.9
 - Pipenv
+
+Getting source code
+===================
+
+`Fork <https://docs.github.com/en/get-started/quickstart/fork-a-repo>`_ the
+repository on `GitHub <https://github.com/kaprien/tuf-repository-service-cli>`_ and
+`clone <https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository>`_
+it to your local machine:
+
+.. code-block:: console
+
+    git clone git@github.com:YOUR-USERNAME/tuf-repository-service-cli.git
+
+Add a `remote
+<https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/configuring-a-remote-for-a-fork>`_ and
+regularly `sync <https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/syncing-a-fork>`_ to make sure
+you stay up-to-date with our repository:
+
+.. code-block:: console
+
+    git remote add upstream https://github.com/kaprien/tuf-repository-service-cli
+    git checkout main
+    git fetch upstream
+    git merge upstream/main
 
 
 Preparing the environment
@@ -66,25 +89,25 @@ The flag -d will install the development requirements
         $ LDFLAGS=-L$(brew --prefix libffi)/lib CFLAGS=-I$(brew --prefix libffi)/include pip install cffi cryptography
 
 
-Install ``kaprien`` in your development environment
+Install ``tuf-repository-service`` in your development environment
 
 
-Installing the Kaprien program straight from the root.
+Installing the TUF Repository Service CLI program.
 
 .. code:: shell
 
     $ pip install -e .
 
 
-Running Kaprien
+Running TUF Repository Service
 
 .. code:: shell
 
-    $ kaprien
+    $ trs-cli
 
-    Usage: kaprien [OPTIONS] COMMAND [ARGS]...
+    Usage: trs-cli [OPTIONS] COMMAND [ARGS]...
 
-    KAPRIEN Command Line Interface (CLI) helps you to manage your KAPRIEN.
+    TUF Repository Service Command Line Interface (CLI).
 
 
 

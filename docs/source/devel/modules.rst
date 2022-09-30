@@ -1,7 +1,7 @@
-kaprien
-=======
+tuf_repository_service
+======================
 
 .. toctree::
    :maxdepth: 4
 
-   kaprien
+   tuf_repository_service

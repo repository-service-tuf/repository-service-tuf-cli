@@ -4,11 +4,11 @@ requires = ["hatchling==0.22.0"]
 build-backend = "hatchling.build"
 
 [project]
-name = "kaprien"
-description = 'Demo Package Installer for Kaprien'
+name = "tuf-repository-service"
+description = 'TUF Repository Service Command Line Interface'
 readme = "README.rst"
 requires-python = ">=3.9"
-license = { text = "Apache-2.0"}
+license = { text = "MIT"}
 keywords = []
 authors = [
   { name = "Kairo de Araujo", email = "kairo@dearaujo.nl" },
@@ -28,7 +28,7 @@ dependencies = ["rich-click", "tuf"]
 dynamic = ["version"]
 
 [tool.hatch.version]
-path = "kaprien/__version__.py"
+path = "tuf_repository_service/__version__.py"
 
 [project.scripts]
-kaprien = "kaprien.cli:kaprien"
+tuf_repository_service = "tuf_repository_service.cli:trs"
