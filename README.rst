@@ -9,8 +9,9 @@ TUF Repository Service Command Line Interface
 .. |Coverage| image:: https://codecov.io/gh/kaprien/tuf-repository-service-cli/branch/main/graph/badge.svg
   :target: https://codecov.io/gh/kaprien/tuf-repository-service-cli
 
-TUF Repository Service Command Line Interface (CLI). This CLI is part of TUF
-Repository Service (TRS).
+TUF Repository Service Command Line Interface (CLI).
+
+This CLI is part of TUF Repository Service (TRS).
 
 .. note::
 
@@ -89,17 +90,7 @@ The flag -d will install the development requirements
         $ LDFLAGS=-L$(brew --prefix libffi)/lib CFLAGS=-I$(brew --prefix libffi)/include pip install cffi cryptography
 
 
-Install ``tuf-repository-service`` in your development environment
-
-
-Installing the TUF Repository Service CLI program.
-
-.. code:: shell
-
-    $ pip install -e .
-
-
-Running TUF Repository Service
+Running TRS CLI
 
 .. code:: shell
 

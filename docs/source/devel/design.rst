@@ -1,5 +1,5 @@
-Design
-======
+Command Line Interface Design
+=============================
 
 Context level
 -------------

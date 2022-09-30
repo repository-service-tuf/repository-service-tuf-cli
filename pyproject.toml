@@ -31,4 +31,4 @@ dynamic = ["version"]
 path = "tuf_repository_service/__version__.py"
 
 [project.scripts]
-tuf_repository_service = "tuf_repository_service.cli:trs"
+trs-cli = "tuf_repository_service.cli:trs"
