@@ -9,29 +9,28 @@
 # requirements. To emit only development requirements, pass "--dev-only".
 
 -i https://pypi.org/simple
--e .
 alabaster==0.7.12
 attrs==22.1.0; python_version >= '3.5'
 babel==2.10.3; python_version >= '3.6'
 black==22.3.0
 build==0.8.0
-certifi==2022.6.15; python_version >= '3.6'
+certifi==2022.9.24; python_version >= '3.6'
 cffi==1.15.0
 charset-normalizer==2.1.1; python_version >= '3.6'
 click==8.0.4
 commonmark==0.9.1
 configobj==5.0.6
-coverage==6.4.4
+coverage==6.5.0
 crypto==1.4.1
 cryptography==36.0.2
 distlib==0.3.6
 docutils==0.17.1; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'
-dynaconf[ini]==3.1.9
+dynaconf[ini]==3.1.11
 editables==0.3; python_version >= '3.1'
 filelock==3.8.0; python_version >= '3.7'
 flake8==5.0.4
 hatchling==0.22.0
-idna==3.3; python_version >= '3.5'
+idna==3.4; python_version >= '3.5'
 imagesize==1.4.1; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'
 iniconfig==1.1.1
 isort==5.10.1
@@ -39,7 +38,7 @@ jinja2==3.1.2; python_version >= '3.7'
 markupsafe==2.1.1; python_version >= '3.7'
 mccabe==0.7.0; python_version >= '3.6'
 mypy-extensions==0.4.3
-mypy==0.971
+mypy==0.981
 naked==0.1.31
 packaging==21.3; python_version >= '3.1'
 pathspec==0.10.1; python_version >= '3.7'
@@ -52,11 +51,11 @@ py==1.11.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.
 pycodestyle==2.9.1; python_version >= '3.6'
 pycparser==2.21
 pyflakes==2.5.0; python_version >= '3.6'
-pygments==2.11.2
+pygments==2.13
 pynacl==1.5.0
 pyparsing==3.0.9; python_full_version >= '3.6.8'
 pytest==7.1.3
-pytz==2022.2.1
+pytz==2022.4
 pyyaml==6.0; python_version >= '3.6'
 requests==2.28.1
 rich-click==1.2.1
@@ -66,7 +65,7 @@ shellescape==3.8.1
 six==1.16.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'
 snowballstemmer==2.2.0
 sphinx-rtd-theme==1.0.0
-sphinx==5.1.1
+sphinx==5.2.3
 sphinxcontrib-applehelp==1.0.2
 sphinxcontrib-devhelp==1.0.2
 sphinxcontrib-htmlhelp==2.0.0
@@ -74,12 +73,11 @@ sphinxcontrib-jsmath==1.0.1
 sphinxcontrib-plantuml==0.24
 sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.5
-toml==0.10.2; python_version >= '2.6' and python_version not in '3.0, 3.1, 3.2, 3.3'
-tomli==2.0.1; python_version < '3.11'
-tox==3.25.1
+tomli==2.0.1; python_version >= '3.1'
+tox==3.26.0
 tuf==2.0.0
-types-requests==2.28.9
-types-urllib3==1.26.23
+types-requests==2.28.11
+types-urllib3==1.26.25
 typing-extensions==4.3.0; python_version >= '3.7'
 urllib3==1.26.12; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5' and python_full_version < '4.0.0'
-virtualenv==20.16.4; python_version >= '3.6'
+virtualenv==20.16.5; python_version >= '3.6'

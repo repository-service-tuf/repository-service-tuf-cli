@@ -184,9 +184,7 @@ class TestLoginGroupCLI:
             pretend.call(test_context["settings"].SERVER, "fake-token")
         ]
 
-    def test_login_missing_http_protocol(
-        self, monkeypatch, client, test_context
-    ):
+    def test_login_missing_http_protocol(self, client, test_context):
         steps = [
             "test-trs",
             "http://test-trs",
@@ -206,3 +204,161 @@ class TestLoginGroupCLI:
         )
         assert test_result.exit_code == 0
         assert "Login successfuly." in test_result.output
+
+    def test_login_with_server(self, client, test_context):
+        steps = [
+            "admin",
+            "pass",
+            "1",
+        ]
+        login._login = pretend.call_recorder(
+            lambda *a: {"access_token": "fake-token"}
+        )
+
+        login.loaders = pretend.stub(
+            write=pretend.call_recorder(lambda *a: None)
+        )
+        test_result = client.invoke(
+            login.login,
+            ["-s", "http://test-trs"],
+            input="\n".join(steps),
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 0
+        assert "Login successfuly." in test_result.output
+        assert login.loaders.write.calls == [
+            pretend.call(
+                test_context["config"], test_context["settings"].to_dict()
+            )
+        ]
+
+    def test_login_with_server_bad_address(self, client, test_context):
+        steps = [
+            "admin",
+            "pass",
+            "1",
+        ]
+        login._login = pretend.call_recorder(
+            lambda *a: {"access_token": "fake-token"}
+        )
+
+        test_result = client.invoke(
+            login.login,
+            ["-s", "test-trs"],
+            input="\n".join(steps),
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 1
+        assert (
+            "Please use 'http://test-trs' or 'https://test-trs'"
+            in test_result.output
+        )
+
+    def test_login_with_server_bad_address_them_fixed(
+        self, client, test_context
+    ):
+        steps = [
+            "http://test-trs",
+            "admin",
+            "pass",
+            "1",
+        ]
+        login._login = pretend.call_recorder(
+            lambda *a: {"access_token": "fake-token"}
+        )
+
+        login.loaders = pretend.stub(
+            write=pretend.call_recorder(lambda *a: None)
+        )
+        test_result = client.invoke(
+            login.login,
+            ["-s", "test-trs"],
+            input="\n".join(steps),
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 0
+        assert "Login successfuly." in test_result.output
+        assert login.loaders.write.calls == [
+            pretend.call(
+                test_context["config"], test_context["settings"].to_dict()
+            )
+        ]
+
+    def test_login_with_server_user(self, client, test_context):
+        steps = [
+            "pass",
+            "1",
+        ]
+        login._login = pretend.call_recorder(
+            lambda *a: {"access_token": "fake-token"}
+        )
+
+        login.loaders = pretend.stub(
+            write=pretend.call_recorder(lambda *a: None)
+        )
+        test_result = client.invoke(
+            login.login,
+            ["-s", "http://test-trs", "-u", "admin"],
+            input="\n".join(steps),
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 0
+        assert "Login successfuly." in test_result.output
+        assert login.loaders.write.calls == [
+            pretend.call(
+                test_context["config"], test_context["settings"].to_dict()
+            )
+        ]
+
+    def test_login_with_server_user_pass(self, client, test_context):
+        steps = [
+            "pass",
+            "1",
+        ]
+        login._login = pretend.call_recorder(
+            lambda *a: {"access_token": "fake-token"}
+        )
+
+        login.loaders = pretend.stub(
+            write=pretend.call_recorder(lambda *a: None)
+        )
+        test_result = client.invoke(
+            login.login,
+            ["-s", "http://test-trs", "-u", "admin", "-p", "pass"],
+            input="\n".join(steps),
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 0
+        assert "Login successfuly." in test_result.output
+        assert login.loaders.write.calls == [
+            pretend.call(
+                test_context["config"], test_context["settings"].to_dict()
+            )
+        ]
+
+    def test_login_with_non_intereactive(self, client, test_context):
+        login._login = pretend.call_recorder(
+            lambda *a: {"access_token": "fake-token"}
+        )
+
+        login.loaders = pretend.stub(
+            write=pretend.call_recorder(lambda *a: None)
+        )
+        test_result = client.invoke(
+            login.login,
+            ["-s", "http://test-trs", "-u", "admin", "-p", "pass", "-e", "1"],
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 0
+        assert "Login successfuly." in test_result.output
+        assert login.loaders.write.calls == [
+            pretend.call(
+                test_context["config"], test_context["settings"].to_dict()
+            )
+        ]

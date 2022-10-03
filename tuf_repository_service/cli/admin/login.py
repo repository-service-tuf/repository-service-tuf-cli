@@ -27,7 +27,7 @@ def _login(server: str, data: Dict[str, str]):
     return token_response.json()
 
 
-def _run_login(context):
+def _run_login(context, server_, user_, password_, expires_):
     settings = context.obj.get("settings")
     console.print(
         markdown.Markdown(
@@ -39,25 +39,40 @@ def _run_login(context):
         width=100,
     )
     while True:
-        server = prompt.Prompt.ask(
-            "\nServer Address",
-            default=settings.get("SERVER"),
-            show_default=True,
-        )
-
+        if server_ is None:
+            server = prompt.Prompt.ask(
+                "\nServer Address",
+                default=settings.get("SERVER"),
+                show_default=True,
+            )
+        else:
+            server = server_
         if server.startswith("http") is False:
             console.print(
                 f"Please use 'http://{server}' or 'https://{server}'"
             )
+            server_ = None
         else:
             break
-    username = prompt.Prompt.ask(
-        "Username", default="admin", show_default=True
-    )
-    password = click.prompt("Password", hide_input=True)
-    expires = prompt.IntPrompt.ask(
-        "Expire (in hours)", default=24, show_default=False
-    )
+
+    if user_ is None:
+        username = prompt.Prompt.ask(
+            "Username", default="admin", show_default=True
+        )
+    else:
+        username = user_
+
+    if password_ is None:
+        password = click.prompt("Password", hide_input=True)
+    else:
+        password = password_
+
+    if expires_ is None:
+        expires = prompt.IntPrompt.ask(
+            "Expire (in hours)", default=24, show_default=False
+        )
+    else:
+        expires = expires_
 
     data = {
         "username": username,
@@ -88,8 +103,14 @@ def _run_login(context):
 @click.option(
     "-f", "--force", "force", help="Force login/Renew token", is_flag=True
 )
+@click.option("-s", "server_", help="Server", required=False, default=None)
+@click.option("-u", "user_", help="User", required=False, default=None)
+@click.option("-p", "password_", help="Password", required=False, default=None)
+@click.option(
+    "-e", "expires_", help="Expires in Hours", required=False, default=None
+)
 @click.pass_context
-def login(context, force):
+def login(context, force, server_, user_, password_, expires_):
     """
     Login to TUF Repository Service (API).
     """
@@ -100,7 +121,7 @@ def login(context, force):
     if force is False and server is not None and token is not None:
         response = is_logged(server, token)
         if response.state is False:
-            _run_login(context)
+            _run_login(context, server_, user_, password_, expires_)
 
         else:
             data = response.data
@@ -111,4 +132,4 @@ def login(context, force):
                 )
 
     else:
-        _run_login(context)
+        _run_login(context, server_, user_, password_, expires_)
