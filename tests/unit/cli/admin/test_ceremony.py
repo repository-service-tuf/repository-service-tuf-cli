@@ -1,14 +1,245 @@
 from unittest.mock import MagicMock
 
 import pretend  # type: ignore
+import pytest
+from click import ClickException
 from securesystemslib.keys import generate_ed25519_key  # type: ignore
 
-from tuf_repository_service.cli.admin.ceremony import ceremony
+from tuf_repository_service.cli.admin import ceremony
 
 
 class TestCeremonyGroupCLI:
+    def test__bootstrap(self, monkeypatch):
+        mocked_request_server = pretend.stub(
+            status_code=202,
+            json=pretend.call_recorder(
+                lambda: {
+                    "data": {"task_id": "task_id_123"},
+                    "message": "Bootstrap accepted.",
+                }
+            ),
+        )
+        monkeypatch.setattr(
+            ceremony, "request_server", lambda *a, **kw: mocked_request_server
+        )
+
+        result = ceremony._bootstrap("http://fake-trs", {}, {})
+        assert result == "task_id_123"
+        assert mocked_request_server.json.calls == [pretend.call()]
+
+    def test__bootstrap_not_202(self, monkeypatch):
+        mocked_request_server = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(
+                lambda: {
+                    "data": {"task_id": "task_id_123"},
+                    "message": "Bootstrap accepted.",
+                }
+            ),
+        )
+        monkeypatch.setattr(
+            ceremony, "request_server", lambda *a, **kw: mocked_request_server
+        )
+
+        with pytest.raises(ClickException) as err:
+            ceremony._bootstrap("http://fake-trs", {}, {})
+
+        assert "Error 200" in str(err)
+        assert mocked_request_server.json.calls == [pretend.call()]
+
+    def test__bootstrap_not_no_message(self, monkeypatch):
+        mocked_request_server = pretend.stub(
+            status_code=202,
+            json=pretend.call_recorder(
+                lambda: {
+                    "data": {"task_id": "task_id_123"},
+                }
+            ),
+            text="No message available.",
+        )
+        monkeypatch.setattr(
+            ceremony, "request_server", lambda *a, **kw: mocked_request_server
+        )
+
+        with pytest.raises(ClickException) as err:
+            ceremony._bootstrap("http://fake-trs", {}, {})
+
+        assert "No message available." in str(err)
+        assert mocked_request_server.json.calls == [pretend.call()]
+
+    def test__bootstrap_state(self, monkeypatch):
+        fake_response_started = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(
+                lambda: {
+                    "data": {
+                        "state": "STARTED",
+                    }
+                }
+            ),
+        )
+        fake_response_success = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(
+                lambda: {
+                    "data": {
+                        "state": "SUCCESS",
+                        "result": {"details": {"bootstrap": True}},
+                    }
+                }
+            ),
+        )
+        mocked_request_server = MagicMock()
+        mocked_request_server.side_effect = [
+            fake_response_started,
+            fake_response_success,
+        ]
+        monkeypatch.setattr(ceremony, "request_server", mocked_request_server)
+
+        result = ceremony._bootstrap_state(
+            "task_id_123", "http://fake-server", {}
+        )
+        assert result is None
+        assert fake_response_started.json.calls == [pretend.call()]
+        assert fake_response_success.json.calls == [pretend.call()]
+
+    def test__bootstrap_state_without_bootstrap_true(self, monkeypatch):
+        fake_response_started = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(
+                lambda: {
+                    "data": {
+                        "state": "STARTED",
+                    }
+                }
+            ),
+        )
+        fake_response_success = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(
+                lambda: {
+                    "data": {
+                        "state": "SUCCESS",
+                    }
+                }
+            ),
+        )
+        mocked_request_server = MagicMock()
+        mocked_request_server.side_effect = [
+            fake_response_started,
+            fake_response_success,
+        ]
+        monkeypatch.setattr(ceremony, "request_server", mocked_request_server)
+
+        with pytest.raises(ClickException) as err:
+            ceremony._bootstrap_state("task_id_123", "http://fake-server", {})
+
+        assert "Something went wrong, result:" in str(err)
+        assert fake_response_started.json.calls == [pretend.call()]
+        assert fake_response_success.json.calls == [pretend.call()]
+
+    def test__bootstrap_state_task_failure(self, monkeypatch):
+        fake_response_started = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(
+                lambda: {
+                    "data": {
+                        "state": "STARTED",
+                        "result": {"details": {"bootstrap": True}},
+                    }
+                }
+            ),
+        )
+        fake_response_success = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(
+                lambda: {
+                    "data": {
+                        "state": "FAILURE",
+                        "result": "SomeException: bla bla bla",
+                    }
+                }
+            ),
+            text="{'data': {'state': 'FAILURE','result': 'SomeException'}}",
+        )
+        mocked_request_server = MagicMock()
+        mocked_request_server.side_effect = [
+            fake_response_started,
+            fake_response_success,
+        ]
+        monkeypatch.setattr(ceremony, "request_server", mocked_request_server)
+
+        with pytest.raises(ClickException) as err:
+            ceremony._bootstrap_state("task_id_123", "http://fake-server", {})
+
+        assert "Failed:" in str(err)
+        assert fake_response_started.json.calls == [pretend.call()]
+        assert fake_response_success.json.calls == [pretend.call()]
+
+    def test__bootstrap_state_not_200(self, monkeypatch):
+        fake_response_started = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(
+                lambda: {
+                    "data": {
+                        "state": "STARTED",
+                        "result": {"details": {"bootstrap": True}},
+                    }
+                }
+            ),
+        )
+        fake_response_success = pretend.stub(
+            status_code=400,
+            text="Bad request",
+        )
+        mocked_request_server = MagicMock()
+        mocked_request_server.side_effect = [
+            fake_response_started,
+            fake_response_success,
+        ]
+        monkeypatch.setattr(ceremony, "request_server", mocked_request_server)
+
+        with pytest.raises(ClickException) as err:
+            ceremony._bootstrap_state("task_id_123", "http://fake-server", {})
+        assert "Unexpected response Bad request" in str(err)
+        assert fake_response_started.json.calls == [pretend.call()]
+
+    def test__bootstrap_state_bootstrap_no_data(self, monkeypatch):
+        fake_response = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(lambda: {"data": {}}),
+            text=str("{'data': {}}"),
+        )
+
+        monkeypatch.setattr(
+            ceremony, "request_server", lambda *a, **kw: fake_response
+        )
+
+        with pytest.raises(ClickException) as err:
+            ceremony._bootstrap_state("task_id_123", "http://fake-server", {})
+
+        assert "No data received" in str(err)
+        assert fake_response.json.calls == [pretend.call()]
+
+    def test__bootstrap_state_bootstrap_no_state(self, monkeypatch):
+        fake_response = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(lambda: {"data": {"state": None}}),
+            text=str("{'data': {}}"),
+        )
+
+        monkeypatch.setattr(
+            ceremony, "request_server", lambda *a, **kw: fake_response
+        )
+
+        with pytest.raises(ClickException) as err:
+            ceremony._bootstrap_state("task_id_123", "http://fake-server", {})
+
+        assert "No state in data received" in str(err)
+        assert fake_response.json.calls == [pretend.call()]
+
     def test_ceremony(self, client, test_context):
-        test_result = client.invoke(ceremony, obj=test_context)
+        test_result = client.invoke(ceremony.ceremony, obj=test_context)
         assert test_result.exit_code == 1
         assert (
             "Repository Metadata and Settings for TUF Repository Service"
@@ -16,7 +247,9 @@ class TestCeremonyGroupCLI:
         )
 
     def test_ceremony_start_no(self, client, test_context):
-        test_result = client.invoke(ceremony, input="n\nn\n", obj=test_context)
+        test_result = client.invoke(
+            ceremony.ceremony, input="n\nn\n", obj=test_context
+        )
         assert "Ceremony aborted." in test_result.output
         assert test_result.exit_code == 1
 
@@ -48,7 +281,7 @@ class TestCeremonyGroupCLI:
         ]
         input_step2 = ["n"]
         test_result = client.invoke(
-            ceremony,
+            ceremony.ceremony,
             input="\n".join(input_step1 + input_step2),
             obj=test_context,
         )
@@ -119,7 +352,7 @@ class TestCeremonyGroupCLI:
         )
 
         test_result = client.invoke(
-            ceremony,
+            ceremony.ceremony,
             input="\n".join(input_step1 + input_step2),
             obj=test_context,
         )
@@ -213,7 +446,7 @@ class TestCeremonyGroupCLI:
         )
 
         test_result = client.invoke(
-            ceremony,
+            ceremony.ceremony,
             input="\n".join(input_step1 + input_step2),
             obj=test_context,
         )
@@ -333,7 +566,7 @@ class TestCeremonyGroupCLI:
         test_context["settings"].TOKEN = "test-token"
         # write settings
         test_result = client.invoke(
-            ceremony,
+            ceremony.ceremony,
             ["--bootstrap"],
             input="\n".join(input_step1 + input_step2),
             obj=test_context,
@@ -375,7 +608,7 @@ class TestCeremonyGroupCLI:
         test_context["settings"].TOKEN = "test-token"
 
         test_result = client.invoke(
-            ceremony, ["--bootstrap"], obj=test_context
+            ceremony.ceremony, ["--bootstrap"], obj=test_context
         )
 
         assert test_result.exit_code == 1
@@ -411,7 +644,7 @@ class TestCeremonyGroupCLI:
         test_context["settings"].TOKEN = "test-token"
 
         test_result = client.invoke(
-            ceremony, ["--bootstrap"], obj=test_context
+            ceremony.ceremony, ["--bootstrap"], obj=test_context
         )
 
         assert test_result.exit_code == 1
@@ -512,7 +745,7 @@ class TestCeremonyGroupCLI:
         test_context["settings"].TOKEN = "test-token"
         # write settings
         test_result = client.invoke(
-            ceremony,
+            ceremony.ceremony,
             ["--bootstrap"],
             input="\n".join(input_step1 + input_step2),
             obj=test_context,
@@ -621,7 +854,7 @@ class TestCeremonyGroupCLI:
         test_context["settings"].TOKEN = "test-token"
         # write settings
         test_result = client.invoke(
-            ceremony,
+            ceremony.ceremony,
             ["--bootstrap"],
             input="\n".join(input_step1 + input_step2),
             obj=test_context,
