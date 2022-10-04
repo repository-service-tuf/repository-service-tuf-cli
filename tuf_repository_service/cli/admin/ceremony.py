@@ -452,6 +452,7 @@ def _check_server(settings):
 
 
 def _bootstrap(server, headers, json_payload):
+    task_id = None
     response = request_server(
         server,
         URL.bootstrap.value,
@@ -460,52 +461,74 @@ def _bootstrap(server, headers, json_payload):
         headers=headers,
     )
     response_data = response.json()
-
     if response.status_code != 202:
         raise click.ClickException(
             f"Error {response.status_code} {response_data.get('detail')}"
         )
+
     elif (
         response_data.get("message") is None
         or response_data.get("message") != "Bootstrap accepted."
     ):
         raise click.ClickException(response.text)
+
     else:
-        task_id = response_data.get("task_id", None)
-        console.print(f"Boostrap status: ACCEPTED ({task_id})")
+        if data := response_data.get("data"):
+            task_id = data.get("task_id")
+            console.print(f"Boostrap status: ACCEPTED ({task_id})")
 
     return task_id
 
 
-def _bootstrap_status(task_id, server, headers):
-    received_status = []
+def _bootstrap_state(task_id, server, headers):
+    received_state = []
     while True:
-        status_response = request_server(
+        state_response = request_server(
             server, f"{URL.task.value}{task_id}", Methods.get, headers=headers
         )
-        if status_response.status_code != 200:
+
+        if state_response.status_code != 200:
             raise click.ClickException(
-                f"Unexpected response {status_response.text}"
+                f"Unexpected response {state_response.text}"
             )
 
-        status = status_response.json().get("data").get("status")
-        if status not in received_status:
-            console.print(f"Boostrap status: {status}")
-            received_status.append(status)
+        data = state_response.json().get("data")
 
-        if status == "SUCCESS":
-            result = status_response.json().get("data").get("result")
-            if result is not True:
+        if data:
+            if state := data.get("state"):
+                if state not in received_state:
+                    console.print(f"Boostrap status: {state}")
+                    received_state.append(state)
+
+                if state == "SUCCESS":
+                    try:
+                        result = data.get("result")
+                        bootstrap_result = result.get("details").get(
+                            "bootstrap"
+                        )
+                    except AttributeError:
+                        bootstrap_result = False
+
+                    if bootstrap_result is not True:
+                        raise click.ClickException(
+                            f"Something went wrong, result: {result}"
+                        )
+
+                    console.print("[green]Bootstrap finished.[/]")
+                    break
+
+                elif state == "FAILURE":
+                    raise click.ClickException(
+                        f"Failed: {state_response.text}"
+                    )
+            else:
                 raise click.ClickException(
-                    f"Something went wrong, result: {result}"
+                    f"No state in data received {state_response.text}"
                 )
-
-            console.print("[green]Bootstrap finished.[/]")
-            break
-
-        elif status == "FAILURE":
-            raise click.ClickException(f"Failed: {status_response.text}")
-
+        else:
+            raise click.ClickException(
+                f"No data received {state_response.text}"
+            )
         time.sleep(2)
 
 
@@ -741,6 +764,6 @@ def ceremony(context, bootstrap, file, upload, save):
         if task_id is None:
             raise click.ClickException("task id wasn't received")
 
-        _bootstrap_status(task_id, settings.SERVER, headers)
+        _bootstrap_state(task_id, settings.SERVER, headers)
 
     console.print("\nCeremony done. 🔐 🎉")
