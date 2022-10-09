@@ -242,7 +242,7 @@ class TestCeremonyGroupCLI:
         test_result = client.invoke(ceremony.ceremony, obj=test_context)
         assert test_result.exit_code == 1
         assert (
-            "Repository Metadata and Settings for TUF Repository Service"
+            "Repository Metadata and Settings for the TUF Repository Service"
             in test_result.output
         )
 
