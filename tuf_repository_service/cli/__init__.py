@@ -19,6 +19,7 @@ HOME = str(Path.home())
     help="TUF Repository Service config file",
     required=False,
 )
+@click.version_option()
 @click.pass_context
 def trs(context, config):
     """
