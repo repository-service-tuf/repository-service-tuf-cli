@@ -96,7 +96,7 @@ def _run_login(context, server_, user_, password_, expires_):
     loaders.write(context.obj.get("config"), settings.to_dict())
 
     console.print(f"Token stored in {context.obj.get('config')}\n")
-    console.print("Login successfuly.")
+    console.print("Login successful.")
 
 
 @admin.command()

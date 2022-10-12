@@ -69,7 +69,7 @@ class TestLoginGroupCLI:
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()
@@ -100,7 +100,7 @@ class TestLoginGroupCLI:
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()
@@ -135,7 +135,7 @@ class TestLoginGroupCLI:
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()
@@ -203,7 +203,7 @@ class TestLoginGroupCLI:
             login.login, input="\n".join(steps), obj=test_context
         )
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
 
     def test_login_with_server(self, client, test_context):
         steps = [
@@ -226,7 +226,7 @@ class TestLoginGroupCLI:
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()
@@ -280,7 +280,7 @@ class TestLoginGroupCLI:
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()
@@ -307,7 +307,7 @@ class TestLoginGroupCLI:
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()
@@ -334,7 +334,7 @@ class TestLoginGroupCLI:
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()
@@ -356,7 +356,7 @@ class TestLoginGroupCLI:
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()

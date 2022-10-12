@@ -11,11 +11,11 @@ TUF Repository Service Command Line Interface
 
 TUF Repository Service Command Line Interface (CLI).
 
-This CLI is part of TUF Repository Service (TRS).
+This CLI is part of the TUF Repository Service (TRS).
 
 .. note::
 
-    Not a functional tool, it is still in development stage. Wait release 0.0.1
+    Not a functional tool, it is still in the development stage. Wait for release 0.0.1
 
 Development
 ###########
@@ -26,7 +26,7 @@ Requirements:
 - Python >=3.9
 - Pipenv
 
-Getting source code
+Getting the source code
 ===================
 
 `Fork <https://docs.github.com/en/get-started/quickstart/fork-a-repo>`_ the
@@ -54,23 +54,23 @@ you stay up-to-date with our repository:
 Preparing the environment
 =========================
 
-After installing Python, install the pipenv tool.
+After installing Python, install the pipenv tool:
 
 .. code:: shell
 
     $ pip install pipenv
 
 
-Creating a virtual environment for this project.
+Create a virtual environment for this project:
 
 .. code:: shell
 
     $ pipenv shell
 
 
-Install requirements from Pipfile
+Install the requirements from the Pipfile.
 
-The flag -d will install the development requirements
+The flag -d will install the development requirements:
 
 .. code:: shell
 
@@ -79,9 +79,9 @@ The flag -d will install the development requirements
 
 .. note::
 
-    MacOS running on Macbooks M1
+    macOS running on MacBook M1
 
-    For developers, after above command, run
+    For developers, after the above command, run:
 
     .. code:: shell
 
@@ -90,7 +90,7 @@ The flag -d will install the development requirements
         $ LDFLAGS=-L$(brew --prefix libffi)/lib CFLAGS=-I$(brew --prefix libffi)/include pip install cffi cryptography
 
 
-Running TRS CLI
+Running TRS CLI:
 
 .. code:: shell
 
@@ -105,9 +105,9 @@ Running TRS CLI
 How to add new requirements
 ===========================
 
-Install requirements package
+Install the requirements package.
 
-The flag -d will install the development requirements
+The flag -d will install the development requirements.
 
 .. code:: shell
 
@@ -125,7 +125,7 @@ Update all project requirements
 Tests
 =====
 
-Perform automated testing with the TOX tool.
+Perform automated testing with the tox tool:
 
 .. code:: shell
 
