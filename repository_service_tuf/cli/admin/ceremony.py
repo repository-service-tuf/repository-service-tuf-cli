@@ -20,27 +20,27 @@ from securesystemslib.interface import (  # type: ignore
     import_ed25519_privatekey_from_file,
 )
 
-from tuf_repository_service.cli import click
-from tuf_repository_service.cli.admin import admin
-from tuf_repository_service.helpers.api_client import (
+from repository_service_tuf.cli import click
+from repository_service_tuf.cli.admin import admin
+from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,
     is_logged,
     request_server,
 )
-from tuf_repository_service.helpers.tuf import (
+from repository_service_tuf.helpers.tuf import (
     RolesKeysInput,
     initialize_metadata,
 )
 
 CEREMONY_INTRO = """
-# Repository Metadata and Settings for the TUF Repository Service
+# Repository Metadata and Settings for the Repository Service for TUF
 
 Create new Repository Metadata and Settings
 
-TUF Repository Service is an implementation for The Update Framework (TUF) as a
-Service to be deployed in Cloud or on-premises, protecting your target files
-repository.
+Repository Service for TUF is an implementation for The Update Framework (TUF)
+as a Service to be deployed in Cloud or on-premises, protecting your target
+files repository.
 
 TUF helps developers maintain the security of software update systems,
 providing protection even against attackers that compromise the repository or
@@ -53,11 +53,11 @@ More about TUF access https://theupdateframework.io
 CEREMONY_INTRO_ROLES_RESPONSIBILITIES = """
 
 ## Roles and Responsibilities
-TUF Repository Service implements Roles and Responsibilities based on TUF top
-roles (root, targets, timestamp, and snapshot) and the delegated roles bin and
-bins.
+Repository Service for TUF implements Roles and Responsibilities based on TUF
+top roles (root, targets, timestamp, and snapshot) and the delegated roles bin
+and bins.
 
-The inspiration for TUF Repository Service is the
+The inspiration for Repository Service for TUF is the
 [Python Enhancement Proposal 458](https://peps.python.org/pep-0458/).
 
 
@@ -430,13 +430,13 @@ def _check_server(settings):
         if token_access_check.state is False:
             raise click.ClickException(
                 f"{str(token_access_check.data)}"
-                "\n\nTry re-login: 'TUF Repository Service admin login'"
+                "\n\nTry re-login: 'Repository Service for TUF admin login'"
             )
 
         expired_admin = token_access_check.data.get("expired")
         if expired_admin is True:
             raise click.ClickException(
-                "Token expired. Run 'TUF Repository Service admin login'"
+                "Token expired. Run 'Repository Service for TUF admin login'"
             )
         else:
             headers = {"Authorization": f"Bearer {token}"}
@@ -448,7 +448,7 @@ def _check_server(settings):
             ):
                 raise click.ClickException(f"{response.json().get('detail')}")
     else:
-        raise click.ClickException("Login first. Run 'trs-cli admin login'")
+        raise click.ClickException("Login first. Run 'rstuf-cli admin login'")
 
     return headers
 
@@ -540,7 +540,7 @@ def _bootstrap_state(task_id, server, headers):
     "--bootstrap",
     "bootstrap",
     help=(
-        "Bootstrap a TUF Repository Service using the Repository Metadata "
+        "Bootstrap a Repository Service for TUF using the Repository Metadata "
         "after Ceremony"
     ),
     required=False,

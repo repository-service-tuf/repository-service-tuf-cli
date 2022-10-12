@@ -5,7 +5,7 @@ from pathlib import Path
 
 import rich_click as click  # type: ignore
 
-from tuf_repository_service import Dynaconf
+from repository_service_tuf import Dynaconf
 
 HOME = str(Path.home())
 
@@ -15,14 +15,14 @@ HOME = str(Path.home())
     "-c",
     "--config",
     "config",
-    default=os.path.join(HOME, ".trs.ini"),
-    help="TUF Repository Service config file",
+    default=os.path.join(HOME, ".rstuf.ini"),
+    help="Repository Service for TUF config file",
     required=False,
 )
 @click.pass_context
-def trs(context, config):
+def rstuf(context, config):
     """
-    TUF Repository Service Command Line Interface (CLI).
+    Repository Service for TUF Command Line Interface (CLI).
     """
     context.obj = {
         "settings": Dynaconf(settings_files=[config]),
