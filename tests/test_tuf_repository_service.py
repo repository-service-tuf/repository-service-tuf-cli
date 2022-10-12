@@ -1,3 +1,4 @@
+from repository_service_tuf.__version__ import version
 from repository_service_tuf.cli import rstuf
 
 
@@ -6,3 +7,10 @@ class TestRSTUFCLI:
 
         test_result = client.invoke(rstuf)
         assert test_result.exit_code == 0
+
+    def test_trs_version_parameter(self, client):
+        """Tests the CLI --version parameter existence and output format."""
+        result = client.invoke(rstuf, ["--version"])
+
+        assert result.exit_code == 0
+        assert result.output == f"rstuf, version {version}\n"
