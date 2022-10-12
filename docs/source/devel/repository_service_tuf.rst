@@ -1,4 +1,4 @@
-tuf\_repository\_service package
+repository\_service\_tuf package
 ================================
 
 Subpackages
@@ -7,13 +7,13 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   tuf_repository_service.cli
-   tuf_repository_service.helpers
+   repository_service_tuf.cli
+   repository_service_tuf.helpers
 
 Module contents
 ---------------
 
-.. automodule:: tuf_repository_service
+.. automodule:: repository_service_tuf
    :members:
    :undoc-members:
    :show-inheritance:

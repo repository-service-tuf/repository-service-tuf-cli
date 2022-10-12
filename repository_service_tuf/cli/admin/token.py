@@ -1,8 +1,8 @@
 import click
 from rich.console import Console  # type: ignore
 
-from tuf_repository_service.cli.admin import admin
-from tuf_repository_service.helpers.api_client import (
+from repository_service_tuf.cli.admin import admin
+from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,
     is_logged,
@@ -51,7 +51,7 @@ def generate(context, scope, expires):
     logged_token = settings.get("TOKEN")
     login = is_logged(server, logged_token)
     if login.state is False:
-        raise click.ClickException("Not logged. Use 'trs-cli admin login'")
+        raise click.ClickException("Not logged. Use 'rstuf-cli admin login'")
 
     headers = {"Authorization": f"Bearer {logged_token}"}
     payload = {"scopes": list(scope), "expires": expires}
@@ -85,7 +85,7 @@ def inspect(context, token):
     logged_token = settings.get("TOKEN")
     login = is_logged(server, logged_token)
     if login.state is False:
-        raise click.ClickException("Not logged. Use 'trs-cli admin login'")
+        raise click.ClickException("Not logged. Use 'rstuf-cli admin login'")
 
     headers = {"Authorization": f"Bearer {logged_token}"}
     response = request_server(

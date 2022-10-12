@@ -4,7 +4,7 @@ from typing import Any, Dict, Optional
 
 import requests
 
-from tuf_repository_service.cli import click
+from repository_service_tuf.cli import click
 
 
 class URL(Enum):

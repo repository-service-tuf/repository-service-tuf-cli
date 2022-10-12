@@ -9,12 +9,12 @@ Development
 Component level
 ---------------
 
-.. uml:: ../../diagrams/tuf-repository-service-cli-C3.puml
+.. uml:: ../../diagrams/repository-service-tuf-cli-C3.puml
 .. toctree::
    :maxdepth: 4
 
-   tuf_repository_service
-   tuf_repository_service.cli
-   tuf_repository_service.cli.admin
-   tuf_repository_service.helpers
+   repository_service_tuf
+   repository_service_tuf.cli
+   repository_service_tuf.cli.admin
+   repository_service_tuf.helpers
    modules

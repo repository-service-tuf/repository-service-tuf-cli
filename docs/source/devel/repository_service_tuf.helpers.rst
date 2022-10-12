@@ -1,21 +1,21 @@
-tuf\_repository\_service.helpers package
+repository\_service\_tuf.helpers package
 ========================================
 
 Submodules
 ----------
 
-tuf\_repository\_service.helpers.api\_client module
+repository\_service\_tuf.helpers.api\_client module
 ---------------------------------------------------
 
-.. automodule:: tuf_repository_service.helpers.api_client
+.. automodule:: repository_service_tuf.helpers.api_client
    :members:
    :undoc-members:
    :show-inheritance:
 
-tuf\_repository\_service.helpers.tuf module
+repository\_service\_tuf.helpers.tuf module
 -------------------------------------------
 
-.. automodule:: tuf_repository_service.helpers.tuf
+.. automodule:: repository_service_tuf.helpers.tuf
    :members:
    :undoc-members:
    :show-inheritance:
@@ -23,7 +23,7 @@ tuf\_repository\_service.helpers.tuf module
 Module contents
 ---------------
 
-.. automodule:: tuf_repository_service.helpers
+.. automodule:: repository_service_tuf.helpers
    :members:
    :undoc-members:
    :show-inheritance:
