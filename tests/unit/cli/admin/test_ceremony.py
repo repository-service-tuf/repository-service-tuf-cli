@@ -5,7 +5,7 @@ import pytest
 from click import ClickException
 from securesystemslib.keys import generate_ed25519_key  # type: ignore
 
-from tuf_repository_service.cli.admin import ceremony
+from repository_service_tuf.cli.admin import ceremony
 
 
 class TestCeremonyGroupCLI:
@@ -23,7 +23,7 @@ class TestCeremonyGroupCLI:
             ceremony, "request_server", lambda *a, **kw: mocked_request_server
         )
 
-        result = ceremony._bootstrap("http://fake-trs", {}, {})
+        result = ceremony._bootstrap("http://fake-rstuf", {}, {})
         assert result == "task_id_123"
         assert mocked_request_server.json.calls == [pretend.call()]
 
@@ -42,7 +42,7 @@ class TestCeremonyGroupCLI:
         )
 
         with pytest.raises(ClickException) as err:
-            ceremony._bootstrap("http://fake-trs", {}, {})
+            ceremony._bootstrap("http://fake-rstuf", {}, {})
 
         assert "Error 200" in str(err)
         assert mocked_request_server.json.calls == [pretend.call()]
@@ -62,7 +62,7 @@ class TestCeremonyGroupCLI:
         )
 
         with pytest.raises(ClickException) as err:
-            ceremony._bootstrap("http://fake-trs", {}, {})
+            ceremony._bootstrap("http://fake-rstuf", {}, {})
 
         assert "No message available." in str(err)
         assert mocked_request_server.json.calls == [pretend.call()]
@@ -242,9 +242,9 @@ class TestCeremonyGroupCLI:
         test_result = client.invoke(ceremony.ceremony, obj=test_context)
         assert test_result.exit_code == 1
         assert (
-            "Repository Metadata and Settings for TUF Repository Service"
-            in test_result.output
-        )
+            "Repository Metadata and Settings for the Repository Service "
+            "for TUF"
+        ) in test_result.output
 
     def test_ceremony_start_no(self, client, test_context):
         test_result = client.invoke(
@@ -347,7 +347,7 @@ class TestCeremonyGroupCLI:
 
         fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
         monkeypatch.setattr(
-            "tuf_repository_service.cli.admin.ceremony._load_key",
+            "repository_service_tuf.cli.admin.ceremony._load_key",
             fake__load_key,
         )
 
@@ -441,7 +441,7 @@ class TestCeremonyGroupCLI:
 
         fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
         monkeypatch.setattr(
-            "tuf_repository_service.cli.admin.ceremony._load_key",
+            "repository_service_tuf.cli.admin.ceremony._load_key",
             fake__load_key,
         )
 
@@ -525,7 +525,7 @@ class TestCeremonyGroupCLI:
             lambda s: {"Authorization": "Bearer test"}
         )
         monkeypatch.setattr(
-            "tuf_repository_service.cli.admin.ceremony._check_server",
+            "repository_service_tuf.cli.admin.ceremony._check_server",
             mocked_check_server,
         )
 
@@ -546,7 +546,7 @@ class TestCeremonyGroupCLI:
         ]
 
         monkeypatch.setattr(
-            "tuf_repository_service.cli.admin.ceremony.request_server",
+            "repository_service_tuf.cli.admin.ceremony.request_server",
             mocked_request_server,
         )
 
@@ -557,7 +557,7 @@ class TestCeremonyGroupCLI:
 
         fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
         monkeypatch.setattr(
-            "tuf_repository_service.cli.admin.ceremony._load_key",
+            "repository_service_tuf.cli.admin.ceremony._load_key",
             fake__load_key,
         )
 
@@ -584,7 +584,7 @@ class TestCeremonyGroupCLI:
             lambda s: {"Authorization": "Bearer test"}
         )
         monkeypatch.setattr(
-            "tuf_repository_service.cli.admin.ceremony._check_server",
+            "repository_service_tuf.cli.admin.ceremony._check_server",
             mocked_check_server,
         )
 
@@ -599,7 +599,7 @@ class TestCeremonyGroupCLI:
         )
 
         monkeypatch.setattr(
-            "tuf_repository_service.cli.admin.ceremony.request_server",
+            "repository_service_tuf.cli.admin.ceremony.request_server",
             lambda *a, **kw: mocked_request_server,
         )
 
@@ -621,7 +621,7 @@ class TestCeremonyGroupCLI:
             lambda s: {"Authorization": "Bearer test"}
         )
         monkeypatch.setattr(
-            "tuf_repository_service.cli.admin.ceremony._check_server",
+            "repository_service_tuf.cli.admin.ceremony._check_server",
             mocked_check_server,
         )
 
@@ -635,7 +635,7 @@ class TestCeremonyGroupCLI:
         )
 
         monkeypatch.setattr(
-            "tuf_repository_service.cli.admin.ceremony.request_server",
+            "repository_service_tuf.cli.admin.ceremony.request_server",
             lambda *a, **kw: mocked_request_server,
         )
 
@@ -706,7 +706,7 @@ class TestCeremonyGroupCLI:
             lambda s: {"Authorization": "Bearer test"}
         )
         monkeypatch.setattr(
-            "tuf_repository_service.cli.admin.ceremony._check_server",
+            "repository_service_tuf.cli.admin.ceremony._check_server",
             mocked_check_server,
         )
 
@@ -725,7 +725,7 @@ class TestCeremonyGroupCLI:
         ]
 
         monkeypatch.setattr(
-            "tuf_repository_service.cli.admin.ceremony.request_server",
+            "repository_service_tuf.cli.admin.ceremony.request_server",
             mocked_request_server,
         )
 
@@ -736,7 +736,7 @@ class TestCeremonyGroupCLI:
 
         fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
         monkeypatch.setattr(
-            "tuf_repository_service.cli.admin.ceremony._load_key",
+            "repository_service_tuf.cli.admin.ceremony._load_key",
             fake__load_key,
         )
 
@@ -810,7 +810,7 @@ class TestCeremonyGroupCLI:
             lambda s: {"Authorization": "Bearer test"}
         )
         monkeypatch.setattr(
-            "tuf_repository_service.cli.admin.ceremony._check_server",
+            "repository_service_tuf.cli.admin.ceremony._check_server",
             mocked_check_server,
         )
 
@@ -834,7 +834,7 @@ class TestCeremonyGroupCLI:
         ]
 
         monkeypatch.setattr(
-            "tuf_repository_service.cli.admin.ceremony.request_server",
+            "repository_service_tuf.cli.admin.ceremony.request_server",
             mocked_request_server,
         )
 
@@ -845,7 +845,7 @@ class TestCeremonyGroupCLI:
 
         fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
         monkeypatch.setattr(
-            "tuf_repository_service.cli.admin.ceremony._load_key",
+            "repository_service_tuf.cli.admin.ceremony._load_key",
             fake__load_key,
         )
 

@@ -4,9 +4,9 @@ from dynaconf import loaders
 from rich import markdown, prompt  # type: ignore
 from rich.console import Console  # type: ignore
 
-from tuf_repository_service.cli import click
-from tuf_repository_service.cli.admin import admin
-from tuf_repository_service.helpers.api_client import (
+from repository_service_tuf.cli import click
+from repository_service_tuf.cli.admin import admin
+from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,
     is_logged,
@@ -31,7 +31,7 @@ def _run_login(context, server_, user_, password_, expires_):
     settings = context.obj.get("settings")
     console.print(
         markdown.Markdown(
-            f"""# Login to TUF Repository Service\n
+            f"""# Login to Repository Service for TUF\n
             The server and token will generate a token and it will be
             stored in {context.obj.get('config')}
             """
@@ -96,7 +96,7 @@ def _run_login(context, server_, user_, password_, expires_):
     loaders.write(context.obj.get("config"), settings.to_dict())
 
     console.print(f"Token stored in {context.obj.get('config')}\n")
-    console.print("Login successfuly.")
+    console.print("Login successful.")
 
 
 @admin.command()
@@ -112,7 +112,7 @@ def _run_login(context, server_, user_, password_, expires_):
 @click.pass_context
 def login(context, force, server_, user_, password_, expires_):
     """
-    Login to TUF Repository Service (API).
+    Login to Repository Service for TUF (API).
     """
     settings = context.obj.get("settings")
     server = settings.get("SERVER")

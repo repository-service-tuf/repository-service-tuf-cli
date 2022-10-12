@@ -1,7 +1,7 @@
-tuf_repository_service
+repository_service_tuf
 ======================
 
 .. toctree::
    :maxdepth: 4
 
-   tuf_repository_service
+   repository_service_tuf

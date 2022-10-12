@@ -1,7 +1,7 @@
 import pretend
 import pytest
 
-from tuf_repository_service.cli.admin import login
+from repository_service_tuf.cli.admin import login
 
 
 class TestLoginGroupCLI:
@@ -52,7 +52,7 @@ class TestLoginGroupCLI:
 
     def test_login(self, client, test_context):
         steps = [
-            "http://test-trs",
+            "http://test-rstuf",
             "admin",
             "pass",
             "1",
@@ -69,7 +69,7 @@ class TestLoginGroupCLI:
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()
@@ -83,7 +83,7 @@ class TestLoginGroupCLI:
         test_context["settings"].TOKEN = "test-token"
 
         steps = [
-            "http://test-trs",
+            "http://test-rstuf",
             "admin",
             "pass",
             "1",
@@ -100,7 +100,7 @@ class TestLoginGroupCLI:
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()
@@ -110,11 +110,11 @@ class TestLoginGroupCLI:
     def test_login_expired_token(self, client, test_context):
 
         # simulate the settings file with invalid/expired token
-        test_context["settings"].SERVER = "http://test-trs"
+        test_context["settings"].SERVER = "http://test-rstuf"
         test_context["settings"].TOKEN = "fake-token"
 
         steps = [
-            "http://test-trs",
+            "http://test-rstuf",
             "admin",
             "pass",
             "1",
@@ -135,7 +135,7 @@ class TestLoginGroupCLI:
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()
@@ -148,11 +148,11 @@ class TestLoginGroupCLI:
     def test_login_already_logged(self, client, test_context):
 
         # simulate the settings file with invalid/expired token
-        test_context["settings"].SERVER = "http://test-trs"
+        test_context["settings"].SERVER = "http://test-rstuf"
         test_context["settings"].TOKEN = "fake-token"
 
         steps = [
-            "http://test-trs",
+            "http://test-rstuf",
             "admin",
             "pass",
             "1",
@@ -177,7 +177,7 @@ class TestLoginGroupCLI:
 
         assert test_result.exit_code == 0
         assert (
-            "Already logged to http://test-trs."
+            "Already logged to http://test-rstuf."
             " Valid until '2022-08-23T09:10:14'" in test_result.output
         )
         assert login.is_logged.calls == [
@@ -186,8 +186,8 @@ class TestLoginGroupCLI:
 
     def test_login_missing_http_protocol(self, client, test_context):
         steps = [
-            "test-trs",
-            "http://test-trs",
+            "test-rstuf",
+            "http://test-rstuf",
             "admin",
             "pass",
             "1",
@@ -203,7 +203,7 @@ class TestLoginGroupCLI:
             login.login, input="\n".join(steps), obj=test_context
         )
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
 
     def test_login_with_server(self, client, test_context):
         steps = [
@@ -220,13 +220,13 @@ class TestLoginGroupCLI:
         )
         test_result = client.invoke(
             login.login,
-            ["-s", "http://test-trs"],
+            ["-s", "http://test-rstuf"],
             input="\n".join(steps),
             obj=test_context,
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()
@@ -245,14 +245,14 @@ class TestLoginGroupCLI:
 
         test_result = client.invoke(
             login.login,
-            ["-s", "test-trs"],
+            ["-s", "test-rstuf"],
             input="\n".join(steps),
             obj=test_context,
         )
 
         assert test_result.exit_code == 1
         assert (
-            "Please use 'http://test-trs' or 'https://test-trs'"
+            "Please use 'http://test-rstuf' or 'https://test-rstuf'"
             in test_result.output
         )
 
@@ -260,7 +260,7 @@ class TestLoginGroupCLI:
         self, client, test_context
     ):
         steps = [
-            "http://test-trs",
+            "http://test-rstuf",
             "admin",
             "pass",
             "1",
@@ -274,13 +274,13 @@ class TestLoginGroupCLI:
         )
         test_result = client.invoke(
             login.login,
-            ["-s", "test-trs"],
+            ["-s", "test-rstuf"],
             input="\n".join(steps),
             obj=test_context,
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()
@@ -301,13 +301,13 @@ class TestLoginGroupCLI:
         )
         test_result = client.invoke(
             login.login,
-            ["-s", "http://test-trs", "-u", "admin"],
+            ["-s", "http://test-rstuf", "-u", "admin"],
             input="\n".join(steps),
             obj=test_context,
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()
@@ -328,13 +328,13 @@ class TestLoginGroupCLI:
         )
         test_result = client.invoke(
             login.login,
-            ["-s", "http://test-trs", "-u", "admin", "-p", "pass"],
+            ["-s", "http://test-rstuf", "-u", "admin", "-p", "pass"],
             input="\n".join(steps),
             obj=test_context,
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()
@@ -351,12 +351,21 @@ class TestLoginGroupCLI:
         )
         test_result = client.invoke(
             login.login,
-            ["-s", "http://test-trs", "-u", "admin", "-p", "pass", "-e", "1"],
+            [
+                "-s",
+                "http://test-rstuf",
+                "-u",
+                "admin",
+                "-p",
+                "pass",
+                "-e",
+                "1",
+            ],
             obj=test_context,
         )
 
         assert test_result.exit_code == 0
-        assert "Login successfuly." in test_result.output
+        assert "Login successful." in test_result.output
         assert login.loaders.write.calls == [
             pretend.call(
                 test_context["config"], test_context["settings"].to_dict()

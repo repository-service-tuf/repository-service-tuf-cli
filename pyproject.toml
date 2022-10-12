@@ -4,8 +4,8 @@ requires = ["hatchling==0.22.0", "dynaconf[ini]==3.1.9"]
 build-backend = "hatchling.build"
 
 [project]
-name = "tuf-repository-service"
-description = 'TUF Repository Service Command Line Interface'
+name = "repository-service-tuf"
+description = 'Repository Service for TUF Command Line Interface'
 readme = "README.rst"
 requires-python = ">=3.9"
 license = { text = "MIT"}
@@ -28,7 +28,7 @@ dependencies = ["rich-click", "tuf"]
 dynamic = ["version"]
 
 [tool.hatch.version]
-path = "tuf_repository_service/__version__.py"
+path = "repository_service_tuf/__version__.py"
 
 [project.scripts]
-trs-cli = "tuf_repository_service.cli:trs"
+rstuf = "repository_service_tuf.cli:rstuf"
