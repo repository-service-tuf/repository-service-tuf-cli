@@ -4,10 +4,10 @@ Repository Service for TUF Command Line Interface
 
 |Tests and Lint| |Coverage|
 
-.. |Tests and Lint| image:: https://github.com/kaprien/repository-service-tuf-cli/actions/workflows/ci.yml/badge.svg
-  :target: https://github.com/kaprien/repository-service-tuf-cli/actions/workflows/ci.yml
-.. |Coverage| image:: https://codecov.io/gh/kaprien/repository-service-tuf-cli/branch/main/graph/badge.svg
-  :target: https://codecov.io/gh/kaprien/repository-service-tuf-cli
+.. |Tests and Lint| image:: https://github.com/vmware/repository-service-tuf-cli/actions/workflows/ci.yml/badge.svg
+  :target: https://github.com/vmware/repository-service-tuf-cli/actions/workflows/ci.yml
+.. |Coverage| image:: https://codecov.io/gh/vmware/repository-service-tuf-cli/branch/main/graph/badge.svg
+  :target: https://codecov.io/gh/vmware/repository-service-tuf-cli
 
 Repository Service for TUF Command Line Interface (CLI).
 
@@ -30,7 +30,7 @@ Getting the source code
 =======================
 
 `Fork <https://docs.github.com/en/get-started/quickstart/fork-a-repo>`_ the
-repository on `GitHub <https://github.com/kaprien/repository-service-tuf-cli>`_ and
+repository on `GitHub <https://github.com/vmware/repository-service-tuf-cli>`_ and
 `clone <https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository>`_
 it to your local machine:
 
@@ -45,7 +45,7 @@ you stay up-to-date with our repository:
 
 .. code-block:: console
 
-    git remote add upstream https://github.com/kaprien/repository-service-tuf-cli
+    git remote add upstream https://github.com/vmware/repository-service-tuf-cli
     git checkout main
     git fetch upstream
     git merge upstream/main
