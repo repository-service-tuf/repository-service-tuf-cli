@@ -301,7 +301,7 @@ class TestCeremonyGroupCLI:
             "",
             "",
             "y",
-            "https://github.com/kaprien",
+            "https://github.com/vmware",
             "*, */*, */*/*, */*/*/*, */*/*/*/*, */*/*/*/*/*",
             "",
             "",
