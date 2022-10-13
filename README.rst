@@ -94,9 +94,9 @@ Running RSTUF CLI:
 
 .. code:: shell
 
-    $ rstuf-cli
+    $ rstuf
 
-    Usage: rstuf-cli [OPTIONS] COMMAND [ARGS]...
+    Usage: rstuf [OPTIONS] COMMAND [ARGS]...
 
     Repository Service for TUF Command Line Interface (CLI).
 
