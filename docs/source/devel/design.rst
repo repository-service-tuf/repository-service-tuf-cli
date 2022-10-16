@@ -7,7 +7,7 @@ Context level
 The ``repository-service-tuf``, in the context perspective, is a command line tool. It sends
 HTTP requests to ``repository-service-tuf-api``.
 
-.. uml:: ../../diagrams/repository-service-tuf-cli-C1.puml
+.. image:: /_static/repository-service-tuf-cli-C1.png
 
 
 Container level
@@ -26,4 +26,4 @@ option ``-f/--file`` with ``ceremony`` subcommand.
 ``metadata`` folder if used ``-s/--save``with ``ceremony`` subcommand.
 
 
-.. uml:: ../../diagrams/repository-service-tuf-cli-C2.puml
+.. image:: /_static/repository-service-tuf-cli-C2.png
