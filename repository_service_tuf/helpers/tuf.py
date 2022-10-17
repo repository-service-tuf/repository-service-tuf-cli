@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2022 VMware Inc
+#
+# SPDX-License-Identifier: MIT
+
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple

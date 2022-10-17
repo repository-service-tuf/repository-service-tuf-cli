@@ -1,4 +1,9 @@
 #!/bin/python
+
+# SPDX-FileCopyrightText: 2022 VMware Inc
+#
+# SPDX-License-Identifier: MIT
+
 from securesystemslib.interface import (  # type: ignore
     generate_and_write_ed25519_keypair,
 )
