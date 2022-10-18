@@ -8,8 +8,8 @@ tests:
 	tox -r
 
 requirements:
-	pipenv lock -r > requirements.txt
-	pipenv lock -r -d > requirements-dev.txt
+	pipenv requirements > requirements.txt
+	pipenv requirements --dev > requirements-dev.txt
 
 coverage:
 	coverage report
