@@ -10,7 +10,7 @@ import os
 import time
 from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List
 
 from rich import box, markdown, prompt, table  # type: ignore
 from rich.console import Console  # type: ignore
@@ -32,6 +32,7 @@ from repository_service_tuf.helpers.api_client import (
     is_logged,
     request_server,
 )
+from repository_service_tuf.helpers.tuf import KeyProp as Key
 from repository_service_tuf.helpers.tuf import (
     RolesKeysInput,
     initialize_metadata,
@@ -262,12 +263,6 @@ default_settings = {
 
 
 @dataclass
-class Key:
-    key: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
-
-
-@dataclass
 class ServiceSettings:
     targets_base_url: str
 
@@ -290,12 +285,17 @@ SETTINGS = PayloadSettings(
 )
 
 
-def _key_is_duplicated(key: Dict[str, Any]) -> bool:
-    for role in SETTINGS.roles.values():
+def _key_is_duplicated(
+    roles_keys_input_list: List[RolesKeysInput], key: Key.key, filename: str
+) -> bool:
+    for role in roles_keys_input_list:
         if any(k for k in role.keys.values() if key == k.get("key")):
             return True
-        if any(k for k in role.keys.values() if key == k.get("path")):
-            return False
+
+        # FIXME: this will block files with the same name but which are in
+        #  different paths, a different approach should be found
+        if any(k for k in role.keys.values() if filename == k.get("filename")):
+            return True
 
     return False
 
@@ -410,7 +410,10 @@ def _configure_keys(rolename: str, role: RolesKeysInput) -> None:
             else:
                 raise click.ClickException("Required key not validated.")
 
-        if key.key is not None and _key_is_duplicated(key.key) is True:
+        if key.key is not None and (
+            _key_is_duplicated(SETTINGS.roles.values(), key.key, filepath)
+            is True
+        ):
             console.print(":cross_mark: [red]Failed[/]: Key is duplicated.")
             continue
 
@@ -452,7 +455,7 @@ def _check_server(settings):
             ):
                 raise click.ClickException(f"{response.json().get('detail')}")
     else:
-        raise click.ClickException("Login first. Run 'rstuf-cli admin login'")
+        raise click.ClickException("Login first. Run 'rstuf admin login'")
 
     return headers
 
@@ -576,7 +579,7 @@ def _bootstrap_state(task_id, server, headers):
     "-s",
     "--save",
     help=(
-        "Save a copy of the metadata localy. This option saves the metadata "
+        "Save a copy of the metadata locally. This option saves the metadata "
         "files (json) in the 'metadata' dir."
     ),
     show_default=True,

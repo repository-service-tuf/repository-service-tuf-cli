@@ -4,7 +4,7 @@
 
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
 from securesystemslib.signer import Signer, SSlibSigner  # type: ignore
 from tuf.api.metadata import (
@@ -33,11 +33,25 @@ repository_metadata: Dict[str, Metadata] = {}
 
 
 @dataclass
+class KeyProp:
+    # "key": Any (Any follows the KEY_SCHEMA from securesystemslib)
+    key: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+
+
+@dataclass
+class KeyInput(TypedDict):
+    filename: str
+    password: str
+    key: KeyProp
+
+
+@dataclass
 class RolesKeysInput:
     expiration: int = 1
     num_of_keys: int = 1
     threshold: int = 1
-    keys: Dict[str, Any] = field(default_factory=dict)
+    keys: Dict[str, KeyInput] = field(default_factory=dict)
     offline_keys: bool = True
     paths: Optional[List[str]] = None
     number_hash_prefixes: Optional[int] = None
