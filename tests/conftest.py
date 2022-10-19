@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 import pytest  # type: ignore
 from click.testing import CliRunner  # type: ignore
 from dynaconf import Dynaconf
+from securesystemslib.keys import generate_ed25519_key  # type: ignore
 
 
 @pytest.fixture
@@ -21,3 +22,13 @@ def test_context():
 def client():
     runner = CliRunner()
     return runner
+
+
+@pytest.fixture
+def fake_key():
+    class FakeKey:
+        def __init__(self):
+            self.error = None
+            self.key = generate_ed25519_key()
+
+    return FakeKey
