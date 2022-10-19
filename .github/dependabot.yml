@@ -7,16 +7,17 @@ updates:
       interval: "daily"
       time: "10:00"
     commit-message:
-      prefix: "chore"
+      prefix: "build"
       include: "scope"
     open-pull-requests-limit: 10
-  # Monitor Python test dependencies
+  # Monitor Python dependencies
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "daily"
       time: "10:00"
     commit-message:
-      prefix: "chore"
+      prefix: "build"
+      prefix-development: "build-dev"
       include: "scope"
     open-pull-requests-limit: 10
