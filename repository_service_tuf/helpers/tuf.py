@@ -39,7 +39,6 @@ class KeyProp:
     error: Optional[str] = None
 
 
-@dataclass
 class KeyInput(TypedDict):
     filename: str
     password: str
