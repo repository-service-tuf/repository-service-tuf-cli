@@ -39,7 +39,7 @@ sphinxcontrib-qthelp = "*"
 sphinxcontrib-serializinghtml = "*"
 sphinxcontrib-plantuml = "*"
 sphinx-rtd-theme = "*"
-hatchling = "==0.22.0"
+hatchling = "==1.11.1"
 build = "*"
 
 [requires]
