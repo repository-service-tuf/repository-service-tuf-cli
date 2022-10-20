@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-rich-click = "==1.2.1"
+rich-click = "==1.5.2"
 securesystemslib = "==0.22.0"
 cryptography = "==36.0.2"
 cffi = "==1.15.0"
