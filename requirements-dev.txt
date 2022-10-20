@@ -70,4 +70,4 @@ securesystemslib==0.22.0
 shellescape==3.8.1
 tuf==2.0.0
 types-requests==2.28.11
-types-urllib3==1.26.25
+types-urllib3==1.26.25.1
