@@ -3,12 +3,13 @@
 # SPDX-License-Identifier: MIT
 
 import os
+from dataclasses import dataclass
 from tempfile import TemporaryDirectory
+from typing import Any, Dict, Optional
 
 import pytest  # type: ignore
 from click.testing import CliRunner  # type: ignore
 from dynaconf import Dynaconf
-from securesystemslib.keys import generate_ed25519_key  # type: ignore
 
 
 @pytest.fixture
@@ -26,9 +27,9 @@ def client():
 
 @pytest.fixture
 def fake_key():
+    @dataclass
     class FakeKey:
-        def __init__(self):
-            self.error = None
-            self.key = generate_ed25519_key()
+        key: Optional[Dict[str, Any]] = None
+        error: Optional[str] = None
 
     return FakeKey

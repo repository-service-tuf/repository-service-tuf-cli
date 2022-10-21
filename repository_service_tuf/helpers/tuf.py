@@ -2,9 +2,9 @@
 #
 # SPDX-License-Identifier: MIT
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple, TypedDict
+from typing import Any, Dict, List, Optional, Tuple
 
 from securesystemslib.signer import Signer, SSlibSigner  # type: ignore
 from tuf.api.metadata import (
@@ -33,24 +33,28 @@ repository_metadata: Dict[str, Metadata] = {}
 
 
 @dataclass
-class KeyProp:
-    # "key": Any (Any follows the KEY_SCHEMA from securesystemslib)
+class KeySchema:
+    # "key": Any (Any follows the ED25519KEY_SCHEMA from securesystemslib)
     key: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
 
 
-class KeyInput(TypedDict):
-    filename: str
+@dataclass
+class KeyInput:
+    filepath: str
     password: str
-    key: KeyProp
+    key: KeySchema
+
+    def to_dict(self):
+        return asdict(self)
 
 
 @dataclass
-class RolesKeysInput:
+class RoleSettingsInput:
     expiration: int = 1
     num_of_keys: int = 1
     threshold: int = 1
-    keys: Dict[str, KeyInput] = field(default_factory=dict)
+    keys: Dict[str, KeyInput] = None
     offline_keys: bool = True
     paths: Optional[List[str]] = None
     number_hash_prefixes: Optional[int] = None
@@ -60,7 +64,7 @@ class RolesKeysInput:
 
 
 def initialize_metadata(
-    settings: Dict[str, RolesKeysInput], save=True
+    settings: Dict[str, RoleSettingsInput], save=True
 ) -> Dict[str, Metadata]:
     """
     Creates development TUF top-level role metadata (root, targets, snapshot,
@@ -95,8 +99,8 @@ def initialize_metadata(
     def _signers(role_name: str) -> List[Signer]:
         """Returns all Signers from the settings for a specific role name"""
         return [
-            SSlibSigner(key["key"])
-            for key in settings[role_name].keys.values()
+            SSlibSigner(key_input.key.key)
+            for key_input in settings[role_name].keys.values()
         ]
 
     def _sign(role: Metadata, role_name: str) -> None:
