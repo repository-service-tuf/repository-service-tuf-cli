@@ -252,7 +252,7 @@ class RoleSettings:
 
 
 default_settings = {
-    Roles.ROOT.value: RoleSettings(356, 1, 2, True),
+    Roles.ROOT.value: RoleSettings(365, 1, 2, True),
     Roles.TARGETS.value: RoleSettings(365, 1, 2, True),
     Roles.SNAPSHOT.value: RoleSettings(1, 1, 1, False),
     Roles.TIMESTAMP.value: RoleSettings(1, 1, 1, False),
