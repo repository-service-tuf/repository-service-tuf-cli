@@ -481,7 +481,7 @@ def _bootstrap(server, headers, json_payload):
     else:
         if data := response_json.get("data"):
             task_id = data.get("task_id")
-            console.print(f"Boostrap status: ACCEPTED ({task_id})")
+            console.print(f"Bootstrap status: ACCEPTED ({task_id})")
 
     return task_id
 
@@ -503,7 +503,7 @@ def _bootstrap_state(task_id, server, headers):
         if data:
             if state := data.get("state"):
                 if state not in received_state:
-                    console.print(f"Boostrap status: {state}")
+                    console.print(f"Bootstrap status: {state}")
                     received_state.append(state)
 
                 if state == "SUCCESS":
