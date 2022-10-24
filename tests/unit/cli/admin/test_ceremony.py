@@ -7,12 +7,125 @@ from unittest.mock import MagicMock
 import pretend  # type: ignore
 import pytest
 from click import ClickException
-from securesystemslib.keys import generate_ed25519_key  # type: ignore
+from securesystemslib.keys import generate_ed25519_key
 
 from repository_service_tuf.cli.admin import ceremony
+from repository_service_tuf.cli.admin.ceremony import _key_is_duplicated
+from repository_service_tuf.helpers.tuf import KeyInput, RoleSettingsInput
 
 
 class TestCeremonyGroupCLI:
+    def test__key_is_duplicated_different_key(self, fake_key):
+        """
+        Tests the existence of duplicates with a different given key and a
+        different filepath.
+        """
+
+        duplicate_key = fake_key(key=generate_ed25519_key())
+        rand_key_1 = fake_key(key=generate_ed25519_key())
+        rand_key_2 = fake_key(key=generate_ed25519_key())
+        rand_key_3 = fake_key(key=generate_ed25519_key())
+
+        key_input_1 = KeyInput(
+            filepath="filepath_1", password="passwd_1", key=rand_key_1
+        )
+        key_input_2 = KeyInput(
+            filepath="filepath_2", password="passwd_2", key=rand_key_2
+        )
+        key_input_3 = KeyInput(
+            filepath="filepath_3", password="passwd_3", key=rand_key_3
+        )
+
+        role_1_keys_inputs = {"root_1": key_input_1, "root_2": key_input_2}
+        role_2_keys_inputs = {"bin_1": key_input_3}
+
+        role1 = RoleSettingsInput(keys=role_1_keys_inputs)
+        role2 = RoleSettingsInput(keys=role_2_keys_inputs)
+
+        assert (
+            _key_is_duplicated(
+                [role1, role2], duplicate_key.key, "unique_filepath"
+            )
+            is False
+        )
+
+    def test__key_is_duplicated_same_key(self, fake_key):
+        """
+        Tests the existence of duplicates with the same given key and a
+        different filepath.
+        """
+        duplicate_key = fake_key(key=generate_ed25519_key())
+        rand_key_2 = fake_key(key=generate_ed25519_key())
+        rand_key_3 = fake_key(key=generate_ed25519_key())
+
+        key_input_1 = KeyInput(
+            filepath="filepath_1", password="passwd_1", key=duplicate_key
+        )
+        key_input_2 = KeyInput(
+            filepath="filepath_2", password="passwd_2", key=rand_key_2
+        )
+        key_input_3 = KeyInput(
+            filepath="filepath_3", password="passwd_3", key=rand_key_3
+        )
+
+        role_1_keys_inputs = {"root_1": key_input_1, "root_2": key_input_2}
+        role_2_keys_inputs = {"bin_1": key_input_3}
+
+        role1 = RoleSettingsInput(keys=role_1_keys_inputs)
+        role2 = RoleSettingsInput(keys=role_2_keys_inputs)
+
+        assert (
+            _key_is_duplicated(
+                [role1, role2], duplicate_key.key, "unique_filepath"
+            )
+            is True
+        )
+
+        # testing when the duplicate key is in another item of the roles list
+        assert (
+            _key_is_duplicated(
+                [role1, role2], rand_key_3.key, "unique_filepath"
+            )
+            is True
+        )
+
+    def test__key_is_duplicated_same_filepath(self, fake_key):
+        """
+        Tests the existence of duplicates with a different given key and the
+        same filepath.
+        """
+        duplicate_key = fake_key(key=generate_ed25519_key())
+        rand_key_1 = fake_key(key=generate_ed25519_key())
+        rand_key_2 = fake_key(key=generate_ed25519_key())
+        rand_key_3 = fake_key(key=generate_ed25519_key())
+
+        key_input_1 = KeyInput(
+            filepath="filepath_1", password="passwd_1", key=rand_key_1
+        )
+        key_input_2 = KeyInput(
+            filepath="filepath_2", password="passwd_2", key=rand_key_2
+        )
+        key_input_3 = KeyInput(
+            filepath="filepath_3", password="passwd_3", key=rand_key_3
+        )
+
+        role_1_keys_inputs = {"root_1": key_input_1, "root_2": key_input_2}
+        role_2_keys_inputs = {"bin_1": key_input_3}
+
+        role1 = RoleSettingsInput(keys=role_1_keys_inputs)
+        role2 = RoleSettingsInput(keys=role_2_keys_inputs)
+
+        assert (
+            _key_is_duplicated([role1, role2], duplicate_key.key, "filepath_1")
+            is True
+        )
+
+        # testing when duplicate filepath is in another item of the roles list
+        assert (
+            _key_is_duplicated([role1, role2], duplicate_key.key, "filepath_3")
+            is True
+        )
+
     def test__bootstrap(self, monkeypatch):
         mocked_request_server = pretend.stub(
             status_code=202,
@@ -293,7 +406,7 @@ class TestCeremonyGroupCLI:
         assert test_result.exit_code == 1
 
     def test_ceremony_start_default_values(
-        self, client, monkeypatch, test_context
+        self, client, fake_key, monkeypatch, test_context
     ):
         input_step1 = [
             "y",
@@ -344,12 +457,11 @@ class TestCeremonyGroupCLI:
             "y",
         ]
 
-        class FakeKey:
-            def __init__(self):
-                self.error = None
-                self.key = generate_ed25519_key()
+        from securesystemslib.keys import generate_ed25519_key
 
-        fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
+        fake__load_key = pretend.call_recorder(
+            lambda *a, **kw: fake_key(key=generate_ed25519_key())
+        )
         monkeypatch.setattr(
             "repository_service_tuf.cli.admin.ceremony._load_key",
             fake__load_key,
@@ -381,7 +493,7 @@ class TestCeremonyGroupCLI:
         assert "strongPass" not in test_result.output
 
     def test_ceremony_start_default_values_reconfigure_one_role(
-        self, client, monkeypatch, test_context
+        self, client, fake_key, monkeypatch, test_context
     ):
         input_step1 = [
             "y",
@@ -438,12 +550,9 @@ class TestCeremonyGroupCLI:
             "y",
         ]
 
-        class FakeKey:
-            def __init__(self):
-                self.error = None
-                self.key = generate_ed25519_key()
-
-        fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
+        fake__load_key = pretend.call_recorder(
+            lambda *a, **kw: fake_key(key=generate_ed25519_key())
+        )
         monkeypatch.setattr(
             "repository_service_tuf.cli.admin.ceremony._load_key",
             fake__load_key,
@@ -474,7 +583,7 @@ class TestCeremonyGroupCLI:
         assert "strongPass" not in test_result.output
 
     def test_ceremony_with_flag_bootstrap(
-        self, client, monkeypatch, test_context
+        self, client, fake_key, monkeypatch, test_context
     ):
         input_step1 = [
             "y",
@@ -554,12 +663,9 @@ class TestCeremonyGroupCLI:
             mocked_request_server,
         )
 
-        class FakeKey:
-            def __init__(self):
-                self.error = None
-                self.key = generate_ed25519_key()
-
-        fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
+        fake__load_key = pretend.call_recorder(
+            lambda *a, **kw: fake_key(key=generate_ed25519_key())
+        )
         monkeypatch.setattr(
             "repository_service_tuf.cli.admin.ceremony._load_key",
             fake__load_key,
@@ -655,7 +761,7 @@ class TestCeremonyGroupCLI:
         assert "Error 401 Unauthorized." in test_result.output
 
     def test_ceremony_with_flag_bootstrap_failed_post(
-        self, client, monkeypatch, test_context
+        self, client, fake_key, monkeypatch, test_context
     ):
         input_step1 = [
             "y",
@@ -733,12 +839,9 @@ class TestCeremonyGroupCLI:
             mocked_request_server,
         )
 
-        class FakeKey:
-            def __init__(self):
-                self.error = None
-                self.key = generate_ed25519_key()
-
-        fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
+        fake__load_key = pretend.call_recorder(
+            lambda *a, **kw: fake_key(key=generate_ed25519_key())
+        )
         monkeypatch.setattr(
             "repository_service_tuf.cli.admin.ceremony._load_key",
             fake__load_key,
@@ -759,7 +862,7 @@ class TestCeremonyGroupCLI:
         assert "Error 403 Forbidden" in test_result.output
 
     def test_ceremony_with_flag_bootstrap_unexpected_error(
-        self, client, monkeypatch, test_context
+        self, client, fake_key, monkeypatch, test_context
     ):
         input_step1 = [
             "y",
@@ -842,12 +945,9 @@ class TestCeremonyGroupCLI:
             mocked_request_server,
         )
 
-        class FakeKey:
-            def __init__(self):
-                self.error = None
-                self.key = generate_ed25519_key()
-
-        fake__load_key = pretend.call_recorder(lambda *a, **kw: FakeKey())
+        fake__load_key = pretend.call_recorder(
+            lambda *a, **kw: fake_key(key=generate_ed25519_key())
+        )
         monkeypatch.setattr(
             "repository_service_tuf.cli.admin.ceremony._load_key",
             fake__load_key,

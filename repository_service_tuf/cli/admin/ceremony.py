@@ -8,9 +8,10 @@
 import json
 import os
 import time
+from collections.abc import ValuesView
 from dataclasses import asdict, dataclass
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from rich import box, markdown, prompt, table  # type: ignore
 from rich.console import Console  # type: ignore
@@ -33,7 +34,9 @@ from repository_service_tuf.helpers.api_client import (
     request_server,
 )
 from repository_service_tuf.helpers.tuf import (
-    RolesKeysInput,
+    KeyInput,
+    KeySchema,
+    RoleSettingsInput,
     initialize_metadata,
 )
 
@@ -262,12 +265,6 @@ default_settings = {
 
 
 @dataclass
-class Key:
-    key: Optional[Dict[str, Any]] = None
-    error: Optional[str] = None
-
-
-@dataclass
 class ServiceSettings:
     targets_base_url: str
 
@@ -277,7 +274,7 @@ class ServiceSettings:
 
 @dataclass
 class PayloadSettings:
-    roles: Dict[str, RolesKeysInput]
+    roles: Dict[str, RoleSettingsInput]
     service: ServiceSettings
 
 
@@ -285,27 +282,32 @@ OFFLINE_KEYS = {Roles.ROOT.value, Roles.TARGETS.value, Roles.BIN.value}
 
 # generate the basic data structure
 SETTINGS = PayloadSettings(
-    roles={role.value: RolesKeysInput() for role in Roles},
+    roles={role.value: RoleSettingsInput() for role in Roles},
     service=ServiceSettings(targets_base_url=""),
 )
 
 
-def _key_is_duplicated(key: Dict[str, Any]) -> bool:
-    for role in SETTINGS.roles.values():
-        if any(k for k in role.keys.values() if key == k.get("key")):
+def _key_is_duplicated(
+    roles_keys_input_list: ValuesView[RoleSettingsInput],
+    key: KeySchema.key,
+    filepath: str,
+) -> bool:
+    for role in roles_keys_input_list:
+        if any(k for k in role.keys.values() if key == k.key.key):
             return True
-        if any(k for k in role.keys.values() if key == k.get("path")):
-            return False
+
+        if any(k for k in role.keys.values() if filepath == k.filepath):
+            return True
 
     return False
 
 
-def _load_key(filepath: str, password: str) -> Key:
+def _load_key(filepath: str, password: str) -> KeySchema:
     try:
         key = import_ed25519_privatekey_from_file(filepath, password)
-        return Key(key=key)
+        return KeySchema(key=key)
     except CryptoError as err:
-        return Key(
+        return KeySchema(
             error=(
                 f":cross_mark: [red]Failed[/]: {str(err)} Check the"
                 " password."
@@ -313,12 +315,12 @@ def _load_key(filepath: str, password: str) -> Key:
         )
 
     except (StorageError, FormatError, Error) as err:
-        return Key(error=f":cross_mark: [red]Failed[/]: {str(err)}")
+        return KeySchema(error=f":cross_mark: [red]Failed[/]: {str(err)}")
 
 
-def _configure_role(rolename: str, role: RolesKeysInput) -> None:
+def _configure_role(rolename: str, role: RoleSettingsInput) -> None:
     # default reset when start configuration
-    role.keys.clear()
+    role.keys = dict()
 
     role.threshold = default_settings[rolename].threshold
     role.offline_keys = default_settings[rolename].offline_keys
@@ -387,7 +389,7 @@ def _configure_role(rolename: str, role: RolesKeysInput) -> None:
         )
 
 
-def _configure_keys(rolename: str, role: RolesKeysInput) -> None:
+def _configure_keys(rolename: str, role: RoleSettingsInput) -> None:
     key_count = 1
     while len(role.keys) < role.num_of_keys:
         filepath = prompt.Prompt.ask(
@@ -400,7 +402,7 @@ def _configure_keys(rolename: str, role: RolesKeysInput) -> None:
             f"{rolename}`s Key password",
             hide_input=True,
         )
-        key: Key = _load_key(filepath, password)
+        key: KeySchema = _load_key(filepath, password)
 
         if key.error:
             console.print(key.error)
@@ -410,15 +412,16 @@ def _configure_keys(rolename: str, role: RolesKeysInput) -> None:
             else:
                 raise click.ClickException("Required key not validated.")
 
-        if key.key is not None and _key_is_duplicated(key.key) is True:
+        if key.key is not None and (
+            _key_is_duplicated(SETTINGS.roles.values(), key.key, filepath)
+            is True
+        ):
             console.print(":cross_mark: [red]Failed[/]: Key is duplicated.")
             continue
 
-        role.keys[f"{rolename}_{key_count}"] = {
-            "filename": filepath.split("/")[-1],
-            "password": password,
-            "key": key.key,
-        }
+        role.keys[f"{rolename}_{key_count}"] = KeyInput(
+            filepath=filepath, password=password, key=key
+        )
         console.print(
             ":white_check_mark: Key "
             f"{key_count}/{role.num_of_keys} [green]Verified[/]"
@@ -452,7 +455,7 @@ def _check_server(settings):
             ):
                 raise click.ClickException(f"{response.json().get('detail')}")
     else:
-        raise click.ClickException("Login first. Run 'rstuf-cli admin login'")
+        raise click.ClickException("Login first. Run 'rstuf admin login'")
 
     return headers
 
@@ -576,7 +579,7 @@ def _bootstrap_state(task_id, server, headers):
     "-s",
     "--save",
     help=(
-        "Save a copy of the metadata localy. This option saves the metadata "
+        "Save a copy of the metadata locally. This option saves the metadata "
         "files (json) in the 'metadata' dir."
     ),
     show_default=True,
@@ -619,10 +622,10 @@ def ceremony(context, bootstrap, file, upload, save):
     if upload is False:
         console.print(markdown.Markdown(CEREMONY_INTRO), width=100)
 
-        ceramony_detailed = prompt.Confirm.ask(
-            "\nDo you want more information about Roles and Responsabilities?"
+        ceremony_detailed = prompt.Confirm.ask(
+            "\nDo you want more information about Roles and Responsibilities?"
         )
-        if ceramony_detailed is True:
+        if ceremony_detailed is True:
             with console.pager():
                 console.print(
                     markdown.Markdown(CEREMONY_INTRO_ROLES_RESPONSIBILITIES),
@@ -671,10 +674,10 @@ def ceremony(context, bootstrap, file, upload, save):
                 )
                 keys_table.add_column("id", justify="center")
                 keys_table.add_column("verified", justify="center")
-                for key in role.keys.values():
+                for key_input in role.keys.values():
                     keys_table.add_row(
-                        key.get("filename"),
-                        key.get("key").get("keyid"),
+                        key_input.filepath.split("/")[-1],
+                        key_input.key.key.get("keyid"),
                         ":white_heavy_check_mark:",
                     )
 
@@ -739,7 +742,7 @@ def ceremony(context, bootstrap, file, upload, save):
         json_payload["settings"] = {"service": SETTINGS.service.to_dict()}
         for role, data in SETTINGS.roles.items():
             if data.offline_keys is True:
-                data.keys.clear()
+                data.keys = dict()
 
             if "roles" not in json_payload["settings"]:
                 json_payload["settings"]["roles"] = {role: data.to_dict()}

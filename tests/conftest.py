@@ -3,7 +3,9 @@
 # SPDX-License-Identifier: MIT
 
 import os
+from dataclasses import dataclass
 from tempfile import TemporaryDirectory
+from typing import Any, Dict, Optional
 
 import pytest  # type: ignore
 from click.testing import CliRunner  # type: ignore
@@ -21,3 +23,13 @@ def test_context():
 def client():
     runner = CliRunner()
     return runner
+
+
+@pytest.fixture
+def fake_key():
+    @dataclass
+    class FakeKey:
+        key: Optional[Dict[str, Any]] = None
+        error: Optional[str] = None
+
+    return FakeKey
