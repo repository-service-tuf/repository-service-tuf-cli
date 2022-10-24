@@ -18,7 +18,7 @@ jobs:
       release_id: ${{ steps.gh-release.outputs.id }}
     steps:
       - name: Checkout release tag
-        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+        uses: actions/checkout@v3
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
 
