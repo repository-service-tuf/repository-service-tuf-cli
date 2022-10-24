@@ -131,3 +131,16 @@ Perform automated testing with the tox tool:
 
     $ tox
 
+
+Installing & enabling pre-commit
+================================
+
+The pre-commit tool is installed as part of the development requirements.
+
+To automatically run checks before you commit your changes you should install
+the git hook scripts with **pre-commit**:
+
+.. code:: shell
+
+    $ pre-commit install
+
