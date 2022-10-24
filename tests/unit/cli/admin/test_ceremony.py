@@ -535,7 +535,7 @@ class TestCeremonyGroupCLI:
 
         fake_response_get = pretend.stub(
             status_code=200,
-            json=pretend.call_recorder(lambda: {"boostrap": False}),
+            json=pretend.call_recorder(lambda: {"bootstrap": False}),
         )
         fake_response_post = pretend.stub(
             status_code=202,
@@ -716,7 +716,7 @@ class TestCeremonyGroupCLI:
 
         fake_response_get = pretend.stub(
             status_code=200,
-            json=pretend.call_recorder(lambda: {"boostrap": False}),
+            json=pretend.call_recorder(lambda: {"bootstrap": False}),
         )
         fake_response_post = pretend.stub(
             status_code=403,
@@ -820,7 +820,7 @@ class TestCeremonyGroupCLI:
 
         fake_response_get = pretend.stub(
             status_code=200,
-            json=pretend.call_recorder(lambda: {"boostrap": False}),
+            json=pretend.call_recorder(lambda: {"bootstrap": False}),
         )
         fake_response_post = pretend.stub(
             status_code=202,
