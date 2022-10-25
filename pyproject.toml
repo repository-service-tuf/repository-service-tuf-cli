@@ -24,7 +24,16 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
-dependencies = ["rich-click", "tuf"]
+dependencies = [
+  "click",
+  "dynaconf",
+  "PyNaCl",
+  "requests",
+  "rich",
+  "rich-click",
+  "securesystemslib",
+  "tuf==2.0.0",
+]
 dynamic = ["version"]
 
 [tool.hatch.version]
