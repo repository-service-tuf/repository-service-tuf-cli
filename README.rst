@@ -90,6 +90,21 @@ The flag -d will install the development requirements:
         $ LDFLAGS=-L$(brew --prefix libffi)/lib CFLAGS=-I$(brew --prefix libffi)/include pip install cffi cryptography
 
 
+Running checks with pre-commit:
+
+The pre-commit tool is installed as part of the development requirements.
+
+To automatically run checks before you commit your changes you should run:
+
+.. code:: shell
+
+    $ make precommit
+
+This will install the git hook scripts for the first time, it will update to the
+latest versions of the hooks and run the pre-commit tool.
+Now ``pre-commit`` will run automatically on ``git commit``.
+
+
 Running RSTUF CLI:
 
 .. code:: shell
@@ -130,17 +145,4 @@ Perform automated testing with the tox tool:
 .. code:: shell
 
     $ tox
-
-
-Installing & enabling pre-commit
-================================
-
-The pre-commit tool is installed as part of the development requirements.
-
-To automatically run checks before you commit your changes you should install
-the git hook scripts with **pre-commit**:
-
-.. code:: shell
-
-    $ pre-commit install
 
