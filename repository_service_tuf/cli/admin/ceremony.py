@@ -8,7 +8,6 @@
 import json
 import os
 import time
-from collections.abc import ValuesView
 from dataclasses import asdict, dataclass
 from enum import Enum
 from typing import Any, Dict
@@ -288,11 +287,11 @@ SETTINGS = PayloadSettings(
 
 
 def _key_is_duplicated(
-    roles_keys_input_list: ValuesView[RoleSettingsInput],
+    roles_settings: list[RoleSettingsInput],
     key: KeySchema.key,
     filepath: str,
 ) -> bool:
-    for role in roles_keys_input_list:
+    for role in roles_settings:
         if any(k for k in role.keys.values() if key == k.key.key):
             return True
 
@@ -412,9 +411,9 @@ def _configure_keys(rolename: str, role: RoleSettingsInput) -> None:
             else:
                 raise click.ClickException("Required key not validated.")
 
+        roles_settings = list(SETTINGS.roles.values())
         if key.key is not None and (
-            _key_is_duplicated(SETTINGS.roles.values(), key.key, filepath)
-            is True
+            _key_is_duplicated(roles_settings, key.key, filepath) is True
         ):
             console.print(":cross_mark: [red]Failed[/]: Key is duplicated.")
             continue
