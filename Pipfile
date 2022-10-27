@@ -4,20 +4,13 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-rich-click = "==1.2.1"
-securesystemslib = "==0.22.0"
-cryptography = "==36.0.2"
-cffi = "==1.15.0"
-click = "==8.0.4"
-commonmark = "==0.9.1"
-pycparser = "==2.21"
-rich = "==12.0.1"
+rich-click = "*"
+securesystemslib = "*"
+click = "*"
+rich = "*"
 PyNaCl = "==1.5.0"
-Pygments = "==2.13"
 requests = "*"
-types-requests = "*"
 tuf = "==2.0.0"
-crypto = "*"
 dynaconf = {extras = ["ini"], version = "*"}
 
 [dev-packages]
