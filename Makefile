@@ -11,6 +11,11 @@ requirements:
 	pipenv requirements > requirements.txt
 	pipenv requirements --dev > requirements-dev.txt
 
+precommit:
+	pre-commit install
+	pre-commit autoupdate
+	pre-commit run --all-files --show-diff-on-failure
+
 coverage:
 	coverage report
 	coverage html -i
