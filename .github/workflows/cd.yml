@@ -10,10 +10,17 @@ permissions:
   contents: write
 
 jobs:
+  functional-latest:
+    uses: vmware/repository-service-tuf/.github/workflows/functional.yml@main
+    with:
+      worker_version: latest
+      api_version: latest
+      cli_version: dev
 
   build:
     name: Build
     runs-on: ubuntu-latest
+    needs: functional-latest
     outputs:
       release_id: ${{ steps.gh-release.outputs.id }}
     steps:
