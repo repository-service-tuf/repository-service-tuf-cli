@@ -40,7 +40,7 @@ def token(context):
     "scope",
     help=(
         "Scope to grant. Multiple is accepted. Ex: -s write:targets"
-        " -s read:targets"
+        " -s read:settings"
     ),
     multiple=True,
     required=True,

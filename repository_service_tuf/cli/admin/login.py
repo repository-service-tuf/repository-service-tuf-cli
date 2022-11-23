@@ -83,7 +83,6 @@ def _run_login(context, server_, user_, password_, expires_):
         "password": password,
         "scope": (
             "write:targets "
-            "read:targets "
             "write:bootstrap "
             "read:bootstrap "
             "read:settings "
