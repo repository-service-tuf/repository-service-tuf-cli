@@ -1,6 +1,6 @@
 [build-system]
 # hatchling pinned for reproducibility: version should be kept up-to-date
-requires = ["hatchling==0.22.0", "dynaconf[ini]==3.1.9"]
+requires = ["hatchling==0.22.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -26,7 +26,7 @@ classifiers = [
 ]
 dependencies = [
   "click",
-  "dynaconf[ini]",
+  "dynaconf[ini]==3.1.9",
   "PyNaCl",
   "requests",
   "rich",
