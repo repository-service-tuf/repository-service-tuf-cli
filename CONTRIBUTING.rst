@@ -109,8 +109,8 @@ The flag -d will install the development requirements:
         $ LDFLAGS=-L$(brew --prefix libffi)/lib CFLAGS=-I$(brew --prefix libffi)/include pip install cffi cryptography
 
 
-Running checks with pre-commit:
-
+Running checks with pre-commit
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 The pre-commit tool is installed as part of the development requirements.
 
 To automatically run checks before you commit your changes you should run:
@@ -119,12 +119,13 @@ To automatically run checks before you commit your changes you should run:
 
     $ make precommit
 
-This will install the git hook scripts for the first time, it will update to the
+This will install the git hook scripts for the first time, update to the
 latest versions of the hooks and run the pre-commit tool.
 Now ``pre-commit`` will run automatically on ``git commit``.
 
 
-Running RSTUF CLI:
+Running RSTUF CLI
+~~~~~~~~~~~~~~~~~
 
 .. code:: shell
 
@@ -148,7 +149,7 @@ The flag -d will install the development requirements.
 
 
 Update all project requirements
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code:: shell
 
