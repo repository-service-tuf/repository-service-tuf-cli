@@ -576,8 +576,8 @@ def _bootstrap_state(task_id, server, headers):
     "-s",
     "--save",
     help=(
-        "Save a copy of the metadata localy. This option saves the metadata "
-        "files (json) in the 'metadata' dir."
+        "Save a copy of the metadata locally. This option saves the metadata "
+        "files (json) in the 'metadata' folder in the current directory."
     ),
     show_default=True,
     is_flag=True,
