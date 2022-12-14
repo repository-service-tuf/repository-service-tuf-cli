@@ -23,7 +23,7 @@ identify==2.5.9 ; python_version >= '3.7'
 idna==3.4 ; python_version >= '3.5'
 imagesize==1.4.1 ; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'
 iniconfig==1.1.1
-isort==5.10.1
+isort==5.11.2
 jinja2==3.1.2 ; python_version >= '3.7'
 markupsafe==2.1.1 ; python_version >= '3.7'
 mccabe==0.7.0 ; python_version >= '3.6'
@@ -59,7 +59,7 @@ sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.5
 toml==0.10.2 ; python_version >= '2.6' and python_version not in '3.0, 3.1, 3.2, 3.3'
 tomli==2.0.1 ; python_version < '3.11'
-tox==4.0.8
+tox==4.0.9
 typing-extensions==4.4.0 ; python_version >= '3.7'
 urllib3==1.26.13 ; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5'
 virtualenv==20.17.1 ; python_version >= '3.6'
