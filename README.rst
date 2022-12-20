@@ -42,9 +42,9 @@ Contributing
 Please, visit the `Repository Service for TUF Development Guide
 <https://repository-service-tuf.readthedocs.io/en/latest/devel/index.html#development-guide>`_.
 
-Check our `CONTRIBUTING.rst <CONTRIBUTING.rst>`_ for more details on how to
-contribute to this repository.
+Check our `CONTRIBUTING.rst <https://github.com/vmware/repository-service-tuf-cli/blob/main/CONTRIBUTING.rst>`_
+for more details on how to contribute to this repository.
 
 License
 =======
-`MIT <LICENSE>`_
+`MIT <https://github.com/vmware/repository-service-tuf-cli/blob/main/LICENSE>`_
