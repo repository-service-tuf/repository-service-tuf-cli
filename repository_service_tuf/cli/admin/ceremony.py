@@ -452,7 +452,7 @@ def _check_server(settings):
             ):
                 raise click.ClickException(f"{response.json().get('detail')}")
     else:
-        raise click.ClickException("Login first. Run 'rstuf-cli admin login'")
+        raise click.ClickException("Login first. Run 'rstuf admin login'")
 
     return headers
 
