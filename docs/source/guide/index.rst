@@ -83,7 +83,7 @@ Ceremony (``ceremony``)
 -----------------------
 
 The Repository Service for TUF Metadata uses the following Roles: ``root``, ``timestamp``,
-``snapshot``, ``targets``, ``bin``, and ``bins`` to build the Repository
+``snapshot``, ``targets``, and ``bins`` to build the Repository
 Metadata (for more details, check out TUF Specification and PEP 458).
 
 The Ceremony is a complex process that Repository Service for TUF CLI tries to simplify.
@@ -145,8 +145,8 @@ Step 1: Configure the Roles
     What is the Metadata expiration for the targets role?(Days) (365):
     What is the number of keys for the targets role? (2):
     What is the key threshold for the targets role signing? (1):
-    The role targets delegates paths to the bin role. See TUF Specification about Path Pattern for the paths
-    pattern and the example.                                                                            
+    The role targets delegate trust for all target files to 'bin-n' roles based on file path hash prefixes,
+    a.k.a hash bin delegation. See TUF TAP 15 and the example.
     Show example [y/n] (y): y
 
                                                 Example:                                              
@@ -178,17 +178,13 @@ Step 1: Configure the Roles
     The threshold for snapshot is 1 (one) based on the number of keys (1).
 
     What is the Metadata expiration for timestamp role?(Days) (1):
-    What is the number of keys for timestamp role? (1): 
+    What is the number of keys for timestamp role? (1):
     The threshold for timestamp is 1 (one) based on the number of keys (1).
-
-    What is the Metadata expiration for the bin role?(Days) (365):
-    What is the number of keys for the bin role? (1):
-    The threshold for bin is 1 (one) based on the number of keys (1).
 
     What is the Metadata expiration for the bins role?(Days) (1):
     What is the number of keys for the bins role? (1):
     The threshold for bins is 1 (one) based on the number of keys (1).
-    Number of hashed bins for bins? (8): 
+    Number of hashed bins for bins? (8):
 
 
 1. root ``expiration``, ``number of keys``, and ``threshold``
@@ -196,8 +192,7 @@ Step 1: Configure the Roles
    for the files (target files), and the ``paths``
 3. snapshot ``expiration``, ``number of keys``, and ``threshold``
 4. timestamp ``expiration``, ``number of keys``, and ``threshold``
-5. bin ``expiration``, ``number of keys``, and ``threshold``
-6. bins ``expiration``, ``number of keys``, ``threshold``, and ``number of hash bins``
+5. bins ``expiration``, ``number of keys``, ``threshold``, and ``number of hash bins``
 
 - ``expiration`` is the number of days in which the Metadata will expire
 - ``number of keys`` Metadata will have
@@ -232,35 +227,31 @@ load the keys.
     Ready to start loading the keys? Passwords will be required for keys [y/n]: y
 
     Enter 1/2 the root`s Key path: tests/files/JanisJoplin.key
-    Enter 1/2 the root`s Key password: 
+    Enter 1/2 the root`s Key password:
     ✅ Key 1/2 Verified
 
     Enter 2/2 the root`s Key path: tests/files/JimiHendrix.key
-    Enter 2/2 the root`s Key password: 
+    Enter 2/2 the root`s Key password:
     ✅ Key 2/2 Verified
 
     Enter 1/2 the targets`s Key path: tests/files/KurtCobain.key
-    Enter 1/2 the targets`s Key password: 
+    Enter 1/2 the targets`s Key password:
     ✅ Key 1/2 Verified
 
     Enter 2/2 the targets`s Key path: tests/files/ChrisCornel.key
-    Enter 2/2 the targets`s Key password: 
+    Enter 2/2 the targets`s Key password:
     ✅ Key 2/2 Verified
 
     Enter 1/1 the snapshot`s Key path: tests/files/snapshot1.key
-    Enter 1/1 the snapshot`s Key password: 
+    Enter 1/1 the snapshot`s Key password:
     ✅ Key 1/1 Verified
 
     Enter 1/1 the timestamp`s Key path: tests/files/timestamp1.key
-    Enter 1/1 the timestamp`s Key password: 
-    ✅ Key 1/1 Verified
-
-    Enter 1/1 the bin`s Key path: tests/files/JoeCocker.key
-    Enter 1/1 the bin`s Key password: 
+    Enter 1/1 the timestamp`s Key password:
     ✅ Key 1/1 Verified
 
     Enter 1/1 the bins`s Key path: tests/files/bins1.key
-    Enter 1/1 the bins`s Key password: 
+    Enter 1/1 the bins`s Key password:
     ✅ Key 1/1 Verified
 
 
@@ -301,7 +292,7 @@ complete (without the offline keys).
     │                                         │                                                        │
     │                                         │                                                        │
     │               DELEGATIONS               │                                                        │
-    │             targets -> bin              │                                                        │
+    │             targets -> bins             │                                                        │
     │   https://www.example.com/downloads/*   │                                                        │
     │  https://www.example.com/downloads/*/*  │                                                        │
     │ https://www.example.com/downloads/*/*/* │                                                        │
@@ -327,16 +318,6 @@ complete (without the offline keys).
     │ Role Expiration: 1 days │                  ╵                                        ╵            │
     └─────────────────────────┴────────────────────────────────────────────────────────────────────────┘
     Configuration correct for timestamp? [y/n]: y
-    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-    ┃       ROLE SUMMARY        ┃                                 KEYS                                 ┃
-    ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-    │         Role: bin         │                 ╷                                       ╷            │
-    │     Number of Keys: 1     │            path │                  id                   │ verified   │
-    │       Threshold: 1        │ ╶───────────────┼───────────────────────────────────────┼──────────╴ │
-    │    Keys Type: offline     │   JoeCocker.key │ be95ae808ff4f17e248470c941700247d8c7… │    ✅      │
-    │ Role Expiration: 365 days │                 ╵                                       ╵            │
-    └───────────────────────────┴──────────────────────────────────────────────────────────────────────┘
-    Configuration correct for bin? [y/n]: y
     ┏━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
     ┃      ROLE SUMMARY       ┃                                  KEYS                                  ┃
     ┡━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
