@@ -332,6 +332,7 @@ complete (without the offline keys).
     │      bins -> bins       │                                                                        │
     │     Number bins: 8      │                                                                        │
     └─────────────────────────┴────────────────────────────────────────────────────────────────────────┘
+    Configuration correct for bins? [y/n]: y
 
 Finishing
 .........
