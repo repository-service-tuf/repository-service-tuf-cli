@@ -306,16 +306,13 @@ class TestCeremonyGroupCLI:
             "",
             "y",
             "https://github.com/vmware",
-            "*, */*, */*/*, */*/*/*, */*/*/*/*, */*/*/*/*/*",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
             "4",
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
             "",
         ]
         input_step2 = [
@@ -332,11 +329,8 @@ class TestCeremonyGroupCLI:
             "strongPass",
             "tests/files/timestamp1.key",
             "strongPass",
-            "tests/files/JoeCocker.key",
-            "strongPass",
             "tests/files/bins1.key",
             "strongPass",
-            "y",
             "y",
             "y",
             "y",
@@ -376,7 +370,6 @@ class TestCeremonyGroupCLI:
         assert "Keys Type: online" in test_result.output
         assert "Role: timestamp" in test_result.output
         assert "KurtCobain.key" in test_result.output
-        assert "JoeCocker.key" in test_result.output
         assert "bins1.key" in test_result.output
         # passwords not shown in output
         assert "strongPass" not in test_result.output
@@ -403,9 +396,6 @@ class TestCeremonyGroupCLI:
             "",
             "",
             "",
-            "",
-            "",
-            "",
         ]
         input_step2 = [
             "Y",
@@ -421,8 +411,6 @@ class TestCeremonyGroupCLI:
             "strongPass",
             "tests/files/timestamp1.key",
             "strongPass",
-            "tests/files/JoeCocker.key",
-            "strongPass",
             "tests/files/bins1.key",
             "strongPass",
             "y",
@@ -430,10 +418,8 @@ class TestCeremonyGroupCLI:
             "n",
             "",
             "",
-            "",
             "tests/files/snapshot1.key",
             "strongPass",
-            "y",
             "y",
             "y",
             "y",
@@ -469,7 +455,6 @@ class TestCeremonyGroupCLI:
         assert "Keys Type: online" in test_result.output
         assert "Role: timestamp" in test_result.output
         assert "KurtCobain.key" in test_result.output
-        assert "JoeCocker.key" in test_result.output
         assert "bins1.key" in test_result.output
         # passwords not shown in output
         assert "strongPass" not in test_result.output
@@ -496,9 +481,6 @@ class TestCeremonyGroupCLI:
             "",
             "",
             "",
-            "",
-            "",
-            "",
         ]
         input_step2 = [
             "Y",
@@ -514,11 +496,8 @@ class TestCeremonyGroupCLI:
             "strongPass",
             "tests/files/timestamp1.key",
             "strongPass",
-            "tests/files/JoeCocker.key",
-            "strongPass",
             "tests/files/bins1.key",
             "strongPass",
-            "y",
             "y",
             "y",
             "y",
@@ -677,9 +656,6 @@ class TestCeremonyGroupCLI:
             "",
             "",
             "",
-            "",
-            "",
-            "",
         ]
         input_step2 = [
             "Y",
@@ -695,11 +671,8 @@ class TestCeremonyGroupCLI:
             "strongPass",
             "tests/files/timestamp1.key",
             "strongPass",
-            "tests/files/JoeCocker.key",
-            "strongPass",
             "tests/files/bins1.key",
             "strongPass",
-            "y",
             "y",
             "y",
             "y",
@@ -781,9 +754,6 @@ class TestCeremonyGroupCLI:
             "",
             "",
             "",
-            "",
-            "",
-            "",
         ]
         input_step2 = [
             "Y",
@@ -799,11 +769,8 @@ class TestCeremonyGroupCLI:
             "strongPass",
             "tests/files/timestamp1.key",
             "strongPass",
-            "tests/files/JoeCocker.key",
-            "strongPass",
             "tests/files/bins1.key",
             "strongPass",
-            "y",
             "y",
             "y",
             "y",
