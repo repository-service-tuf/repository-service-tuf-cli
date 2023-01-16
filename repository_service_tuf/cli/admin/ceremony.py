@@ -597,7 +597,7 @@ def ceremony(context, bootstrap, file, upload, save):
         console.print(markdown.Markdown(CEREMONY_INTRO), width=100)
 
         ceramony_detailed = prompt.Confirm.ask(
-            "\nDo you want more information about Roles and Responsabilities?"
+            "\nDo you want more information about roles and responsibilities?"
         )
         if ceramony_detailed is True:
             with console.pager():
