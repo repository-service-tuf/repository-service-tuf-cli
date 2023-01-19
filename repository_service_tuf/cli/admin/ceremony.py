@@ -356,6 +356,12 @@ def _configure_role(rolename: str, role: RolesKeysInput) -> None:
         if show_example:
             console.print(markdown.Markdown(HASH_BINS_EXAMPLE), width=100)
 
+        role.number_hash_prefixes = prompt.IntPrompt.ask(
+            f"[green]How many hash bins[/] do you want for [cyan]{rolename}[/]?",  # noqa
+            default=8,
+            show_default=True,
+        )
+
         targets_base_url = click.prompt(
             "\nWhat is the Base URL (i.e.: https://www.example.com/downloads/)"
         )
@@ -363,12 +369,6 @@ def _configure_role(rolename: str, role: RolesKeysInput) -> None:
             targets_base_url = targets_base_url + "/"
 
         SETTINGS.service.targets_base_url = targets_base_url
-
-        role.number_hash_prefixes = prompt.IntPrompt.ask(
-            f"[green]How many hash bins[/] do you want for [cyan]{rolename}[/]?",  # noqa
-            default=8,
-            show_default=True,
-        )
 
 
 def _configure_keys(rolename: str, role: RolesKeysInput) -> None:

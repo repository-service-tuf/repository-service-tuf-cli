@@ -172,9 +172,9 @@ Step 1: Configure the Roles
     - "1.bins-1.json" will be responsible for file https://example.com/downloads/productB/productB-v1.0.tar
     - "1.bins-5.json" will be responsible for file https://example.com/downloads/productB/updates/servicepack-1.tar
 
-    What is the Base URL (i.e.: https://www.example.com/downloads/): https://www.example.com/downloads/
-
     How many hash bins do you want for targets? (8):
+
+    What is the Base URL (i.e.: https://www.example.com/downloads/): https://www.example.com/downloads/
 
     What is the Metadata expiration for the snapshot role?(Days) (1):
     What is the number of keys for the snapshot role? (1):
