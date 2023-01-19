@@ -186,15 +186,15 @@ Check the number of keys, the threshold/quorum, and the key details.
 
 """
 
-PATHS_DELEGATION_MESSAGE = """
+BINS_DELEGATION_MESSAGE = """
 The role *targets* delegates to the hash bin roles.
-See
-[TUF Specification about Path Pattern](
+See:
+[TUF Specification about succinct hash bin delegation](
     https://github.com/theupdateframework/taps/blob/master/tap15.md
-) for the paths pattern and the example.
+)
 """
 
-PATHS_EXAMPLE = """
+HASH_BINS_EXAMPLE = """
 
 Example:
 --------
@@ -202,21 +202,28 @@ Example:
 The Organization Example (https://example.com) has all files downloaded
 `/downloads` path, meaning https://example.com/downloads/.
 
-Additionally, it has two sub-folders, `productA` and `productB` where the
-clients can find all files (i.e.: `productA-v1.0.tar`, `productB-1.0.tar`), for
-`productB` it even has a sub-folder, `updates`, where clients can find update
-files (i.e.: `servicepack-1.tar`, `servicepack-2.tar`).
+Additionally, it has two sub-folders, productA and productB where the clients
+can find all files (i.e.: productA-v1.0.tar, productB-v1.0.tar), for productB
+it even has a sub-folder, updates where clients can find update files
+(i.e.: servicepack-1.tar, servicepack-2.tar).
+The organization has decided to use 8 hash bins. Target files will be
+uniformly distributed over 8 bins whose names will be "1.bins-0.json",
+"1.bins-1.json", ... , "1.bins-7.json".
 
-In that case mapping all targets files paths as:
-- https://example.com/downloads/ is `*`
-- https://example.com/downloads/productA/ is `*/*`
-- https://example.com/downloads/productB/ is `*/*` (same as above)
-- https://example.com/downloads/productB/updates/ is `*/*/*`
+Now imagine that the organization stores the following files:
+- https://example.com/downloads/productA/productA-v1.0.tar
+- https://example.com/downloads/productB/productB-v1.0.tar
+- https://example.com/downloads/productB/updates/servicepack-1.tar
 
-Specific paths that role `targets` delegates are:
-``*/productA/*, */productB/*, * /productB/updates/*``
-
-Generic paths that role targets delegates are: ``*, */*, */*/*``
+As we said the targets will be uniformly distributed over the 8 bins no matter
+if they are located in the same folder.
+In this example here is how they will be distributed:
+- "1.bins-0.json" will be responsible for file:
+ https://example.com/downloads/productA/productA-v1.0.tar
+- "1.bins-1.json" will be responsible for file:
+ https://example.com/downloads/productB/productB-v1.0.tar
+- "1.bins-5.json" will be responsible for file:
+ https://example.com/downloads/productB/updates/servicepack-1.tar
 """
 
 console = Console()
@@ -344,10 +351,10 @@ def _configure_role(rolename: str, role: RolesKeysInput) -> None:
         )
 
     if rolename == Roles.TARGETS.value:
-        console.print(markdown.Markdown(PATHS_DELEGATION_MESSAGE), width=100)
+        console.print(markdown.Markdown(BINS_DELEGATION_MESSAGE), width=100)
         show_example = prompt.Confirm.ask("Show example", default="y")
         if show_example:
-            console.print(markdown.Markdown(PATHS_EXAMPLE), width=100)
+            console.print(markdown.Markdown(HASH_BINS_EXAMPLE), width=100)
 
         targets_base_url = click.prompt(
             "\nWhat is the Base URL (i.e.: https://www.example.com/downloads/)"
@@ -358,7 +365,7 @@ def _configure_role(rolename: str, role: RolesKeysInput) -> None:
         SETTINGS.service.targets_base_url = targets_base_url
 
         role.number_hash_prefixes = prompt.IntPrompt.ask(
-            f"[green]Number of hashed bins[/] for [cyan]{rolename}[/]?",
+            f"[green]How many hash bins[/] do you want for [cyan]{rolename}[/]?",  # noqa
             default=8,
             show_default=True,
         )

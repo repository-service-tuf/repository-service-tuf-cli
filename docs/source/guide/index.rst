@@ -146,7 +146,8 @@ Step 1: Configure the Roles
     What is the number of keys for the targets role? (2):
     What is the key threshold for the targets role signing? (1):
     The role targets delegate trust for all target files to 'bin-n' roles based on file path hash prefixes,
-    a.k.a hash bin delegation. See TUF TAP 15 and the example.
+    a.k.a hash bin delegation. See TUF TAP 15: https://github.com/theupdateframework/taps/blob/master/tap15.md
+    You can also have a look at our example.
     Show example [y/n] (y): y
 
                                                 Example:                                              
@@ -155,23 +156,25 @@ Step 1: Configure the Roles
     https://example.com/downloads/.                                                                     
 
     Additionally, it has two sub-folders, productA and productB where the clients can find all files
-    (i.e.: productA-v1.0.tar, productB-1.0.tar), for productB it even has a sub-folder, updates where
+    (i.e.: productA-v1.0.tar, productB-v1.0.tar), for productB it even has a sub-folder, updates where
     clients can find update files (i.e.: servicepack-1.tar, servicepack-2.tar).
+    The organization has decided to use 8 hash bins. Target files will be uniformly distributed over
+    8 bins whose names will be "1.bins-0.json", "1.bins-1.json", ... , "1.bins-7.json".
 
-    In that case mapping all targets files paths as:                                                    
+    Now imagine that the organization stores the following files:
+    - https://example.com/downloads/productA/productA-v1.0.tar
+    - https://example.com/downloads/productB/productB-v1.0.tar
+    - https://example.com/downloads/productB/updates/servicepack-1.tar
 
-    • https://example.com/downloads/ is *                                                              
-    • https://example.com/downloads/productA/ is */*                                                   
-    • https://example.com/downloads/productB/ is */* (same as above)                                   
-    • https://example.com/downloads/productB/updates/ is */*/*                                         
-
-    Specific paths that role targets delegates are: */productA/*, */productB/*, * /productB/updates/*   
-
-    Generic paths that role targets delegates are: *, */*, */*/*                                        
+    As we said the targets will be uniformly distributed over the 8 bins no matter if they are
+    located in the same folder. In this example here is how they will be distributed:
+    - "1.bins-0.json" will be responsible for file https://example.com/downloads/productA/productA-v1.0.tar
+    - "1.bins-1.json" will be responsible for file https://example.com/downloads/productB/productB-v1.0.tar
+    - "1.bins-5.json" will be responsible for file https://example.com/downloads/productB/updates/servicepack-1.tar
 
     What is the Base URL (i.e.: https://www.example.com/downloads/): https://www.example.com/downloads/
 
-    What paths targets delegates? (*, */*): *, */*, */*/*
+    How many hash bins do you want for targets? (8):
 
     What is the Metadata expiration for the snapshot role?(Days) (1):
     What is the number of keys for the snapshot role? (1):
@@ -184,22 +187,19 @@ Step 1: Configure the Roles
     What is the Metadata expiration for the bins role?(Days) (1):
     What is the number of keys for the bins role? (1):
     The threshold for bins is 1 (one) based on the number of keys (1).
-    Number of hashed bins for bins? (8):
 
 
 1. root ``expiration``, ``number of keys``, and ``threshold``
-2. targets ``expiration``, ``number of keys``,  ``threshold``, the ``base URL``
-   for the files (target files), and the ``paths``
+2. targets ``expiration``, ``number of keys``, ``threshold``, the ``base URL``
+   for the files (target files), and the ``number of hash bins``
 3. snapshot ``expiration``, ``number of keys``, and ``threshold``
 4. timestamp ``expiration``, ``number of keys``, and ``threshold``
-5. bins ``expiration``, ``number of keys``, ``threshold``, and ``number of hash bins``
+5. bins ``expiration``, ``number of keys``, and ``threshold``
 
 - ``expiration`` is the number of days in which the Metadata will expire
 - ``number of keys`` Metadata will have
 - ``threshold`` is the number of keys needed to sign the Metadata
 - ``base URL`` for the artifacts, example: http://www.example.com/download/
-- ``paths`` is the delegated paths, example:
-  http://www.example.com/download/productA/* will be ``*, */*``
 - ``number of hash bins`` is the number of hash bins between 1 and 32. How many
   delegated roles (``bins-X``) will it create?
 
@@ -293,9 +293,7 @@ complete (without the offline keys).
     │                                         │                                                        │
     │               DELEGATIONS               │                                                        │
     │             targets -> bins             │                                                        │
-    │   https://www.example.com/downloads/*   │                                                        │
-    │  https://www.example.com/downloads/*/*  │                                                        │
-    │ https://www.example.com/downloads/*/*/* │                                                        │
+    │              Number bins: 8             │                                                                        │
     └─────────────────────────────────────────┴────────────────────────────────────────────────────────┘
     Configuration correct for targets? [y/n]: y
     ┏━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
@@ -324,13 +322,8 @@ complete (without the offline keys).
     │       Role: bins        │             ╷                                             ╷            │
     │    Number of Keys: 1    │        path │                     id                      │ verified   │
     │      Threshold: 1       │ ╶───────────┼─────────────────────────────────────────────┼──────────╴ │
-    │    Keys Type: online    │   bins1.key │ 9b2a880bd470e8373e24efb0dc54df3909e180e445… │    ✅      │
+    │    Keys Type: online    │   bins1.key │ 9b2a880bd470e8373e24efb0dc54df3909e180e445… │    ✅       │
     │ Role Expiration: 1 days │             ╵                                             ╵            │
-    │                         │                                                                        │
-    │                         │                                                                        │
-    │       DELEGATIONS       │                                                                        │
-    │      bins -> bins       │                                                                        │
-    │     Number bins: 8      │                                                                        │
     └─────────────────────────┴────────────────────────────────────────────────────────────────────────┘
     Configuration correct for bins? [y/n]: y
 
