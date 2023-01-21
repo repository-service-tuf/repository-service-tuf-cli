@@ -426,7 +426,7 @@ def _configure_keys(rolename: str, role: RolesKeysInput) -> None:
         key_count += 1
 
 
-def _check_server(settings):
+def _check_server(settings) -> dict[str, str]:
     server = settings.get("SERVER")
     token = settings.get("TOKEN")
     if server and token:
@@ -457,7 +457,7 @@ def _check_server(settings):
     return headers
 
 
-def _bootstrap(server, headers, json_payload):
+def _bootstrap(server, headers, json_payload) -> Optional[str]:
     task_id = None
     response = request_server(
         server,
@@ -486,7 +486,7 @@ def _bootstrap(server, headers, json_payload):
     return task_id
 
 
-def _bootstrap_state(task_id, server, headers):
+def _bootstrap_state(task_id, server, headers) -> None:
     received_state = []
     while True:
         state_response = request_server(
@@ -583,7 +583,7 @@ def _bootstrap_state(task_id, server, headers):
     is_flag=True,
 )
 @click.pass_context
-def ceremony(context, bootstrap, file, upload, save):
+def ceremony(context, bootstrap, file, upload, save) -> None:
     """
     Start a new Metadata Ceremony.
     """
@@ -695,6 +695,7 @@ def ceremony(context, bootstrap, file, upload, save):
                 )
 
                 if rolename == Roles.TARGETS.value:
+                    assert role.paths is not None
                     delegations_row = (
                         f"\n{SETTINGS.service.targets_base_url}".join(
                             ["", *role.paths]
@@ -737,14 +738,18 @@ def ceremony(context, bootstrap, file, upload, save):
         json_payload: Dict[str, Any] = dict()
 
         json_payload["settings"] = {"service": SETTINGS.service.to_dict()}
-        for role, data in SETTINGS.roles.items():
+        for settings_role, data in SETTINGS.roles.items():
             if data.offline_keys is True:
                 data.keys.clear()
 
             if "roles" not in json_payload["settings"]:
-                json_payload["settings"]["roles"] = {role: data.to_dict()}
+                json_payload["settings"]["roles"] = {
+                    settings_role: data.to_dict()
+                }
             else:
-                json_payload["settings"]["roles"][role] = data.to_dict()
+                json_payload["settings"]["roles"][
+                    settings_role
+                ] = data.to_dict()
 
         json_payload["metadata"] = {
             key: data.to_dict() for key, data in metadata.items()
