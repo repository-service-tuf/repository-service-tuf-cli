@@ -36,6 +36,13 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+[tool.mypy]
+exclude = "docs/"
+
+[[tool.mypy.overrides]]
+module = ["dynaconf", "pretend"]
+ignore_missing_imports = true
+
 [tool.hatch.version]
 path = "repository_service_tuf/__version__.py"
 
