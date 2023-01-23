@@ -13,6 +13,8 @@ requests = "*"
 tuf = "==2.0.0"
 dynaconf = {extras = ["ini"], version = "*"}
 isort = "*"
+sqlalchemy = "*"
+psycopg2 = "*"
 
 [dev-packages]
 black = "*"

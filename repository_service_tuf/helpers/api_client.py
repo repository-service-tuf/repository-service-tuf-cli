@@ -1,20 +1,25 @@
 # SPDX-FileCopyrightText: 2022-2023 VMware Inc
 #
 # SPDX-License-Identifier: MIT
-
+import time
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
 
 import requests
+from requests.exceptions import ConnectionError
+from rich.console import Console
 
 from repository_service_tuf.cli import click
+
+console = Console()
 
 
 class URL(Enum):
     token = "api/v1/token/"  # nosec bandit: not hard coded password.
     bootstrap = "api/v1/bootstrap/"
     task = "api/v1/task/?task_id="
+    publish_targets = "api/v1/targets/publish/"
 
 
 class Methods(Enum):
@@ -50,7 +55,7 @@ def request_server(
         else:
             raise ValueError("Internal Error. Invalid HTTP/S Method.")
 
-    except requests.exceptions.ConnectionError:
+    except ConnectionError:
         raise click.ClickException(f"Failed to connect to {server}")
 
     return response
@@ -69,6 +74,80 @@ def is_logged(server: str, token: str):
             return Login(state=True, data=data)
 
     else:
-        click.ClickException(
-            f"Error {response.status_code} {response.json()['detail']}"
+        raise click.ClickException(
+            f"Error {response.status_code} {response.text}"
         )
+
+
+def get_headers(settings: Dict[str, str]) -> Dict[str, str]:
+    server = settings.get("SERVER")
+    token = settings.get("TOKEN")
+    if server and token:
+        token_access_check = is_logged(server, token)
+        if token_access_check.state is False:
+            raise click.ClickException(
+                f"{str(token_access_check.data)}"
+                "\n\nTry re-login: 'rstuf admin login'"
+            )
+
+        expired_admin = token_access_check.data.get("expired")
+        if expired_admin is True:
+            raise click.ClickException(
+                "Token expired. Run 'rstuf admin login'"
+            )
+        else:
+            headers = {"Authorization": f"Bearer {token}"}
+            response = request_server(
+                server, URL.bootstrap.value, Methods.get, headers=headers
+            )
+            if response.status_code != 200:
+                raise click.ClickException(
+                    f"Unexpected error: {response.text}"
+                )
+    else:
+        raise click.ClickException("Login first. Run 'rstuf admin login'")
+
+    return headers
+
+
+def task_status(
+    task_id: str, server: str, headers: Dict[str, str], title: Optional[str]
+) -> Dict[Any, str]:
+    received_state = []
+    while True:
+        state_response = request_server(
+            server, f"{URL.task.value}{task_id}", Methods.get, headers=headers
+        )
+
+        if state_response.status_code != 200:
+            raise click.ClickException(
+                f"Unexpected response {state_response.text}"
+            )
+
+        data = state_response.json().get("data")
+
+        if data:
+            if state := data.get("state"):
+                if state not in received_state:
+                    console.print(f"{title}{state}")
+                    received_state.append(state)
+                else:
+                    console.print(".", end="")
+
+                if state == "SUCCESS":
+                    return data
+
+                elif state == "FAILURE":
+                    raise click.ClickException(
+                        f"Failed: {state_response.text}"
+                    )
+
+            else:
+                raise click.ClickException(
+                    f"No state in data received {state_response.text}"
+                )
+        else:
+            raise click.ClickException(
+                f"No data received {state_response.text}"
+            )
+        time.sleep(2)
