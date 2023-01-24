@@ -31,7 +31,7 @@ dependencies = [
   "requests",
   "rich",
   "rich-click",
-  "securesystemslib",
+  "securesystemslib[crypto]",
   "tuf==2.0.0",
 ]
 dynamic = ["version"]
