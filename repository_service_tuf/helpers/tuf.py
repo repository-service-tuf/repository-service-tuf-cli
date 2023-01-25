@@ -175,7 +175,7 @@ def initialize_metadata(
         # bootstrapping the metadata, because in production we do not have
         # access to all top-level role signing keys at the time of
         # bootstrapping the metadata.
-        if len(signers) >= threshold:
+        if len(signers) < threshold:
             raise ValueError(
                 f"not enough keys ({len(signers)}) for "
                 f"signing threshold '{threshold}'"
