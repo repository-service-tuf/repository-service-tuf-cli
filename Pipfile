@@ -35,6 +35,7 @@ sphinx-rtd-theme = "*"
 hatchling = "==0.22.0"
 build = "*"
 pre-commit = "*"
+bandit = "*"
 
 [requires]
 python_version = "3.10"

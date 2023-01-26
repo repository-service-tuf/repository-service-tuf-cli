@@ -12,7 +12,7 @@ from repository_service_tuf.cli import click
 
 
 class URL(Enum):
-    token = "api/v1/token/"
+    token = "api/v1/token/"  # nosec bandit: not hard coded password.
     bootstrap = "api/v1/bootstrap/"
     task = "api/v1/task/?task_id="
 

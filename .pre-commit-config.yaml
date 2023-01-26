@@ -24,6 +24,12 @@ repos:
   hooks:
   - id: black
     args: [-l79, --check, --diff, .]
+- repo: https://github.com/PyCQA/bandit
+  rev: '1.7.4'
+  hooks:
+  - id: bandit
+    args: ["-r", "repository_service_tuf"]
+    exclude: tests
 - repo: local
   hooks:
     - id: tox-requirements
