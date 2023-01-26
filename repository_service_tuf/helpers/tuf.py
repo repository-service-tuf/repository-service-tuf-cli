@@ -10,7 +10,6 @@ from securesystemslib.signer import Signer, SSlibSigner  # type: ignore
 from tuf.api.metadata import (
     SPECIFICATION_VERSION,
     TOP_LEVEL_ROLE_NAMES,
-    DelegatedRole,
     Delegations,
     Key,
     Metadata,
@@ -25,7 +24,6 @@ from tuf.api.metadata import (
 from tuf.api.serialization.json import JSONSerializer
 
 SPEC_VERSION: str = ".".join(SPECIFICATION_VERSION)
-BIN: str = "bin"
 BINS: str = "bins"
 
 
@@ -204,49 +202,20 @@ def initialize_metadata(
     targets_meta = []
 
     # Update top-level 'targets' role, to delegate trust for all target files
-    # to 'bins' role, defining target path patterns, trusted signing keys and
-    # required signature thresholds.
-    targets_metadata = _load(Targets.type)
-    targets_metadata.signed.delegations = Delegations(keys={}, roles={})
-    targets_metadata_roles: dict[str, DelegatedRole] = {
-        BIN: DelegatedRole(
-            name=BIN,
-            keyids=[],
-            threshold=settings[BIN].threshold,
-            terminating=False,
-            paths=settings[Targets.type].paths,
-        )
-    }
-
-    targets_metadata.signed.delegations.roles = targets_metadata_roles
-
-    for signer in _signers(BIN):
-        targets_metadata.signed.add_key(
-            Key.from_securesystemslib_key(signer.key_dict), BIN
-        )
-
-    # Bump version and expiration, and sign and persist updated 'targets'.
-    _bump_version(targets_metadata)
-    _bump_expiry(targets_metadata, Targets.type)
-    _sign(targets_metadata, Targets.type)
-    _add_payload(targets_metadata, Targets.type)
-
-    targets_meta.append((Targets.type, targets_metadata.signed.version))
-
-    bit_length = settings[BINS].number_hash_prefixes
-    assert bit_length is not None  # nosec B101:assert_used
-
-    succinct_roles = SuccinctRoles([], 1, bit_length, BINS)
-    # Create new 'bins' role and delegate trust from 'bins' for all target
-    # files to 'bin-n' roles based on file path hash prefixes, a.k.a hash bin
+    # to 'bin-n' roles based on file path hash prefixes, a.k.a hash bin
     # delegation.
-    bin = Metadata(Targets())
-    bin.signed.delegations = Delegations(
+    targets = _load(Targets.type)
+    succinct_roles = SuccinctRoles(
+        [], 1, settings[Targets.type].number_hash_prefixes, BINS
+    )
+
+    targets.signed.delegations = Delegations(
         keys={}, succinct_roles=succinct_roles
     )
+
     for delegated_name in succinct_roles.get_roles():
         for signer in _signers(BINS):
-            bin.signed.add_key(
+            targets.signed.add_key(
                 Key.from_securesystemslib_key(signer.key_dict), delegated_name
             )
         bins_hash_role = Metadata(Targets())
@@ -255,12 +224,13 @@ def initialize_metadata(
         _add_payload(bins_hash_role, delegated_name)
         targets_meta.append((delegated_name, bins_hash_role.signed.version))
 
-    # Bump expiration, and sign and persist new 'bins' role.
-    _bump_expiry(bin, BIN)
-    _sign(bin, BIN)
-    _add_payload(bin, BIN)
+    # Bump version and expiration, and sign and persist updated 'targets'.
+    _bump_version(targets)
+    _bump_expiry(targets, Targets.type)
+    _sign(targets, Targets.type)
+    _add_payload(targets, Targets.type)
 
-    targets_meta.append((BIN, bin.signed.version))
+    targets_meta.append((Targets.type, targets.signed.version))
 
     _update_timestamp(_update_snapshot(targets_meta))
 
