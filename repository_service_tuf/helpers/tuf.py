@@ -163,7 +163,7 @@ def initialize_metadata(
 
     # Populate public key store, and define trusted signing keys and required
     # signature thresholds for each top-level role in 'root'.
-    roles = {}
+    roles: dict[str, Role] = {}
     for role_name in TOP_LEVEL_ROLE_NAMES:
         threshold = settings[role_name].threshold
         signers = _signers(role_name)
@@ -180,14 +180,14 @@ def initialize_metadata(
             )
 
         roles[role_name] = Role([], threshold)
-        keys: list[tuple[Key, str]] = [
+        add_key_args: list[tuple[Key, str]] = [
             (Key.from_securesystemslib_key(signer.key_dict), role_name)
             for signer in signers
         ]
 
     root = Root(roles=roles)
-    for key in keys:
-        root.add_key(key[0], key[1])
+    for arg in add_key_args:
+        root.add_key(arg[0], arg[1])
 
     # Add signature wrapper, bump expiration, and sign and persist
     for role in [targets, snapshot, timestamp, root]:
@@ -207,7 +207,7 @@ def initialize_metadata(
     # required signature thresholds.
     targets_metadata = _load(Targets.type)
     targets_metadata.signed.delegations = Delegations(keys={}, roles={})
-    targets_metadata_roles = {
+    targets_metadata_roles: dict[str, DelegatedRole] = {
         BIN: DelegatedRole(
             name=BIN,
             keyids=[],
