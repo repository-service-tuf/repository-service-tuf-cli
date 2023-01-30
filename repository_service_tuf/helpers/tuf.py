@@ -156,11 +156,6 @@ def initialize_metadata(
 
         return snapshot.signed.version
 
-    # Bootstrap default top-level metadata to be updated below if necessary
-    targets = Targets()
-    snapshot = Snapshot()
-    timestamp = Timestamp()
-
     # Populate public key store, and define trusted signing keys and required
     # signature thresholds for each top-level role in 'root'.
     roles: dict[str, Role] = {}
@@ -185,18 +180,23 @@ def initialize_metadata(
             for signer in signers
         ]
 
-    root = Root(roles=roles)
-    for arg in add_key_args:
-        root.add_key(arg[0], arg[1])
-
     # Add signature wrapper, bump expiration, and sign and persist
-    for role in [targets, snapshot, timestamp, root]:
-        # TODO: Create an issue for this mypy error if it's not resolved by the
-        # PR reviews
-        metadata = Metadata(role)  # type: ignore
-        _bump_expiry(metadata, role.type)
-        _sign(metadata, role.type)
-        _add_payload(metadata, role.type)
+    for role in [Targets, Snapshot, Timestamp, Root]:
+
+        # Bootstrap default top-level metadata to be updated below if necessary
+        if role is Root:
+            metadata = Metadata(role(roles=roles))
+            root = metadata.signed
+            for arg in add_key_args:
+                root.add_key(arg[0], arg[1])
+
+        else:
+            metadata = Metadata(role())
+
+        metadata_type = metadata.signed.type
+        _bump_expiry(metadata, metadata_type)
+        _sign(metadata, metadata_type)
+        _add_payload(metadata, metadata_type)
 
     # Track names and versions of new and updated targets for 'snapshot'
     # update
