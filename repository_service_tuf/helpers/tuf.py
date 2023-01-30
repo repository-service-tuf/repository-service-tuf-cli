@@ -217,7 +217,7 @@ def initialize_metadata(
         )
     }
 
-    assert targets_metadata_roles is not None
+    assert targets_metadata_roles is not None  # nosec B101:assert_used
 
     targets_metadata.signed.delegations.roles = targets_metadata_roles
 
@@ -235,7 +235,7 @@ def initialize_metadata(
     targets_meta.append((Targets.type, targets_metadata.signed.version))
 
     bit_length = settings[BINS].number_hash_prefixes
-    assert bit_length is not None
+    assert bit_length is not None  # nosec B101:assert_used
 
     succinct_roles = SuccinctRoles([], 1, bit_length, BINS)
     # Create new 'bins' role and delegate trust from 'bins' for all target

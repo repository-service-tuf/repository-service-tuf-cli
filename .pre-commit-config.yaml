@@ -37,5 +37,12 @@ repos:
       description: Checks if `make requirements` is up-to-date
       entry: tox -e requirements
       language: system
-      files: ''
+      pass_filenames: false
+      verbose: true
+    - id: tox-mypy
+      name: run typing check from tox
+      description: Checks typing with `mypy`
+      entry: tox -e typing
+      language: system
+      pass_filenames: false
       verbose: true

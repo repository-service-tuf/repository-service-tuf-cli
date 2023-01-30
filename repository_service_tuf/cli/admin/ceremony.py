@@ -695,7 +695,7 @@ def ceremony(context, bootstrap, file, upload, save) -> None:
                 )
 
                 if rolename == Roles.TARGETS.value:
-                    assert role.paths is not None
+                    assert role.paths is not None  # nosec B101:assert_used
                     delegations_row = (
                         f"\n{SETTINGS.service.targets_base_url}".join(
                             ["", *role.paths]
