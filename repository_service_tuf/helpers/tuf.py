@@ -185,7 +185,7 @@ def initialize_metadata(
 
         # Bootstrap default top-level metadata to be updated below if necessary
         if role is Root:
-            metadata = Metadata(role(roles=roles))
+            metadata = Metadata(Root(roles=roles))
             root = metadata.signed
             for arg in add_key_args:
                 root.add_key(arg[0], arg[1])
@@ -216,8 +216,6 @@ def initialize_metadata(
             paths=settings[Targets.type].paths,
         )
     }
-
-    assert targets_metadata_roles is not None  # nosec B101:assert_used
 
     targets_metadata.signed.delegations.roles = targets_metadata_roles
 
