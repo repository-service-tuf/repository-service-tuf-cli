@@ -159,6 +159,7 @@ def initialize_metadata(
     # Populate public key store, and define trusted signing keys and required
     # signature thresholds for each top-level role in 'root'.
     roles: dict[str, Role] = {}
+    add_key_args: list[tuple[Key, str]] = []
     for role_name in TOP_LEVEL_ROLE_NAMES:
         threshold = settings[role_name].threshold
         signers = _signers(role_name)
@@ -175,10 +176,10 @@ def initialize_metadata(
             )
 
         roles[role_name] = Role([], threshold)
-        add_key_args: list[tuple[Key, str]] = [
-            (Key.from_securesystemslib_key(signer.key_dict), role_name)
-            for signer in signers
-        ]
+        for signer in signers:
+            add_key_args.append(
+                (Key.from_securesystemslib_key(signer.key_dict), role_name)
+            )
 
     # Add signature wrapper, bump expiration, and sign and persist
     for role in [Targets, Snapshot, Timestamp, Root]:
