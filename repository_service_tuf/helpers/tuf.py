@@ -140,9 +140,7 @@ def initialize_metadata(
         _sign(timestamp, Timestamp.type)
         _add_payload(timestamp, Timestamp.type)
 
-    def _update_snapshot(
-        targets_meta: List[Tuple[str, int]]
-    ) -> Metadata[Snapshot]:
+    def _update_snapshot(targets_meta: List[Tuple[str, int]]) -> int:
         """Loads 'snapshot', updates meta info about passed 'targets'
         metadata, bumps version and expiration, signs and persists. Returns
         new snapshot version, e.g. to update 'timestamp'."""
@@ -158,14 +156,10 @@ def initialize_metadata(
 
         return snapshot.signed.version
 
-    # Bootstrap default top-level metadata to be updated below if necessary
-    targets = Targets()
-    snapshot = Snapshot()
-    timestamp = Timestamp()
-    root = Root()
-
     # Populate public key store, and define trusted signing keys and required
     # signature thresholds for each top-level role in 'root'.
+    roles: dict[str, Role] = {}
+    add_key_args: list[tuple[Key, str]] = []
     for role_name in TOP_LEVEL_ROLE_NAMES:
         threshold = settings[role_name].threshold
         signers = _signers(role_name)
@@ -181,18 +175,29 @@ def initialize_metadata(
                 f"signing threshold '{threshold}'"
             )
 
-        root.roles[role_name] = Role([], threshold)
+        roles[role_name] = Role([], threshold)
         for signer in signers:
-            root.add_key(
-                Key.from_securesystemslib_key(signer.key_dict), role_name
+            add_key_args.append(
+                (Key.from_securesystemslib_key(signer.key_dict), role_name)
             )
 
     # Add signature wrapper, bump expiration, and sign and persist
-    for role in [targets, snapshot, timestamp, root]:
-        metadata = Metadata(role)
-        _bump_expiry(metadata, role.type)
-        _sign(metadata, role.type)
-        _add_payload(metadata, role.type)
+    for role in [Targets, Snapshot, Timestamp, Root]:
+
+        # Bootstrap default top-level metadata to be updated below if necessary
+        if role is Root:
+            metadata = Metadata(Root(roles=roles))
+            root = metadata.signed
+            for arg in add_key_args:
+                root.add_key(arg[0], arg[1])
+
+        else:
+            metadata = Metadata(role())
+
+        metadata_type = metadata.signed.type
+        _bump_expiry(metadata, metadata_type)
+        _sign(metadata, metadata_type)
+        _add_payload(metadata, metadata_type)
 
     # Track names and versions of new and updated targets for 'snapshot'
     # update
@@ -201,32 +206,37 @@ def initialize_metadata(
     # Update top-level 'targets' role, to delegate trust for all target files
     # to 'bins' role, defining target path patterns, trusted signing keys and
     # required signature thresholds.
-    targets = _load(Targets.type)
-    targets.signed.delegations = Delegations(keys={}, roles={})
-    targets.signed.delegations.roles[BIN] = DelegatedRole(
-        name=BIN,
-        keyids=[],
-        threshold=settings[BIN].threshold,
-        terminating=False,
-        paths=settings[Targets.type].paths,
-    )
+    targets_metadata = _load(Targets.type)
+    targets_metadata.signed.delegations = Delegations(keys={}, roles={})
+    targets_metadata_roles: dict[str, DelegatedRole] = {
+        BIN: DelegatedRole(
+            name=BIN,
+            keyids=[],
+            threshold=settings[BIN].threshold,
+            terminating=False,
+            paths=settings[Targets.type].paths,
+        )
+    }
+
+    targets_metadata.signed.delegations.roles = targets_metadata_roles
 
     for signer in _signers(BIN):
-        targets.signed.add_key(
+        targets_metadata.signed.add_key(
             Key.from_securesystemslib_key(signer.key_dict), BIN
         )
 
     # Bump version and expiration, and sign and persist updated 'targets'.
-    _bump_version(targets)
-    _bump_expiry(targets, Targets.type)
-    _sign(targets, Targets.type)
-    _add_payload(targets, Targets.type)
+    _bump_version(targets_metadata)
+    _bump_expiry(targets_metadata, Targets.type)
+    _sign(targets_metadata, Targets.type)
+    _add_payload(targets_metadata, Targets.type)
 
-    targets_meta.append((Targets.type, targets.signed.version))
+    targets_meta.append((Targets.type, targets_metadata.signed.version))
 
-    succinct_roles = SuccinctRoles(
-        [], 1, settings[BINS].number_hash_prefixes, BINS
-    )
+    bit_length = settings[BINS].number_hash_prefixes
+    assert bit_length is not None  # nosec B101:assert_used
+
+    succinct_roles = SuccinctRoles([], 1, bit_length, BINS)
     # Create new 'bins' role and delegate trust from 'bins' for all target
     # files to 'bin-n' roles based on file path hash prefixes, a.k.a hash bin
     # delegation.
