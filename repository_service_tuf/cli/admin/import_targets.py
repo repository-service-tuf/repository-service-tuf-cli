@@ -95,7 +95,10 @@ def _import_csv_to_rstuf(
     "-csv",
     required=True,
     multiple=True,
-    help="CSV file to import. Multiple -csv parameters are allowed.",
+    help=(
+        "CSV file to import. Multiple -csv parameters are allowed. "
+        "See rstuf CLI guide for more details."
+    ),
 )
 @click.option(
     "--skip-publish-targets",
