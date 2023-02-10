@@ -106,7 +106,13 @@ def _import_csv_to_rstuf(
     help="Skip publishing targets in TUF Metadata.",
 )
 @click.pass_context
-def import_targets(context, metadata_url, db_uri, csv, skip_publish_targets):
+def import_targets(
+    context,
+    metadata_url: str,
+    db_uri: str,
+    csv: List[str],
+    skip_publish_targets: bool,
+):
     """
     Import targets to RSTUF from exported CSV file.
     """
@@ -139,7 +145,7 @@ def import_targets(context, metadata_url, db_uri, csv, skip_publish_targets):
     rstuf_table = Table("rstuf_targets", db_metadata, autoload_with=engine)
 
     # validate if the CSV files are accessible
-    _check_csv_files(csv)
+    _check_csv_files(csv_files=csv)
     # import all CSV file(s) data to RSTUF DB without commiting
     _import_csv_to_rstuf(db_client, rstuf_table, csv, succinct_roles)
 
