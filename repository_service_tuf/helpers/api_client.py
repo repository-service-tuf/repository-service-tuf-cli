@@ -93,7 +93,7 @@ def get_headers(settings: Dict[str, str]) -> Dict[str, str]:
         expired_admin = token_access_check.data.get("expired")
         if expired_admin is True:
             raise click.ClickException(
-                "Token expired. Run 'rstuf admin login'"
+                "The token has expired. Run 'rstuf admin login'"
             )
         else:
             headers = {"Authorization": f"Bearer {token}"}

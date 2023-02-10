@@ -100,7 +100,7 @@ def _import_csv_to_rstuf(
 @click.option(
     "--skip-publish-targets",
     is_flag=True,
-    help="Skip publish targets process in TUF Metadata.",
+    help="Skip publishing targets in TUF Metadata.",
 )
 @click.pass_context
 def import_targets(context, metadata_url, db_uri, csv, skip_publish_targets):
