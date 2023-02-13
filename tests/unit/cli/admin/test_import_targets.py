@@ -1,7 +1,6 @@
 import pytest
 import pretend
 import datetime
-from unittest.mock import Mock
 
 from repository_service_tuf.cli.admin import import_targets
 
