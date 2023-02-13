@@ -279,7 +279,7 @@ class TestImportTargetsGroupCLI:
         assert import_targets.is_logged.calls == [
             pretend.call("fake-server", "test-token")
         ]
-        import_targets.request_server.calls == [
+        assert import_targets.request_server.calls == [
             pretend.call(
                 "fake-server",
                 import_targets.URL.bootstrap.value,
@@ -395,7 +395,7 @@ class TestImportTargetsGroupCLI:
         assert import_targets.get_headers.calls == [
             pretend.call(test_context["settings"])
         ]
-        import_targets.request_server.calls == [
+        assert import_targets.request_server.calls == [
             pretend.call(
                 "fake-server",
                 import_targets.URL.bootstrap.value,
@@ -445,7 +445,7 @@ class TestImportTargetsGroupCLI:
         assert import_targets.get_headers.calls == [
             pretend.call(test_context["settings"])
         ]
-        import_targets.request_server.calls == [
+        assert import_targets.request_server.calls == [
             pretend.call(
                 "fake-server",
                 import_targets.URL.bootstrap.value,
@@ -519,7 +519,7 @@ class TestImportTargetsGroupCLI:
         assert import_targets.is_logged.calls == [
             pretend.call("fake-server", "test-token")
         ]
-        import_targets.request_server.calls == [
+        assert import_targets.request_server.calls == [
             pretend.call(
                 "fake-server",
                 import_targets.URL.bootstrap.value,
