@@ -210,7 +210,113 @@ class TestAPIClient:
             pretend.call("http://server", "fake_token")
         ]
 
-    def test_task_status(self):
+    def test_bootstrap_status(self, test_context):
+        test_context["settings"].SERVER = "http://server"
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"auth": "token"}
+        )
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=200,
+                json=lambda: {"data": {"bootstrap": True}, "message": "text"},
+            )
+        )
+        result = api_client.bootstrap_status(test_context["settings"])
+        assert result == {"data": {"bootstrap": True}, "message": "text"}
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        assert api_client.request_server.calls == [
+            pretend.call(
+                test_context["settings"].SERVER,
+                api_client.URL.bootstrap.value,
+                api_client.Methods.get,
+                headers={"auth": "token"},
+            )
+        ]
+
+    def test_bootstrap_status_404_disabled(self, test_context):
+        test_context["settings"].SERVER = "http://server"
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"auth": "token"}
+        )
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=404,
+                json=lambda: {"data": {"bootstrap": True}, "message": "text"},
+            )
+        )
+        with pytest.raises(api_client.click.ClickException) as err:
+            api_client.bootstrap_status(test_context["settings"])
+
+        assert "Server http://server does not allow bootstrap" in str(err)
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        assert api_client.request_server.calls == [
+            pretend.call(
+                test_context["settings"].SERVER,
+                api_client.URL.bootstrap.value,
+                api_client.Methods.get,
+                headers={"auth": "token"},
+            )
+        ]
+
+    def test_bootstrap_status_not_200(self, test_context):
+        test_context["settings"].SERVER = "http://server"
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"auth": "token"}
+        )
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=500,
+                text="Internal Server Error :P",
+            )
+        )
+        with pytest.raises(api_client.click.ClickException) as err:
+            api_client.bootstrap_status(test_context["settings"])
+
+        assert "Internal Server Error :P" in str(err)
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        assert api_client.request_server.calls == [
+            pretend.call(
+                test_context["settings"].SERVER,
+                api_client.URL.bootstrap.value,
+                api_client.Methods.get,
+                headers={"auth": "token"},
+            )
+        ]
+
+    def test_bootstrap_status_not_json_body(self, test_context):
+        test_context["settings"].SERVER = "http://server"
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"auth": "token"}
+        )
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=200, json=lambda: None, text="No json for you"
+            )
+        )
+        with pytest.raises(api_client.click.ClickException) as err:
+            api_client.bootstrap_status(test_context["settings"])
+
+        assert "Unexpected error No json for you" in str(err)
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        assert api_client.request_server.calls == [
+            pretend.call(
+                test_context["settings"].SERVER,
+                api_client.URL.bootstrap.value,
+                api_client.Methods.get,
+                headers={"auth": "token"},
+            )
+        ]
+
+    def test_task_status(self, test_context):
+        test_context["settings"].SERVER = "http://server"
         fake_json = Mock()
         fake_json.side_effect = [
             {"data": {"state": "STARTED", "k": "v"}},
@@ -221,12 +327,17 @@ class TestAPIClient:
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(status_code=200, json=fake_json)
         )
-
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"Auth": "Token"}
+        )
         result = api_client.task_status(
-            "task_id", "http://server", {"Auth": "Token"}, "Test task: "
+            "task_id", test_context["settings"], "Test task: "
         )
 
         assert result == {"state": "SUCCESS", "k": "v"}
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
         assert api_client.request_server.calls == [
             pretend.call(
                 "http://server",
@@ -254,19 +365,34 @@ class TestAPIClient:
             ),
         ]
 
-    def test_task_status_unexpected_error(self):
+    def test_task_status_unexpected_error(self, test_context):
+        test_context["settings"].SERVER = "http://server"
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(status_code=500, text="body error")
+        )
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"Auth": "Token"}
         )
 
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.task_status(
-                "task_id", "http://server", {"Auth": "Token"}, "Test task: "
+                "task_id", test_context["settings"], "Test task: "
             )
 
         assert "Unexpected response body error" in str(err)
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=200,
+                json=lambda: {"data": {"k": "v"}},
+                text="",
+            )
+        )
 
-    def test_task_status_failure(self):
+    def test_task_status_failure(self, test_context):
+        test_context["settings"].SERVER = "http://server"
         fake_json = Mock()
         fake_json.side_effect = [
             {"data": {"state": "STARTED", "k": "v"}},
@@ -280,13 +406,19 @@ class TestAPIClient:
                 text="{'data': {'state': 'FAILURE', 'k': 'v'}",
             )
         )
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"Auth": "Token"}
+        )
 
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.task_status(
-                "task_id", "http://server", {"Auth": "Token"}, "Test task: "
+                "task_id", test_context["settings"], "Test task: "
             )
 
         assert "Failed: " in str(err)
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
         assert api_client.request_server.calls == [
             pretend.call(
                 "http://server",
@@ -308,7 +440,8 @@ class TestAPIClient:
             ),
         ]
 
-    def test_task_status_without_state(self):
+    def test_task_status_without_state(self, test_context):
+        test_context["settings"].SERVER = "http://server"
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
                 status_code=200,
@@ -316,13 +449,19 @@ class TestAPIClient:
                 text="",
             )
         )
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"Auth": "Token"}
+        )
 
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.task_status(
-                "task_id", "http://server", {"Auth": "Token"}, "Test task: "
+                "task_id", test_context["settings"], "Test task: "
             )
 
         assert "No state in data received " in str(err)
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
         assert api_client.request_server.calls == [
             pretend.call(
                 "http://server",
@@ -332,7 +471,8 @@ class TestAPIClient:
             ),
         ]
 
-    def test_task_status_without_data(self):
+    def test_task_status_without_data(self, test_context):
+        test_context["settings"].SERVER = "http://server"
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
                 status_code=200,
@@ -340,10 +480,13 @@ class TestAPIClient:
                 text="",
             )
         )
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"Auth": "Token"}
+        )
 
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.task_status(
-                "task_id", "http://server", {"Auth": "Token"}, "Test task: "
+                "task_id", test_context["settings"], "Test task: "
             )
 
         assert "No data received " in str(err)
@@ -355,8 +498,12 @@ class TestAPIClient:
                 headers={"Auth": "Token"},
             ),
         ]
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
 
-    def test_publish_targets(self):
+    def test_publish_targets(self, test_context):
+        test_context["settings"].SERVER = "http://server"
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
                 status_code=202,
@@ -365,17 +512,49 @@ class TestAPIClient:
                 ),
             )
         )
-        result = api_client.publish_targets(
-            "http://127.0.0.1", {"Auth": "Token"}
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"Auth": "Token"}
         )
-        assert result == "213sferer"
 
-    def test_publish_targets_unexpected_error(self):
+        result = api_client.publish_targets(test_context["settings"])
+
+        assert result == "213sferer"
+        assert api_client.request_server.calls == [
+            pretend.call(
+                test_context["settings"].SERVER,
+                api_client.URL.publish_targets.value,
+                api_client.Methods.post,
+                headers={"Auth": "Token"},
+            )
+        ]
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+
+    def test_publish_targets_unexpected_error(self, test_context):
+        test_context["settings"].SERVER = "http://server"
+
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
                 status_code=500, text="Internal Error"
             )
         )
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"Auth": "Token"}
+        )
+
         with pytest.raises(api_client.click.ClickException) as err:
-            api_client.publish_targets("http://127.0.0.1", {"Auth": "Token"})
+            api_client.publish_targets(test_context["settings"])
+
         assert "Failed to publish targets. 500 Internal Error" in str(err)
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        assert api_client.request_server.calls == [
+            pretend.call(
+                test_context["settings"].SERVER,
+                api_client.URL.publish_targets.value,
+                api_client.Methods.post,
+                headers={"Auth": "Token"},
+            )
+        ]
