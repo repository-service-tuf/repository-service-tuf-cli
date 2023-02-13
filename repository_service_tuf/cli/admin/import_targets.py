@@ -101,8 +101,7 @@ def _get_succinct_roles(metadata_url: str) -> SuccinctRoles:
     if targets_delegations.succinct_roles is None:
         raise click.ClickException("Failed to get Targets succinct roles")
 
-    succinct_roles: SuccinctRoles = targets_delegations.succinct_roles
-    return succinct_roles
+    return targets_delegations.succinct_roles
 
 
 @admin.command()

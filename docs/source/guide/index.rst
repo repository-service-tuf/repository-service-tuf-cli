@@ -456,7 +456,7 @@ Import Targets (``import-targets``)
 
 This feature imports a large number of targets directly to RSTUF Database.
 RSTUF doesn't recommend using this feature for regular flow, but in case you're
-onboarding an existent repository that contains a larget number of targets.
+onboarding an existent repository that contains a large number of targets.
 
 This feature requires extra dependencies:
 
@@ -464,7 +464,7 @@ This feature requires extra dependencies:
 
     pip install repository-service-tuf[psycopg2,sqlachemy]
 
-To use this feature, you need create CSV files with the content to be imported
+To use this feature, you need to create CSV files with the content to be imported
 by RSTUF CLI.
 
 This content requires the following data:
