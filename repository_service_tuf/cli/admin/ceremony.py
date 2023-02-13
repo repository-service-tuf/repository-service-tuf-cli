@@ -520,16 +520,16 @@ def ceremony(context, bootstrap, file, upload, save) -> None:
         bs_response = request_server(
             settings.SERVER, URL.bootstrap.value, Methods.get, headers=headers
         )
-        bs_data = bs_response.json()
         if bs_response.status_code == 404:
             raise click.ClickException(
                 f"Server {settings.SERVER} doesn't allow bootstrap"
             )
         if bs_response.status_code != 200:
             raise click.ClickException(
-                f"Error {bs_response.status_code} {bs_data.get('detail')}"
+                f"Error {bs_response.status_code} {bs_response.text}"
             )
 
+        bs_data = bs_response.json()
         if bs_data.get("bootstrap") is True or None:
             raise click.ClickException(f"{bs_data.get('message')}")
 
