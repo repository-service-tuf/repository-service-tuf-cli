@@ -1,6 +1,7 @@
-import pytest
-import pretend
 import datetime
+
+import pretend
+import pytest
 
 from repository_service_tuf.cli.admin import import_targets
 

@@ -457,7 +457,7 @@ class TestCeremonyGroupCLI:
                     "detail": "Unauthorized.",
                 }
             ),
-            text="Unauthorized."
+            text="Unauthorized.",
         )
 
         monkeypatch.setattr(
