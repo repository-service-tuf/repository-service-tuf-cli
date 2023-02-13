@@ -151,3 +151,17 @@ def task_status(
                 f"No data received {state_response.text}"
             )
         time.sleep(2)
+
+
+def publish_targets(server: str, headers: Dict[str, str]) -> str:
+    publish_targets = request_server(
+        server, URL.publish_targets.value, Methods.post, headers=headers
+    )
+    if publish_targets.status_code != 202:
+        raise click.ClickException(
+            f"Failed to publish targets. {publish_targets.status_code} "
+            f"{publish_targets.text}"
+        )
+    task_id = publish_targets.json()["data"]["task_id"]
+
+    return task_id

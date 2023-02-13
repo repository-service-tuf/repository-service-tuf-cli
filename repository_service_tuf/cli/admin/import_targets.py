@@ -14,10 +14,16 @@ from repository_service_tuf.helpers.api_client import (
     Methods,
     get_headers,
     is_logged,
+    publish_targets,
     request_server,
     task_status,
 )
-from repository_service_tuf.helpers.tuf import Metadata, SuccinctRoles
+from repository_service_tuf.helpers.tuf import (
+    Delegations,
+    Metadata,
+    SuccinctRoles,
+    Targets,
+)
 
 console = Console()
 
@@ -80,6 +86,25 @@ def _import_csv_to_rstuf(
         console.print(f"Import status: {csv_file} imported")
 
 
+def _get_succinct_roles(metadata_url: str) -> SuccinctRoles:
+    response = request_server(metadata_url, "1.bin.json", Methods.get)
+    if response.status_code == 404:
+        raise click.ClickException("RSTUF Metadata Targets not found.")
+
+    json_data = json.loads(response.text)
+    targets: Metadata[Targets] = Metadata.from_dict(json_data)
+    if targets.signed.delegations is None:
+        raise click.ClickException("Failed to get Targets Delegations")
+
+    targets_delegations: Delegations = targets.signed.delegations
+
+    if targets_delegations.succinct_roles is None:
+        raise click.ClickException("Failed to get Targets succinct roles")
+
+    succinct_roles: SuccinctRoles = targets_delegations.succinct_roles
+    return succinct_roles
+
+
 @admin.command()
 @click.option(
     "-metadata-url",
@@ -107,7 +132,7 @@ def _import_csv_to_rstuf(
 )
 @click.pass_context
 def import_targets(
-    context,
+    context: Any,
     metadata_url: str,
     db_uri: str,
     csv: List[str],
@@ -131,14 +156,22 @@ def import_targets(
 
     headers = get_headers(settings)
 
-    response = request_server(metadata_url, "1.bin.json", Methods.get)
-    if response.status_code == 404:
-        raise click.ClickException("RSTUF Metadata Targets not found.")
+    bs_response = request_server(
+        settings.SERVER, URL.bootstrap.value, Methods.get, headers=headers
+    )
+    if bs_response.status_code != 200:
+        raise click.ClickException(
+            f"Error {bs_response.status_code} {bs_response.text}"
+        )
+
+    bs_data = bs_response.json()["data"]
+    if bs_data.get("bootstrap") is False:
+        raise click.ClickException(
+            "`import-targets` requires bootstrap process done."
+        )
 
     # load all required infrastructure
-    json_data = json.loads(response.text)
-    targets = Metadata.from_dict(json_data)
-    succinct_roles = targets.signed.delegations.succinct_roles
+    succinct_roles = _get_succinct_roles(metadata_url)
     engine = create_engine(f"{db_uri}")
     db_metadata = MetaData()
     db_client = engine.connect()
@@ -156,21 +189,13 @@ def import_targets(
 
     if skip_publish_targets:
         console.print(
-            "Import status: Finshed. "
+            "Import status: Finished. "
             "Not targets published (`--skip-publish-targets`)"
         )
     else:
         console.print("Import status: Submitting action publish targets")
-        publish_targets = request_server(
-            server, URL.publish_targets.value, Methods.post, headers=headers
-        )
-        if publish_targets.status_code != 202:
-            raise click.ClickException(
-                f"Failed to publish targets. {publish_targets.text}"
-            )
-        task_id = publish_targets.json()["data"]["task_id"]
+        task_id = publish_targets(server, headers)
         console.print(f"Import status: Publish targets task id is {task_id}")
-
         # monitor task status
         result = task_status(task_id, server, headers, "Import status: task ")
         if result is not None:

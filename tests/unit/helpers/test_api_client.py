@@ -192,7 +192,7 @@ class TestAPIClient:
                 {"SERVER": "http://server", "TOKEN": "fake_token"}
             )
 
-        assert "Token expired" in str(err)
+        assert "The token has expired" in str(err)
         assert api_client.is_logged.calls == [
             pretend.call("http://server", "fake_token")
         ]
@@ -361,3 +361,27 @@ class TestAPIClient:
                 headers={"Auth": "Token"},
             ),
         ]
+
+    def test_publish_targets(self):
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=202,
+                json=pretend.call_recorder(
+                    lambda: {"data": {"task_id": "213sferer"}}
+                ),
+            )
+        )
+        result = api_client.publish_targets(
+            "http://127.0.0.1", {"Auth": "Token"}
+        )
+        assert result == "213sferer"
+
+    def test_publish_targets_unexpected_error(self):
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=500, text="Internal Error"
+            )
+        )
+        with pytest.raises(api_client.click.ClickException) as err:
+            api_client.publish_targets("http://127.0.0.1", {"Auth": "Token"})
+        assert "Failed to publish targets. 500 Internal Error" in str(err)
