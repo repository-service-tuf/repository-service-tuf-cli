@@ -69,7 +69,7 @@ def is_logged(server: str, token: str):
         return Login(state=False)
 
     elif response.status_code == 200:
-        data = response.json().get("data")
+        data = response.json().get("data", {})
         if data.get("expired") is False:
             return Login(state=True, data=data)
 
@@ -112,8 +112,8 @@ def get_headers(settings: Dict[str, str]) -> Dict[str, str]:
 
 def task_status(
     task_id: str, server: str, headers: Dict[str, str], title: Optional[str]
-) -> Dict[Any, str]:
-    received_state = []
+) -> Dict[str, Any]:
+    received_states = []
     while True:
         state_response = request_server(
             server, f"{URL.task.value}{task_id}", Methods.get, headers=headers
@@ -128,9 +128,9 @@ def task_status(
 
         if data:
             if state := data.get("state"):
-                if state not in received_state:
+                if state not in received_states:
                     console.print(f"{title}{state}")
-                    received_state.append(state)
+                    received_states.append(state)
                 else:
                     console.print(".", end="")
 
