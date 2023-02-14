@@ -49,7 +49,7 @@ class TestImportTargetsFunctions:
             read=pretend.call_recorder(lambda: fake_data),
         )
         monkeypatch.setitem(
-            import_targets.__builtins__, "open", lambda *a, **kw: fake_file_obj
+            import_targets.__builtins__, "open", lambda *a: fake_file_obj
         )
 
         fake_time = datetime.datetime(2019, 6, 16, 9, 5, 1)
@@ -218,11 +218,7 @@ class TestImportTargetsFunctions:
 class TestImportTargetsGroupCLI:
     def test_import_targets(self, client, test_context):
         test_context["settings"].SERVER = "fake-server"
-        test_context["settings"].TOKEN = "test-token"
 
-        import_targets.is_logged = pretend.call_recorder(
-            lambda *a: pretend.stub(state=True)
-        )
         import_targets.get_headers = pretend.call_recorder(
             lambda *a: "headers"
         )
@@ -262,13 +258,13 @@ class TestImportTargetsGroupCLI:
         )
 
         options = [
-            "-metadata-url",
+            "--metadata-url",
             "http://127.0.0.1/metadata/",
-            "-db-uri",
+            "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
-            "-csv",
+            "--csv",
             "targets1of2.csv",
-            "-csv",
+            "--csv",
             "targets2of2.csv",
         ]
         result = client.invoke(
@@ -276,9 +272,6 @@ class TestImportTargetsGroupCLI:
         )
         assert result.exit_code == 0, result.output
         assert "Finished." in result.output
-        assert import_targets.is_logged.calls == [
-            pretend.call("fake-server", "test-token")
-        ]
         assert import_targets.request_server.calls == [
             pretend.call(
                 "fake-server",
@@ -289,6 +282,9 @@ class TestImportTargetsGroupCLI:
         ]
         assert import_targets.get_headers.calls == [
             pretend.call(test_context["settings"])
+        ]
+        assert import_targets._get_succinct_roles.calls == [
+            pretend.call("http://127.0.0.1/metadata/")
         ]
         assert fake_response.json.calls == [pretend.call()]
         assert import_targets.create_engine.calls == [
@@ -309,158 +305,9 @@ class TestImportTargetsGroupCLI:
             )
         ]
 
-    def test_import_targets_expired(self, client, test_context):
-        test_context["settings"].SERVER = "fake-server"
-        test_context["settings"].TOKEN = "test-token"
-
-        import_targets.is_logged = pretend.call_recorder(
-            lambda *a: pretend.stub(state=False, data={"expired": True})
-        )
-
-        options = [
-            "-metadata-url",
-            "http://127.0.0.1/metadata/",
-            "-db-uri",
-            "postgresql://postgres:secret@127.0.0.1:5433",
-            "-csv",
-            "targets1of2.csv",
-            "-csv",
-            "targets2of2.csv",
-        ]
-
-        result = client.invoke(
-            import_targets.import_targets, options, obj=test_context
-        )
-        assert result.exit_code == 1, result.output
-        assert "Try re-login" in result.output
-
-    def test_import_never_logged(self, client, test_context):
-        import_targets.is_logged = pretend.call_recorder(
-            lambda *a: pretend.stub(state=False, data={"expired": True})
-        )
-
-        options = [
-            "-metadata-url",
-            "http://127.0.0.1/metadata/",
-            "-db-uri",
-            "postgresql://postgres:secret@127.0.0.1:5433",
-            "-csv",
-            "targets1of2.csv",
-            "-csv",
-            "targets2of2.csv",
-        ]
-
-        result = client.invoke(
-            import_targets.import_targets, options, obj=test_context
-        )
-        assert result.exit_code == 1, result.output
-        assert "Login first. Run 'rstuf admin login'" in result.output
-
-    def test_import_targets_bootstrap_check_failed(self, client, test_context):
-        test_context["settings"].SERVER = "fake-server"
-        test_context["settings"].TOKEN = "test-token"
-
-        import_targets.is_logged = pretend.call_recorder(
-            lambda *a: pretend.stub(state=True)
-        )
-        import_targets.get_headers = pretend.call_recorder(
-            lambda *a: "headers"
-        )
-        fake_response = pretend.stub(
-            status_code=500,
-            text="Internal Error",
-        )
-        import_targets.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
-        )
-
-        options = [
-            "-metadata-url",
-            "http://127.0.0.1/metadata/",
-            "-db-uri",
-            "postgresql://postgres:secret@127.0.0.1:5433",
-            "-csv",
-            "targets1of2.csv",
-            "-csv",
-            "targets2of2.csv",
-        ]
-        result = client.invoke(
-            import_targets.import_targets, options, obj=test_context
-        )
-        assert result.exit_code == 1, result.output
-        assert "Error 500 Internal Error" in result.output
-        assert import_targets.is_logged.calls == [
-            pretend.call("fake-server", "test-token")
-        ]
-        assert import_targets.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
-        assert import_targets.request_server.calls == [
-            pretend.call(
-                "fake-server",
-                import_targets.URL.bootstrap.value,
-                import_targets.Methods.get,
-                headers="headers",
-            )
-        ]
-
-    def test_import_targets_without_bootstrap(self, client, test_context):
-        test_context["settings"].SERVER = "fake-server"
-        test_context["settings"].TOKEN = "test-token"
-
-        import_targets.is_logged = pretend.call_recorder(
-            lambda *a: pretend.stub(state=True)
-        )
-        import_targets.get_headers = pretend.call_recorder(
-            lambda *a: "headers"
-        )
-        fake_response = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(lambda: {"data": {"bootstrap": False}}),
-        )
-        import_targets.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
-        )
-
-        options = [
-            "-metadata-url",
-            "http://127.0.0.1/metadata/",
-            "-db-uri",
-            "postgresql://postgres:secret@127.0.0.1:5433",
-            "-csv",
-            "targets1of2.csv",
-            "-csv",
-            "targets2of2.csv",
-        ]
-        result = client.invoke(
-            import_targets.import_targets, options, obj=test_context
-        )
-        assert result.exit_code == 1, result.output
-        assert (
-            "import-targets` requires bootstrap process done." in result.output
-        )
-        assert import_targets.is_logged.calls == [
-            pretend.call("fake-server", "test-token")
-        ]
-        assert import_targets.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
-        assert import_targets.request_server.calls == [
-            pretend.call(
-                "fake-server",
-                import_targets.URL.bootstrap.value,
-                import_targets.Methods.get,
-                headers="headers",
-            )
-        ]
-
     def test_import_targets_skip_publish_targets(self, client, test_context):
         test_context["settings"].SERVER = "fake-server"
-        test_context["settings"].TOKEN = "test-token"
 
-        import_targets.is_logged = pretend.call_recorder(
-            lambda *a: pretend.stub(state=True)
-        )
         import_targets.get_headers = pretend.call_recorder(
             lambda *a: "headers"
         )
@@ -500,13 +347,13 @@ class TestImportTargetsGroupCLI:
         )
 
         options = [
-            "-metadata-url",
+            "--metadata-url",
             "http://127.0.0.1/metadata/",
-            "-db-uri",
+            "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
-            "-csv",
+            "--csv",
             "targets1of2.csv",
-            "-csv",
+            "--csv",
             "targets2of2.csv",
             "--skip-publish-targets",
         ]
@@ -516,9 +363,6 @@ class TestImportTargetsGroupCLI:
         assert result.exit_code == 0, result.output
         assert "Finished." in result.output
         assert "Not targets published" in result.output
-        assert import_targets.is_logged.calls == [
-            pretend.call("fake-server", "test-token")
-        ]
         assert import_targets.request_server.calls == [
             pretend.call(
                 "fake-server",
@@ -530,6 +374,9 @@ class TestImportTargetsGroupCLI:
         assert import_targets.get_headers.calls == [
             pretend.call(test_context["settings"])
         ]
+        assert import_targets._get_succinct_roles.calls == [
+            pretend.call("http://127.0.0.1/metadata/")
+        ]
         assert fake_response.json.calls == [pretend.call()]
         assert import_targets.create_engine.calls == [
             pretend.call("postgresql://postgres:secret@127.0.0.1:5433")
@@ -539,3 +386,87 @@ class TestImportTargetsGroupCLI:
         ]
         assert import_targets.publish_targets.calls == []
         assert import_targets.task_status.calls == []
+
+    def test_import_targets_bootstrap_check_failed(self, client, test_context):
+        test_context["settings"].SERVER = "fake-server"
+
+        import_targets.get_headers = pretend.call_recorder(
+            lambda *a: "headers"
+        )
+        fake_response = pretend.stub(
+            status_code=500,
+            text="Internal Error",
+        )
+        import_targets.request_server = pretend.call_recorder(
+            lambda *a, **kw: fake_response
+        )
+
+        options = [
+            "--metadata-url",
+            "http://127.0.0.1/metadata/",
+            "--db-uri",
+            "postgresql://postgres:secret@127.0.0.1:5433",
+            "--csv",
+            "targets1of2.csv",
+            "--csv",
+            "targets2of2.csv",
+        ]
+        result = client.invoke(
+            import_targets.import_targets, options, obj=test_context
+        )
+        assert result.exit_code == 1, result.output
+        assert "Error 500 Internal Error" in result.output
+        assert import_targets.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        assert import_targets.request_server.calls == [
+            pretend.call(
+                "fake-server",
+                import_targets.URL.bootstrap.value,
+                import_targets.Methods.get,
+                headers="headers",
+            )
+        ]
+
+    def test_import_targets_without_bootstrap(self, client, test_context):
+        test_context["settings"].SERVER = "fake-server"
+
+        import_targets.get_headers = pretend.call_recorder(
+            lambda *a: "headers"
+        )
+        fake_response = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(lambda: {"data": {"bootstrap": False}}),
+        )
+        import_targets.request_server = pretend.call_recorder(
+            lambda *a, **kw: fake_response
+        )
+
+        options = [
+            "--metadata-url",
+            "http://127.0.0.1/metadata/",
+            "--db-uri",
+            "postgresql://postgres:secret@127.0.0.1:5433",
+            "--csv",
+            "targets1of2.csv",
+            "--csv",
+            "targets2of2.csv",
+        ]
+        result = client.invoke(
+            import_targets.import_targets, options, obj=test_context
+        )
+        assert result.exit_code == 1, result.output
+        assert (
+            "import-targets` requires bootstrap process done." in result.output
+        )
+        assert import_targets.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        assert import_targets.request_server.calls == [
+            pretend.call(
+                "fake-server",
+                import_targets.URL.bootstrap.value,
+                import_targets.Methods.get,
+                headers="headers",
+            )
+        ]

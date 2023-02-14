@@ -13,7 +13,6 @@ from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,
     get_headers,
-    is_logged,
     publish_targets,
     request_server,
     task_status,
@@ -106,17 +105,17 @@ def _get_succinct_roles(metadata_url: str) -> SuccinctRoles:
 
 @admin.command()
 @click.option(
-    "-metadata-url",
+    "--metadata-url",
     required=True,
     help="RSTUF Metadata URL i.e.: http://127.0.0.1 .",
 )
 @click.option(
-    "-db-uri",
+    "--db-uri",
     required=True,
     help="RSTUF DB URI. i.e.: postgresql://postgres:secret@127.0.0.1:5433",
 )
 @click.option(
-    "-csv",
+    "--csv",
     required=True,
     multiple=True,
     help=(
@@ -142,16 +141,6 @@ def import_targets(
     """
     settings = context.obj["settings"]
     server = settings.get("SERVER")
-    token = settings.get("TOKEN")
-    if server and token:
-        token_access_check = is_logged(server, token)
-        if token_access_check.state is False:
-            raise click.ClickException(
-                f"{str(token_access_check.data)}"
-                "\n\nTry re-login: 'Repository Service for TUF admin login'"
-            )
-    else:
-        raise click.ClickException("Login first. Run 'rstuf admin login'")
 
     headers = get_headers(settings)
 
