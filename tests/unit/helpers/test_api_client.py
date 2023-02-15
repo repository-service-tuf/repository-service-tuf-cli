@@ -132,7 +132,7 @@ class TestAPIClient:
 
     def test_get_headers(self):
         api_client.is_logged = pretend.call_recorder(
-            lambda *a, **kw: api_client.Login(
+            lambda *a: api_client.Login(
                 state=True, data={"data": {"expired": False}}
             )
         )
@@ -165,9 +165,7 @@ class TestAPIClient:
 
     def test_get_headers_is_logged_state_false(self):
         api_client.is_logged = pretend.call_recorder(
-            lambda *a, **kw: api_client.Login(
-                state=False, data={"expired": False}
-            )
+            lambda *a: api_client.Login(state=False, data={"expired": False})
         )
 
         with pytest.raises(api_client.click.ClickException) as err:
@@ -182,9 +180,7 @@ class TestAPIClient:
 
     def test_get_headers_is_logged_state_true_expired_token(self):
         api_client.is_logged = pretend.call_recorder(
-            lambda *a, **kw: api_client.Login(
-                state=True, data={"expired": True}
-            )
+            lambda *a: api_client.Login(state=True, data={"expired": True})
         )
 
         with pytest.raises(api_client.click.ClickException) as err:
@@ -199,9 +195,7 @@ class TestAPIClient:
 
     def test_get_headers_unexpected_error(self):
         api_client.is_logged = pretend.call_recorder(
-            lambda *a, **kw: api_client.Login(
-                state=True, data={"expired": False}
-            )
+            lambda *a: api_client.Login(state=True, data={"expired": False})
         )
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(status_code=500, text="error body")
