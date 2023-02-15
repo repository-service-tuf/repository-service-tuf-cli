@@ -119,7 +119,7 @@ def _get_succinct_roles(metadata_url: str) -> SuccinctRoles:
     required=True,
     multiple=True,
     help=(
-        "CSV file to import. Multiple -csv parameters are allowed. "
+        "CSV file to import. Multiple --csv parameters are allowed. "
         "See rstuf CLI guide for more details."
     ),
 )

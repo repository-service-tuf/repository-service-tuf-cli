@@ -502,14 +502,14 @@ See the below CSV file example:
      Import targets to RSTUF from exported CSV file.
 
     ╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ *                          -metadata-url  TEXT  RSTUF Metadata URL i.e.: http://127.0.0.1 . [required]                                                          │
-    │ *                          -db-uri        TEXT  RSTUF DB URI. i.e.: postgresql://postgres:secret@127.0.0.1:5433 [required]                                      │
-    │ *                          -csv           TEXT  CSV file to import. Multiple -csv parameters are allowed. See rstuf CLI guide for more details. [required]      │
+    │ *                          --metadata-url  TEXT  RSTUF Metadata URL i.e.: http://127.0.0.1 . [required]                                                         │
+    │ *                          --db-uri        TEXT  RSTUF DB URI. i.e.: postgresql://postgres:secret@127.0.0.1:5433 [required]                                     │
+    │ *                          --csv           TEXT  CSV file to import. Multiple --csv parameters are allowed. See rstuf CLI guide for more details. [required]    │
     │    --skip-publish-targets                       Skip publishing targets in TUF Metadata.                                                                        │
     │    --help                  -h                   Show this message and exit.                                                                                     │
     ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-    ❯ rstuf admin import-targets -db-uri postgresql://postgres:secret@127.0.0.1:5433 -csv targets-1of2.csv -csv targets-2of2.csv -metadata-url http://127.0.0.1:8080/
+    ❯ rstuf admin import-targets --db-uri postgresql://postgres:secret@127.0.0.1:5433 --csv targets-1of2.csv --csv targets-2of2.csv --metadata-url http://127.0.0.1:8080/
     Import status: Loading data from ../repository-service-tuf/tests/data/targets-1of2.csv
     Import status: Importing ../repository-service-tuf/tests/data/targets-1of2.csv data
     Import status: ../repository-service-tuf/tests/data/targets-1of2.csv imported
