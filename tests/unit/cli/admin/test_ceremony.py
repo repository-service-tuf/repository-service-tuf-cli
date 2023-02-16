@@ -71,177 +71,6 @@ class TestCeremonyGroupCLI:
         assert "No message available." in str(err)
         assert mocked_request_server.json.calls == [pretend.call()]
 
-    def test__bootstrap_state(self, monkeypatch):
-        fake_response_started = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(
-                lambda: {
-                    "data": {
-                        "state": "STARTED",
-                    }
-                }
-            ),
-        )
-        fake_response_success = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(
-                lambda: {
-                    "data": {
-                        "state": "SUCCESS",
-                        "result": {"details": {"bootstrap": True}},
-                    }
-                }
-            ),
-        )
-        mocked_request_server = MagicMock()
-        mocked_request_server.side_effect = [
-            fake_response_started,
-            fake_response_success,
-        ]
-        monkeypatch.setattr(ceremony, "request_server", mocked_request_server)
-
-        result = ceremony._bootstrap_state(
-            "task_id_123", "http://fake-server", {}
-        )
-        assert result is None
-        assert fake_response_started.json.calls == [pretend.call()]
-        assert fake_response_success.json.calls == [pretend.call()]
-
-    def test__bootstrap_state_without_bootstrap_true(self, monkeypatch):
-        fake_response_started = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(
-                lambda: {
-                    "data": {
-                        "state": "STARTED",
-                    }
-                }
-            ),
-        )
-        fake_response_success = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(
-                lambda: {
-                    "data": {
-                        "state": "SUCCESS",
-                    }
-                }
-            ),
-        )
-        mocked_request_server = MagicMock()
-        mocked_request_server.side_effect = [
-            fake_response_started,
-            fake_response_success,
-        ]
-        monkeypatch.setattr(ceremony, "request_server", mocked_request_server)
-
-        with pytest.raises(ClickException) as err:
-            ceremony._bootstrap_state("task_id_123", "http://fake-server", {})
-
-        assert "Something went wrong, result:" in str(err)
-        assert fake_response_started.json.calls == [pretend.call()]
-        assert fake_response_success.json.calls == [pretend.call()]
-
-    def test__bootstrap_state_task_failure(self, monkeypatch):
-        fake_response_started = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(
-                lambda: {
-                    "data": {
-                        "state": "STARTED",
-                        "result": {"details": {"bootstrap": True}},
-                    }
-                }
-            ),
-        )
-        fake_response_success = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(
-                lambda: {
-                    "data": {
-                        "state": "FAILURE",
-                        "result": "SomeException: bla bla bla",
-                    }
-                }
-            ),
-            text="{'data': {'state': 'FAILURE','result': 'SomeException'}}",
-        )
-        mocked_request_server = MagicMock()
-        mocked_request_server.side_effect = [
-            fake_response_started,
-            fake_response_success,
-        ]
-        monkeypatch.setattr(ceremony, "request_server", mocked_request_server)
-
-        with pytest.raises(ClickException) as err:
-            ceremony._bootstrap_state("task_id_123", "http://fake-server", {})
-
-        assert "Failed:" in str(err)
-        assert fake_response_started.json.calls == [pretend.call()]
-        assert fake_response_success.json.calls == [pretend.call()]
-
-    def test__bootstrap_state_not_200(self, monkeypatch):
-        fake_response_started = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(
-                lambda: {
-                    "data": {
-                        "state": "STARTED",
-                        "result": {"details": {"bootstrap": True}},
-                    }
-                }
-            ),
-        )
-        fake_response_success = pretend.stub(
-            status_code=400,
-            text="Bad request",
-        )
-        mocked_request_server = MagicMock()
-        mocked_request_server.side_effect = [
-            fake_response_started,
-            fake_response_success,
-        ]
-        monkeypatch.setattr(ceremony, "request_server", mocked_request_server)
-
-        with pytest.raises(ClickException) as err:
-            ceremony._bootstrap_state("task_id_123", "http://fake-server", {})
-        assert "Unexpected response Bad request" in str(err)
-        assert fake_response_started.json.calls == [pretend.call()]
-
-    def test__bootstrap_state_bootstrap_no_data(self, monkeypatch):
-        fake_response = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(lambda: {"data": {}}),
-            text=str("{'data': {}}"),
-        )
-
-        monkeypatch.setattr(
-            ceremony, "request_server", lambda *a, **kw: fake_response
-        )
-
-        with pytest.raises(ClickException) as err:
-            ceremony._bootstrap_state("task_id_123", "http://fake-server", {})
-
-        assert "No data received" in str(err)
-        assert fake_response.json.calls == [pretend.call()]
-
-    def test__bootstrap_state_bootstrap_no_state(self, monkeypatch):
-        fake_response = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(lambda: {"data": {"state": None}}),
-            text=str("{'data': {}}"),
-        )
-
-        monkeypatch.setattr(
-            ceremony, "request_server", lambda *a, **kw: fake_response
-        )
-
-        with pytest.raises(ClickException) as err:
-            ceremony._bootstrap_state("task_id_123", "http://fake-server", {})
-
-        assert "No state in data received" in str(err)
-        assert fake_response.json.calls == [pretend.call()]
-
     def test_ceremony(self, client, test_context):
         test_result = client.invoke(ceremony.ceremony, obj=test_context)
         assert test_result.exit_code == 1
@@ -526,13 +355,10 @@ class TestCeremonyGroupCLI:
             "y",
         ]
 
-        mocked_check_server = pretend.call_recorder(
+        mocked_get_headers = pretend.call_recorder(
             lambda s: {"Authorization": "Bearer test"}
         )
-        monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.ceremony._check_server",
-            mocked_check_server,
-        )
+        monkeypatch.setattr(ceremony, "get_headers", mocked_get_headers)
 
         fake_response_get = pretend.stub(
             status_code=200,
@@ -585,13 +411,10 @@ class TestCeremonyGroupCLI:
     def test_ceremony_with_flag_bootstrap_already_done(
         self, client, monkeypatch, test_context
     ):
-        mocked_check_server = pretend.call_recorder(
+        mocked_get_headers = pretend.call_recorder(
             lambda s: {"Authorization": "Bearer test"}
         )
-        monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.ceremony._check_server",
-            mocked_check_server,
-        )
+        monkeypatch.setattr(ceremony, "get_headers", mocked_get_headers)
 
         mocked_request_server = pretend.stub(
             status_code=200,
@@ -622,13 +445,10 @@ class TestCeremonyGroupCLI:
     def test_ceremony_with_flag_bootstrap_forbidden(
         self, client, monkeypatch, test_context
     ):
-        mocked_check_server = pretend.call_recorder(
+        mocked_get_headers = pretend.call_recorder(
             lambda s: {"Authorization": "Bearer test"}
         )
-        monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.ceremony._check_server",
-            mocked_check_server,
-        )
+        monkeypatch.setattr(ceremony, "get_headers", mocked_get_headers)
 
         mocked_request_server = pretend.stub(
             status_code=401,
@@ -637,6 +457,7 @@ class TestCeremonyGroupCLI:
                     "detail": "Unauthorized.",
                 }
             ),
+            text="Unauthorized.",
         )
 
         monkeypatch.setattr(
@@ -707,14 +528,10 @@ class TestCeremonyGroupCLI:
             "y",
         ]
 
-        mocked_check_server = pretend.call_recorder(
+        mocked_get_headers = pretend.call_recorder(
             lambda s: {"Authorization": "Bearer test"}
         )
-        monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.ceremony._check_server",
-            mocked_check_server,
-        )
-
+        monkeypatch.setattr(ceremony, "get_headers", mocked_get_headers)
         fake_response_get = pretend.stub(
             status_code=200,
             json=pretend.call_recorder(lambda: {"bootstrap": False}),
@@ -811,13 +628,10 @@ class TestCeremonyGroupCLI:
             "y",
         ]
 
-        mocked_check_server = pretend.call_recorder(
+        mocked_get_headers = pretend.call_recorder(
             lambda s: {"Authorization": "Bearer test"}
         )
-        monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.ceremony._check_server",
-            mocked_check_server,
-        )
+        monkeypatch.setattr(ceremony, "get_headers", mocked_get_headers)
 
         fake_response_get = pretend.stub(
             status_code=200,

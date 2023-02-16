@@ -7,7 +7,6 @@
 #
 import json
 import os
-import time
 from dataclasses import asdict, dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
@@ -29,8 +28,9 @@ from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,
-    is_logged,
+    get_headers,
     request_server,
+    task_status,
 )
 from repository_service_tuf.helpers.tuf import (
     RolesKeysInput,
@@ -426,37 +426,6 @@ def _configure_keys(rolename: str, role: RolesKeysInput) -> None:
         key_count += 1
 
 
-def _check_server(settings) -> dict[str, str]:
-    server = settings.get("SERVER")
-    token = settings.get("TOKEN")
-    if server and token:
-        token_access_check = is_logged(server, token)
-        if token_access_check.state is False:
-            raise click.ClickException(
-                f"{str(token_access_check.data)}"
-                "\n\nTry re-login: 'Repository Service for TUF admin login'"
-            )
-
-        expired_admin = token_access_check.data.get("expired")
-        if expired_admin is True:
-            raise click.ClickException(
-                "Token expired. Run 'Repository Service for TUF admin login'"
-            )
-        else:
-            headers = {"Authorization": f"Bearer {token}"}
-            response = request_server(
-                server, URL.bootstrap.value, Methods.get, headers=headers
-            )
-            if response.status_code != 200 and (
-                response.json().get("bootstrap") is True or None
-            ):
-                raise click.ClickException(f"{response.json().get('detail')}")
-    else:
-        raise click.ClickException("Login first. Run 'rstuf-cli admin login'")
-
-    return headers
-
-
 def _bootstrap(server, headers, json_payload) -> Optional[str]:
     task_id = None
     response = request_server(
@@ -484,58 +453,6 @@ def _bootstrap(server, headers, json_payload) -> Optional[str]:
             console.print(f"Bootstrap status: ACCEPTED ({task_id})")
 
     return task_id
-
-
-def _bootstrap_state(task_id, server, headers) -> None:
-    received_state = []
-    while True:
-        state_response = request_server(
-            server, f"{URL.task.value}{task_id}", Methods.get, headers=headers
-        )
-
-        if state_response.status_code != 200:
-            raise click.ClickException(
-                f"Unexpected response {state_response.text}"
-            )
-
-        data = state_response.json().get("data")
-
-        if data:
-            if state := data.get("state"):
-                if state not in received_state:
-                    console.print(f"Bootstrap status: {state}")
-                    received_state.append(state)
-
-                if state == "SUCCESS":
-                    try:
-                        result = data.get("result")
-                        bootstrap_result = result.get("details").get(
-                            "bootstrap"
-                        )
-                    except AttributeError:
-                        bootstrap_result = False
-
-                    if bootstrap_result is not True:
-                        raise click.ClickException(
-                            f"Something went wrong, result: {result}"
-                        )
-
-                    console.print("[green]Bootstrap finished.[/]")
-                    break
-
-                elif state == "FAILURE":
-                    raise click.ClickException(
-                        f"Failed: {state_response.text}"
-                    )
-            else:
-                raise click.ClickException(
-                    f"No state in data received {state_response.text}"
-                )
-        else:
-            raise click.ClickException(
-                f"No data received {state_response.text}"
-            )
-        time.sleep(2)
 
 
 @admin.command()
@@ -599,20 +516,20 @@ def ceremony(context, bootstrap, file, upload, save) -> None:
 
     settings = context.obj["settings"]
     if bootstrap:
-        headers = _check_server(settings)
+        headers = get_headers(settings)
         bs_response = request_server(
             settings.SERVER, URL.bootstrap.value, Methods.get, headers=headers
         )
-        bs_data = bs_response.json()
         if bs_response.status_code == 404:
             raise click.ClickException(
                 f"Server {settings.SERVER} doesn't allow bootstrap"
             )
         if bs_response.status_code != 200:
             raise click.ClickException(
-                f"Error {bs_response.status_code} {bs_data.get('detail')}"
+                f"Error {bs_response.status_code} {bs_response.text}"
             )
 
+        bs_data = bs_response.json()
         if bs_data.get("bootstrap") is True or None:
             raise click.ClickException(f"{bs_data.get('message')}")
 
@@ -775,6 +692,6 @@ def ceremony(context, bootstrap, file, upload, save) -> None:
         if task_id is None:
             raise click.ClickException("task id wasn't received")
 
-        _bootstrap_state(task_id, settings.SERVER, headers)
+        task_status(task_id, settings.SERVER, headers, "Bootstrap status: ")
 
     console.print("\nCeremony done. 🔐 🎉")
