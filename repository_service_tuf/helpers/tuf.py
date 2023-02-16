@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2022 VMware Inc
+# SPDX-FileCopyrightText: 2022-2023 VMware Inc
 #
 # SPDX-License-Identifier: MIT
 
@@ -138,9 +138,7 @@ def initialize_metadata(
         _sign(timestamp, Timestamp.type)
         _add_payload(timestamp, Timestamp.type)
 
-    def _update_snapshot(
-        targets_meta: List[Tuple[str, int]]
-    ) -> Metadata[Snapshot]:
+    def _update_snapshot(targets_meta: List[Tuple[str, int]]) -> int:
         """Loads 'snapshot', updates meta info about passed 'targets'
         metadata, bumps version and expiration, signs and persists. Returns
         new snapshot version, e.g. to update 'timestamp'."""
@@ -156,14 +154,10 @@ def initialize_metadata(
 
         return snapshot.signed.version
 
-    # Bootstrap default top-level metadata to be updated below if necessary
-    targets = Targets()
-    snapshot = Snapshot()
-    timestamp = Timestamp()
-    root = Root()
-
     # Populate public key store, and define trusted signing keys and required
     # signature thresholds for each top-level role in 'root'.
+    roles: dict[str, Role] = {}
+    add_key_args: list[tuple[Key, str]] = []
     for role_name in TOP_LEVEL_ROLE_NAMES:
         threshold = settings[role_name].threshold
         signers = _signers(role_name)
@@ -173,23 +167,35 @@ def initialize_metadata(
         # bootstrapping the metadata, because in production we do not have
         # access to all top-level role signing keys at the time of
         # bootstrapping the metadata.
-        assert len(signers) >= threshold, (
-            f"not enough keys ({len(signers)}) for "
-            f"signing threshold '{threshold}'"
-        )
+        if len(signers) < threshold:
+            raise ValueError(
+                f"not enough keys ({len(signers)}) for "
+                f"signing threshold '{threshold}'"
+            )
 
-        root.roles[role_name] = Role([], threshold)
+        roles[role_name] = Role([], threshold)
         for signer in signers:
-            root.add_key(
-                Key.from_securesystemslib_key(signer.key_dict), role_name
+            add_key_args.append(
+                (Key.from_securesystemslib_key(signer.key_dict), role_name)
             )
 
     # Add signature wrapper, bump expiration, and sign and persist
-    for role in [targets, snapshot, timestamp, root]:
-        metadata = Metadata(role)
-        _bump_expiry(metadata, role.type)
-        _sign(metadata, role.type)
-        _add_payload(metadata, role.type)
+    for role in [Targets, Snapshot, Timestamp, Root]:
+
+        # Bootstrap default top-level metadata to be updated below if necessary
+        if role is Root:
+            metadata = Metadata(Root(roles=roles))
+            root = metadata.signed
+            for arg in add_key_args:
+                root.add_key(arg[0], arg[1])
+
+        else:
+            metadata = Metadata(role())
+
+        metadata_type = metadata.signed.type
+        _bump_expiry(metadata, metadata_type)
+        _sign(metadata, metadata_type)
+        _add_payload(metadata, metadata_type)
 
     # Track names and versions of new and updated targets for 'snapshot'
     # update

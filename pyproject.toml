@@ -36,8 +36,19 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+[tool.mypy]
+exclude = "docs/"
+
+[[tool.mypy.overrides]]
+module = ["dynaconf", "pretend"]
+ignore_missing_imports = true
+
 [tool.hatch.version]
 path = "repository_service_tuf/__version__.py"
+
+[project.optional-dependencies]
+psycopg2 = ["psycopg2>=2.9.5"]  # required by import-targets sub-command
+sqlalchemy = ["sqlalchemy>=2.0.1"]  # required by import-targets sub-command
 
 [project.scripts]
 rstuf = "repository_service_tuf.cli:rstuf"

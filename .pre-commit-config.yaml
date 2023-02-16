@@ -10,20 +10,26 @@ repos:
   - id: check-yaml
     files: '.github/'
 - repo: https://github.com/pycqa/flake8
-  rev: '5.0.4'
+  rev: '6.0.0'
   hooks:
   - id: flake8
     exclude: repository_service_tuf/__init__.py|venv|.venv|setting.py|.git|.tox|dist|docs|/*lib/python*|/*egg|build|tools
 - repo: https://github.com/PyCQA/isort
-  rev: '5.10.1'
+  rev: '5.12.0'
   hooks:
   - id: isort
     args: [-l79, --profile, black, --check, --diff]
 - repo: https://github.com/psf/black
-  rev: '22.10.0'
+  rev: '22.12.0'
   hooks:
   - id: black
     args: [-l79, --check, --diff, .]
+- repo: https://github.com/PyCQA/bandit
+  rev: '1.7.4'
+  hooks:
+  - id: bandit
+    args: ["-r", "repository_service_tuf"]
+    exclude: tests
 - repo: local
   hooks:
     - id: tox-requirements
@@ -31,5 +37,12 @@ repos:
       description: Checks if `make requirements` is up-to-date
       entry: tox -e requirements
       language: system
-      files: ''
+      pass_filenames: false
+      verbose: true
+    - id: tox-mypy
+      name: run typing check from tox
+      description: Checks typing with `mypy`
+      entry: tox -e typing
+      language: system
+      pass_filenames: false
       verbose: true
