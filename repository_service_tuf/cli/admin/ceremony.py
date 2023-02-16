@@ -357,9 +357,14 @@ def _configure_role(rolename: str, role: RolesKeysInput) -> None:
             console.print(markdown.Markdown(HASH_BINS_EXAMPLE), width=100)
 
         role.number_hash_prefixes = prompt.IntPrompt.ask(
-            f"[green]How many hash bins[/] do you want for [cyan]{rolename}[/]?",  # noqa
+            (
+                "[green]How many hash bins[/] do you want "
+                f"for [cyan]{rolename}[/] (between 1 and 14)?"
+            ),
             default=8,
+            choices=[f"{i:d}" for i in range(1, 15)],  # choices must be int
             show_default=True,
+            show_choices=False,
         )
 
         targets_base_url = click.prompt(
