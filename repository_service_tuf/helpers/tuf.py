@@ -37,8 +37,8 @@ class RolesKeysInput:
     threshold: int = 1
     keys: Dict[str, Any] = field(default_factory=dict)
     offline_keys: bool = True
+    number_hash_prefixes: int = 0
     paths: Optional[List[str]] = None
-    number_hash_prefixes: Optional[int] = None
 
     def to_dict(self):
         return asdict(self)
@@ -205,6 +205,10 @@ def initialize_metadata(
     # to 'bin-n' roles based on file path hash prefixes, a.k.a hash bin
     # delegation.
     targets = _load(Targets.type)
+    if settings[Targets.type].number_hash_prefixes not in range(1, 15):
+        raise ValueError(
+            "Targets `number_hash_prefixes` must be between 1 and 14"
+        )
     succinct_roles = SuccinctRoles(
         [], 1, settings[Targets.type].number_hash_prefixes, BINS
     )
