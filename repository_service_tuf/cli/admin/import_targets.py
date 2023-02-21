@@ -4,8 +4,6 @@ from datetime import datetime
 from typing import Any, Dict, List
 
 from rich.console import Console
-from sqlalchemy import Connection, MetaData, Table, create_engine
-from sqlalchemy.exc import IntegrityError
 
 from repository_service_tuf.cli import click
 from repository_service_tuf.cli.admin import admin
@@ -64,11 +62,14 @@ def _parse_csv_data(
 
 
 def _import_csv_to_rstuf(
-    db_client: Connection,
-    rstuf_table: Table,
+    db_client: Any,
+    rstuf_table: Any,
     csv_files: List[str],
     succinct_roles: SuccinctRoles,
 ) -> None:
+    # Required to except the appropriate exception.
+    from sqlalchemy.exc import IntegrityError
+
     for csv_file in csv_files:
         console.print(f"Import status: Loading data from {csv_file}")
         rstuf_db_data = _parse_csv_data(csv_file, succinct_roles)
@@ -136,8 +137,21 @@ def import_targets(
     skip_publish_targets: bool,
 ):
     """
-    Import targets to RSTUF from exported CSV file.
+    Import targets to RSTUF from exported CSV file.\n
+    Note: sqlalchemy needs to be installed in order to use this command.\n
+    pip install repository-service-tuf[sqlalchemy,psycopg2]
     """
+
+    # SQLAlchemy is an optional dependency and is required only for users who
+    # want to use import_targets. That's why we have import it here.
+    try:
+        from sqlalchemy import Connection, MetaData, Table, create_engine
+    except ModuleNotFoundError:
+        raise ModuleNotFoundError(
+            "SQLAlchemy is required by import-targets. "
+            "pip install repository-service-tuf[sqlalchemy,psycopg2]"
+        )
+
     settings = context.obj["settings"]
 
     bs_status = bootstrap_status(settings)
@@ -151,7 +165,7 @@ def import_targets(
     succinct_roles = _get_succinct_roles(metadata_url)
     engine = create_engine(f"{db_uri}")
     db_metadata = MetaData()
-    db_client = engine.connect()
+    db_client: Connection = engine.connect()
     rstuf_table = Table("rstuf_targets", db_metadata, autoload_with=engine)
 
     # validate if the CSV files are accessible
