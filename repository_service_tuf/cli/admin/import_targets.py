@@ -138,7 +138,9 @@ def import_targets(
     skip_publish_targets: bool,
 ):
     """
-    Import targets to RSTUF from exported CSV file.
+    Import targets to RSTUF from exported CSV file.\n
+    Note: sqlalchemy needs to be installed in order to use this command.\n
+    pip install repository-service-tuf[sqlalchemy,psycopg2]
     """
 
     # SQLAlchemy is an optional dependency and is required only for users who
@@ -148,7 +150,7 @@ def import_targets(
     except ModuleNotFoundError:
         raise ModuleNotFoundError(
             "SQLAlchemy is required by import-targets. "
-            "Use: 'pip install repository-service-tuf[sqlalchemy,psycopg2]'"
+            "pip install repository-service-tuf[sqlalchemy,psycopg2]"
         )
 
     settings = context.obj["settings"]
