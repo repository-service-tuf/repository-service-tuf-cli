@@ -423,7 +423,7 @@ class TestImportTargetsGroupCLI:
         assert result.exit_code == 1
         assert isinstance(result.exception, ModuleNotFoundError)
         exc_msg = result.exception.msg
-        assert "'pip install repository-service-tuf[sqlalchemy" in exc_msg
+        assert "pip install repository-service-tuf[sqlalchemy" in exc_msg
 
     def test_import_targets_bootstrap_check_failed(self, client, test_context):
         test_context["settings"].SERVER = "fake-server"
