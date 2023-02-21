@@ -275,7 +275,7 @@ class TestImportTargetsGroupCLI:
         assert import_targets._get_succinct_roles.calls == [
             pretend.call("http://127.0.0.1/metadata/")
         ]
-        assert import_targets.create_engine.calls == [
+        assert sqlalchemy.create_engine.calls == [
             pretend.call("postgresql://postgres:secret@127.0.0.1:5433")
         ]
         assert import_targets._check_csv_files.calls == [
@@ -352,7 +352,7 @@ class TestImportTargetsGroupCLI:
         assert import_targets._get_succinct_roles.calls == [
             pretend.call("http://127.0.0.1/metadata/")
         ]
-        assert import_targets.create_engine.calls == [
+        assert sqlalchemy.create_engine.calls == [
             pretend.call("postgresql://postgres:secret@127.0.0.1:5433")
         ]
         assert import_targets._check_csv_files.calls == [
