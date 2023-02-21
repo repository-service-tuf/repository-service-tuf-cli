@@ -124,10 +124,11 @@ class TestImportTargetsFunctions:
         ]
 
     def test__import_csv_to_rstuf_duplicate_targets(self):
+        # Required to raise an exception type from import inside a function
+        from sqlalchemy.exc import IntegrityError
+
         fake_rstuf_table = pretend.stub(
-            insert=pretend.raiser(
-                import_targets.IntegrityError("Duplicate", "param", "orig")
-            )
+            insert=pretend.raiser(IntegrityError("Duplicate", "param", "orig"))
         )
         fake_db_client = pretend.stub(
             execute=pretend.call_recorder(lambda *a: None)
@@ -217,6 +218,9 @@ class TestImportTargetsFunctions:
 
 class TestImportTargetsGroupCLI:
     def test_import_targets(self, client, test_context):
+        # Required to properly mock functions imported inside import_targets
+        import sqlalchemy
+
         test_context["settings"].SERVER = "fake-server"
 
         import_targets.get_headers = pretend.call_recorder(
@@ -232,7 +236,7 @@ class TestImportTargetsGroupCLI:
         import_targets._get_succinct_roles = pretend.call_recorder(
             lambda *a: "fake_succinct_roles"
         )
-        import_targets.create_engine = pretend.call_recorder(
+        sqlalchemy.create_engine = pretend.call_recorder(
             lambda *a: pretend.stub(
                 connect=pretend.call_recorder(
                     lambda: pretend.stub(
@@ -241,7 +245,7 @@ class TestImportTargetsGroupCLI:
                 )
             )
         )
-        import_targets.Table = pretend.call_recorder(
+        sqlalchemy.Table = pretend.call_recorder(
             lambda *a, **kw: "rstuf_table"
         )
         import_targets._check_csv_files = pretend.call_recorder(
@@ -287,7 +291,7 @@ class TestImportTargetsGroupCLI:
             pretend.call("http://127.0.0.1/metadata/")
         ]
         assert fake_response.json.calls == [pretend.call()]
-        assert import_targets.create_engine.calls == [
+        assert sqlalchemy.create_engine.calls == [
             pretend.call("postgresql://postgres:secret@127.0.0.1:5433")
         ]
         assert import_targets._check_csv_files.calls == [
@@ -306,6 +310,9 @@ class TestImportTargetsGroupCLI:
         ]
 
     def test_import_targets_skip_publish_targets(self, client, test_context):
+        # Required to properly mock functions imported inside import_targets
+        import sqlalchemy
+
         test_context["settings"].SERVER = "fake-server"
 
         import_targets.get_headers = pretend.call_recorder(
@@ -321,7 +328,7 @@ class TestImportTargetsGroupCLI:
         import_targets._get_succinct_roles = pretend.call_recorder(
             lambda *a: "fake_succinct_roles"
         )
-        import_targets.create_engine = pretend.call_recorder(
+        sqlalchemy.create_engine = pretend.call_recorder(
             lambda *a: pretend.stub(
                 connect=pretend.call_recorder(
                     lambda: pretend.stub(
@@ -330,7 +337,7 @@ class TestImportTargetsGroupCLI:
                 )
             )
         )
-        import_targets.Table = pretend.call_recorder(
+        sqlalchemy.Table = pretend.call_recorder(
             lambda *a, **kw: "rstuf_table"
         )
         import_targets._check_csv_files = pretend.call_recorder(
@@ -378,7 +385,7 @@ class TestImportTargetsGroupCLI:
             pretend.call("http://127.0.0.1/metadata/")
         ]
         assert fake_response.json.calls == [pretend.call()]
-        assert import_targets.create_engine.calls == [
+        assert sqlalchemy.create_engine.calls == [
             pretend.call("postgresql://postgres:secret@127.0.0.1:5433")
         ]
         assert import_targets._check_csv_files.calls == [
@@ -386,6 +393,37 @@ class TestImportTargetsGroupCLI:
         ]
         assert import_targets.publish_targets.calls == []
         assert import_targets.task_status.calls == []
+
+    def test_import_targets_sqlalchemy_import_fails(
+        self, client, test_context
+    ):
+        import builtins
+
+        real_import = builtins.__import__
+        # We need to raise an exception only when "sqlalchemy" is imported
+        # otherwise client.invoke() will fail before reaching import_targets
+
+        def fake_import(name, *args, **kwargs):
+            if name == "sqlalchemy":
+                raise ModuleNotFoundError()
+
+            return real_import(name, *args, **kwargs)
+
+        builtins.__import__ = fake_import
+
+        test_context["settings"].SERVER = "fake-server"
+        options = ["--metadata-url", "", "--db-uri", "", "--csv", ""]
+        result = client.invoke(
+            import_targets.import_targets, options, obj=test_context
+        )
+
+        # Return the original import to not cause other exceptions.
+        builtins.__import__ = real_import
+
+        assert result.exit_code == 1
+        assert isinstance(result.exception, ModuleNotFoundError)
+        exc_msg = result.exception.msg
+        assert "'pip install repository-service-tuf[sqlalchemy" in exc_msg
 
     def test_import_targets_bootstrap_check_failed(self, client, test_context):
         test_context["settings"].SERVER = "fake-server"
