@@ -316,13 +316,14 @@ def _send_bootstrap(
         bootstrap_payload,
         headers=headers,
     )
-    response_json = response.json()
+
     if response.status_code != 202:
         raise click.ClickException(
-            f"Error {response.status_code} {response_json.get('detail')}"
+            f"Error {response.status_code} {response.text}"
         )
 
-    elif (
+    response_json = response.json()
+    if (
         response_json.get("message") is None
         or response_json.get("message") != "Bootstrap accepted."
     ):
