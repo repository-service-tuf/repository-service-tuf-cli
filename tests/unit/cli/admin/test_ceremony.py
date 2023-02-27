@@ -118,7 +118,7 @@ class TestCeremonyFunctions:
                         "message": "Bootstrap accepted.",
                     }
                 ),
-                text="Unexpected result data"
+                text="Unexpected result data",
             )
         )
 
