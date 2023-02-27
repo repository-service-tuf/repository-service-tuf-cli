@@ -104,7 +104,7 @@ class TestCeremonyFunctions:
             )
         ]
 
-    def test__bootstrap_not_202(self, test_context):
+    def test__send_bootstrap_not_202(self, test_context):
         test_context["settings"].SERVER = "http://fake-rstuf"
         ceremony.get_headers = pretend.call_recorder(
             lambda *a: {"auth": "token"}
@@ -118,6 +118,7 @@ class TestCeremonyFunctions:
                         "message": "Bootstrap accepted.",
                     }
                 ),
+                text="Unexpected result data"
             )
         )
 
@@ -140,7 +141,7 @@ class TestCeremonyFunctions:
             )
         ]
 
-    def test__bootstrap_no_message(self, test_context):
+    def test__send_bootstrap_no_message(self, test_context):
         test_context["settings"].SERVER = "http://fake-rstuf"
         ceremony.get_headers = pretend.call_recorder(
             lambda *a: {"auth": "token"}
@@ -176,7 +177,7 @@ class TestCeremonyFunctions:
             )
         ]
 
-    def test__bootstrap_no_task_id(self, test_context):
+    def test__send_bootstrap_no_task_id(self, test_context):
         test_context["settings"].SERVER = "http://fake-rstuf"
         ceremony.get_headers = pretend.call_recorder(
             lambda *a: {"auth": "token"}
@@ -213,7 +214,7 @@ class TestCeremonyFunctions:
             )
         ]
 
-    def test__bootstrap_no_data(self, test_context):
+    def test__send_bootstrap_no_data(self, test_context):
         test_context["settings"].SERVER = "http://fake-rstuf"
         ceremony.get_headers = pretend.call_recorder(
             lambda *a: {"auth": "token"}
