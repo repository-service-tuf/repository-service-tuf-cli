@@ -64,9 +64,9 @@ the other metadata roles in RSTUF.
 CEREMONY_INTRO_ROLES_RESPONSIBILITIES = """
 ## Roles and Responsibilities
 
-Repository Service for TUF implements Roles and Responsibilities based on TUF
-top roles (root, targets, timestamp, and snapshot) and the delegated roles hash
-bins.
+Repository Service for TUF implements roles and responsibilities based on TUF
+top-level roles (root, targets, timestamp, and snapshot) and the delegated hash bin
+roles.
 
 The inspiration for Repository Service for TUF is the
 [Python Enhancement Proposal 458](https://peps.python.org/pep-0458/).
@@ -116,14 +116,14 @@ from the repository. More precisely, it shares the responsibility of providing
 information about the content of updates. The targets role signs `targets.json`
 metadata and delegates to the hash bins roles (called bins).
 
-Uses the online key
+Uses one single online key.
 
 **bins**
 
-The bins role is a target delegated role and is responsible for signing the
-target files in the file repositories. This key is an online key.
+The bins role is a target delegated role and is responsible for signing
+the target files in the file repositories.
 
-Uses the online key
+Uses one single online key.
 
 **snapshot**
 
@@ -132,7 +132,7 @@ It provides repository state information by indicating the latest versions
 of the top-level targets (the targets role) and delegated targets
 (hash bins roles) metadata files on the repository in `snapshot.json`.
 
-Uses the online key
+Uses one single online key.
 
 **timestamp**
 
@@ -141,18 +141,18 @@ timelines of available updates. Timelines information is made available by
 frequently signing a new timestamp.json file with a short expiration time.
 This file indicates the latest version of `snapshot.json`.
 
-Uses the online key
+Uses one single online key,
 """
 
 STEP_1 = """
 # STEP 1: Configure the Roles
 
-The TUF Root role supports multiple keys and the threshold (quorum trust)
-defines the minimal number of keys required to take actions using Root Role.
+The TUF root role supports multiple keys and the threshold (quorum of trust)
+defines the minimal number of keys required to take actions using the root role.
 
 Reference: [TUF Goals for PKI](https://theupdateframework.github.io/specification/latest/#goals-for-pki)
 
-The TUF roles have the expiration, clients must not trust an expired metadata.
+The TUF roles have an expiration, clients must not trust expired metadata.
 
 Reference: [TUF expires](https://theupdateframework.github.io/specification/latest/#expires)
 
@@ -168,7 +168,7 @@ Timestamp, Targets, and delegated targets (hash bin) roles.
 
 The RSTUF Worker uses this key during the process of managing the metadata.
 
-Note: The Ceremony process doesn't show the password or key content.
+Note: the ceremony process won't show any password or key content.
 """
 
 STEP_3 = """
@@ -177,16 +177,16 @@ STEP_3 = """
 ## Root Keys
 The keys must have a password, and the file must be accessible.
 
-Depending on the Organization, each key has an owner, and each owner should
+Depending on the organization, each key has an owner, and each owner should
 insert the password personally.
 
-Note: The Ceremony process doesn't show the password or key content.
+Note: the ceremony process won't show any password or key content.
 """
 
 STEP_4 = """
 # STEP 4: Validate Configuration
 
-The information below is the configuration done in the preview steps.
+The information below is the configuration done in the previous steps.
 Check the number of keys, the threshold/quorum, and the key details.
 
 """
@@ -380,7 +380,7 @@ def _configure_role_target():
     )
 
     targets_base_url = click.prompt(
-        "\nWhat is the targets Base URL? (i.e.: "
+        "\nWhat is the targets base URL? (i.e.: "
         "https://www.example.com/downloads/)"
     )
     if targets_base_url.endswith("/") is False:
@@ -393,7 +393,7 @@ def _configure_role_root():
     setup.number_of_keys[Roles.ROOT] = prompt.IntPrompt.ask(
         (
             f"What is the [green]number of keys[/] for "
-            f"[cyan]{Roles.ROOT.value}[/] role?"
+            f"the [cyan]{Roles.ROOT.value}[/] role?"
         ),
         default=setup.number_of_keys[Roles.ROOT],
         show_default=True,
@@ -402,7 +402,7 @@ def _configure_role_root():
         setup.threshold[Roles.ROOT] = prompt.IntPrompt.ask(
             (
                 f"What is the key [green]threshold[/] for "
-                f"[cyan]{Roles.ROOT.value}[/] role signing?"
+                f"the [cyan]{Roles.ROOT.value}[/] role signing?"
             ),
             default=setup.threshold[Roles.ROOT],
             show_default=True,
@@ -421,7 +421,7 @@ def _configure_role(role: Roles) -> None:
     )
     setup.expiration[role] = prompt.IntPrompt.ask(
         (
-            f"\nWhat [green]Metadata expiration[/] for [cyan]{role.value}[/]"
+            f"\nWhat is the [green]metadata expiration[/] for [cyan]{role.value}[/]"
             " role?(Days)"
         ),
         default=setup.expiration[role],
@@ -441,18 +441,18 @@ def _configure_keys(
     key_count = 1
     while key_count <= number_of_keys:
         key_type = prompt.Prompt.ask(
-            f"\nChoose {key_count}/{number_of_keys} [cyan]{role}[/] Key type",
+            f"\nChoose {key_count}/{number_of_keys} [cyan]{role}[/] key type",
             choices=[KEY_TYPE_ED25519, KEY_TYPE_ECDSA, KEY_TYPE_RSA],
             default=KEY_TYPE_ED25519,
         )
         filepath = prompt.Prompt.ask(
             f"Enter {key_count}/{number_of_keys} the "
-            f"[cyan]{role}[/]`s Key [green]path[/]"
+            f"[cyan]{role}[/]`s private key [green]path[/]"
         )
 
         password = click.prompt(
             f"Enter {key_count}/{number_of_keys} the "
-            f"{role}`s Key password",
+            f"{role}`s key password",
             hide_input=True,
         )
         role_key: RSTUFKey = _load_key(filepath, key_type, password)
@@ -522,7 +522,7 @@ def _run_user_validation():
         console.print("\n", online_key_table)
 
         confirm_config = prompt.Confirm.ask(
-            "\nIs [cyan]Online Key[/] configuration correct?"
+            "\nIs the [cyan]online key[/] configuration correct?"
         )
         if not confirm_config:
             setup.online_key.key = {}
@@ -593,7 +593,7 @@ def _run_user_validation():
 
             console.print("\n", role_table)
             confirm_config = prompt.Confirm.ask(
-                f"\nIs [cyan]{role.value}[/] [yellow]configuration[/] correct?"
+                f"\nIs the [cyan]{role.value}[/] [yellow]configuration[/] correct?"
             )
             if not confirm_config:
                 # reconfigure role and keys
