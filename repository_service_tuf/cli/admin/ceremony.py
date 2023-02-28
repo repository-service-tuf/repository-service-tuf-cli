@@ -65,8 +65,8 @@ CEREMONY_INTRO_ROLES_RESPONSIBILITIES = """
 ## Roles and Responsibilities
 
 Repository Service for TUF implements roles and responsibilities based on TUF
-top-level roles (root, targets, timestamp, and snapshot) and the delegated hash bin
-roles.
+top-level roles (root, targets, timestamp, and snapshot) and the delegated hash
+bin roles.
 
 The inspiration for Repository Service for TUF is the
 [Python Enhancement Proposal 458](https://peps.python.org/pep-0458/).
@@ -193,8 +193,9 @@ Check the number of keys, the threshold/quorum, and the key details.
 
 BINS_DELEGATION_MESSAGE = """
 
-The target metadata file might contain a large number of target files. Targets
-delegates to the hash bin roles to reduce the metadata overhead for clients.
+The target metadata file might contain a large number of target files. That's
+why the targets role delegates trust to the hash bin roles to reduce the
+metadata overhead for clients.
 
 See:
 [TUF Specification about succinct hash bin delegation](
@@ -421,8 +422,8 @@ def _configure_role(role: Roles) -> None:
     )
     setup.expiration[role] = prompt.IntPrompt.ask(
         (
-            f"\nWhat is the [green]metadata expiration[/] for [cyan]{role.value}[/]"
-            " role?(Days)"
+            "\nWhat is the [green]metadata expiration[/] for "
+            f"[cyan]{role.value}[/] role?(Days)"
         ),
         default=setup.expiration[role],
         show_default=True,
@@ -524,7 +525,7 @@ def _run_user_validation():
         confirm_config = prompt.Confirm.ask(
             "\nIs the [cyan]online key[/] configuration correct?"
         )
-        if not confirm_config:
+        if confirm_config is False:
             setup.online_key.key = {}
             setup.online_key.key_path = None
             for key in _configure_keys("ONLINE", 1):
@@ -593,9 +594,10 @@ def _run_user_validation():
 
             console.print("\n", role_table)
             confirm_config = prompt.Confirm.ask(
-                f"\nIs the [cyan]{role.value}[/] [yellow]configuration[/] correct?"
+                f"\nIs the [cyan]{role.value}[/] [yellow]configuration[/] "
+                "correct?"
             )
-            if not confirm_config:
+            if confirm_config is False:
                 # reconfigure role and keys
                 _configure_role(role)
                 if role == Roles.ROOT:
