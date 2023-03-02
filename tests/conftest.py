@@ -63,39 +63,39 @@ def test_setup():
 def test_inputs():
     input_step1 = [
         "y",  # Do you want more information about roles and responsibilities?  # noqa
-        "y",  # Do you want start the ceremony?
-        "",  # What Metadata expiration for root role?(Days)
-        "",  # What is the number of keys for root role? (2)
+        "y",  # Do you want to start the ceremony?
+        "",  # What is the metadata expiration for the root role?(Days)
+        "",  # What is the number of keys for the root role? (2)
         "",  # What is the key threshold for root role signing?
-        "",  # What Metadata expiration for targets role?(Days) (365)?
+        "",  # What metadata expiration for the targets role?(Days) (365)?
         "y",  # Show example?
         "16",  # Choose the number of delegated hash bin roles
-        "http://www.example.com/repository",  # What is the targets Base URL
-        "",  # What Metadata expiration for snapshot role?(Days)
-        "",  # What Metadata expiration for timestamp role?(Days)
-        "",  # What Metadata expiration for bins role?(Days)
+        "http://www.example.com/repository",  # What is the targets base URL
+        "",  # What metadata expiration for the snapshot role?(Days) (365)?
+        "",  # What metadata expiration for the timestamp role?(Days) (365)?
+        "",  # What metadata expiration for the bins role?(Days) (365)?
         "Y",  # Ready to start loading the keys? Passwords will be required for keys [y/n]  # noqa
     ]
     input_step2 = [
-        "",  # hoose 1/1 ONLINE Key type [ed25519/ecdsa/rsa]
-        "tests/files/online.key",  # Enter 1/1 the ONLINE`s Key path
-        "strongPass",  # Enter 1/1 the ONLINE`s Key password
+        "",  # choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
+        "tests/files/online.key",  # Enter 1/1 the ONLINE`s key path
+        "strongPass",  # Enter 1/1 the ONLINE`s private key password
     ]
     input_step3 = [
-        "",  # Choose 1/2 root Key type [ed25519/ecdsa/rsa]
-        "tests/files/JanisJoplin.key",  # Enter 1/2 the root`s Key path
-        "strongPass",  # Enter 1/2 the root`s Key password
-        "",  # Choose 2/2 root Key type [ed25519/ecdsa/rsa]
-        "tests/files/JimiHendrix.key",  # Enter 2/2 the root`s Key path
-        "strongPass",  # Enter 2/2 the root`s Key password:
+        "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
+        "tests/files/JanisJoplin.key",  # Enter 1/2 the root`s private key path
+        "strongPass",  # Enter 1/2 the root`s private key password
+        "",  # Choose 2/2 root key type [ed25519/ecdsa/rsa]
+        "tests/files/JimiHendrix.key",  # Enter 2/2 the root`s private key path
+        "strongPass",  # Enter 2/2 the root`s private key password:
     ]
     input_step4 = [
-        "y",  # Is Online Key configuration correct? [y/n]
-        "y",  # Is root configuration correct? [y/n]
-        "y",  # Is targets configuration correct? [y/n]
-        "y",  # Is snapshot configuration correct? [y/n]
-        "y",  # Is timestamp configuration correct? [y/n]
-        "y",  # Is bins configuration correct? [y/n]
+        "y",  # Is the online Key configuration correct? [y/n]
+        "y",  # Is the root configuration correct? [y/n]
+        "y",  # Is the targets configuration correct? [y/n]
+        "y",  # Is the snapshot configuration correct? [y/n]
+        "y",  # Is the timestamp configuration correct? [y/n]
+        "y",  # Is the bins configuration correct? [y/n]
     ]
 
     return input_step1, input_step2, input_step3, input_step4

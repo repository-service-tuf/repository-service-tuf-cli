@@ -265,8 +265,8 @@ setup = Setup(
 
 
 def _key_is_duplicated(key: Dict[str, Any]) -> bool:
-    """Check if a Key is duplicated, used in a role or online_key"""
-    # verify if key is in any Roke keys
+    """Check if a key is duplicated, used in a role or the online_key"""
+    # verify if the key exists in any role keys
     for role_key in setup.keys.values():
         if any(
             k
@@ -346,12 +346,12 @@ def _send_bootstrap(
             )
 
 
-def _load_bootstrap_payload(file: str) -> Dict[str, Any]:
+def _load_bootstrap_payload(path: str) -> Dict[str, Any]:
     try:
-        with open(file) as payload_data:
+        with open(path) as payload_data:
             bootstrap_payload = json.load(payload_data)
     except OSError as err:
-        raise click.ClickException(f"Error to load {file}. {str(err)}")
+        raise click.ClickException(f"Error to load {path}. {str(err)}")
 
     return bootstrap_payload
 
@@ -423,7 +423,7 @@ def _configure_role(role: Roles) -> None:
     setup.expiration[role] = prompt.IntPrompt.ask(
         (
             "\nWhat is the [green]metadata expiration[/] for "
-            f"[cyan]{role.value}[/] role?(Days)"
+            f"the [cyan]{role.value}[/] role?(Days)"
         ),
         default=setup.expiration[role],
         show_default=True,
@@ -453,7 +453,7 @@ def _configure_keys(
 
         password = click.prompt(
             f"Enter {key_count}/{number_of_keys} the "
-            f"{role}`s key password",
+            f"{role}`s private key password",
             hide_input=True,
         )
         role_key: RSTUFKey = _load_key(filepath, key_type, password)
@@ -614,22 +614,22 @@ def _run_user_validation():
 def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     console.print(markdown.Markdown(CEREMONY_INTRO), width=100)
 
-    ceramony_detailed = prompt.Confirm.ask(
+    ceremony_detailed = prompt.Confirm.ask(
         "\nDo you want more information about roles and responsibilities?"
     )
-    if ceramony_detailed is True:
+    if ceremony_detailed is True:
         with console.pager():
             console.print(
                 markdown.Markdown(CEREMONY_INTRO_ROLES_RESPONSIBILITIES),
                 width=100,
             )
 
-    start_ceremony = prompt.Confirm.ask("\nDo you want start the ceremony?")
+    start_ceremony = prompt.Confirm.ask("\nDo you want to start the ceremony?")
 
     if start_ceremony is False:
         raise click.ClickException("Ceremony aborted.")
 
-    # STEP 1: configure the roles settings (keys, threshould, expiration)
+    # STEP 1: configure the roles settings (keys, threshold, expiration)
     console.print(markdown.Markdown(STEP_1), width=80)
     for role in Roles:
         _configure_role(role)
