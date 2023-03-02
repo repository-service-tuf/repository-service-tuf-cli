@@ -58,7 +58,7 @@ class RSTUFKey:
 
 
 @dataclass
-class Setup:
+class BootstrapSetup:
     expiration: Dict[Roles, int]
     services: ServiceSettings
     number_of_keys: Dict[Literal[Roles.ROOT, Roles.TARGETS], int]
@@ -73,7 +73,9 @@ class Setup:
         }
 
 
-def initialize_metadata(setup: Setup, save=True) -> Dict[str, Metadata]:
+def initialize_metadata(
+    setup: BootstrapSetup, save=True
+) -> Dict[str, Metadata]:
     """
     Creates development TUF top-level role metadata (root, targets, snapshot,
     timestamp).

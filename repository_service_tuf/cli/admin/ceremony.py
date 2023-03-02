@@ -36,10 +36,10 @@ from repository_service_tuf.helpers.api_client import (
     task_status,
 )
 from repository_service_tuf.helpers.tuf import (
+    BootstrapSetup,
     Roles,
     RSTUFKey,
     ServiceSettings,
-    Setup,
     initialize_metadata,
 )
 
@@ -239,7 +239,7 @@ console = Console()
 
 
 # Define all initial settings
-setup = Setup(
+setup = BootstrapSetup(
     expiration={
         Roles.ROOT: 365,
         Roles.TARGETS: 365,
@@ -600,6 +600,8 @@ def _run_user_validation():
             if confirm_config is False:
                 # reconfigure role and keys
                 _configure_role(role)
+
+                # if root, reconfigure also the keys
                 if role == Roles.ROOT:
                     setup.keys[role].clear()
                     for key in _configure_keys(

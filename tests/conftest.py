@@ -10,10 +10,10 @@ from click.testing import CliRunner  # type: ignore
 from dynaconf import Dynaconf
 
 from repository_service_tuf.helpers.tuf import (
+    BootstrapSetup,
     Roles,
     RSTUFKey,
     ServiceSettings,
-    Setup,
 )
 
 
@@ -32,7 +32,7 @@ def client():
 
 @pytest.fixture
 def test_setup():
-    setup = Setup(
+    setup = BootstrapSetup(
         expiration={
             Roles.ROOT: 365,
             Roles.TARGETS: 365,
