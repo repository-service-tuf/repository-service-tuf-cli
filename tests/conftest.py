@@ -67,18 +67,18 @@ def test_inputs():
         "",  # What is the metadata expiration for the root role?(Days)
         "",  # What is the number of keys for the root role? (2)
         "",  # What is the key threshold for root role signing?
-        "",  # What metadata expiration for the targets role?(Days) (365)?
+        "",  # What is the metadata expiration for the targets role?(Days) (365)?
         "y",  # Show example?
         "16",  # Choose the number of delegated hash bin roles
         "http://www.example.com/repository",  # What is the targets base URL
-        "",  # What metadata expiration for the snapshot role?(Days) (365)?
-        "",  # What metadata expiration for the timestamp role?(Days) (365)?
-        "",  # What metadata expiration for the bins role?(Days) (365)?
+        "",  # What is the metadata expiration for the snapshot role?(Days) (365)?
+        "",  # What is the metadata expiration for the timestamp role?(Days) (365)?
+        "",  # What is the metadata expiration for the bins role?(Days) (365)?
         "Y",  # Ready to start loading the keys? Passwords will be required for keys [y/n]  # noqa
     ]
     input_step2 = [
-        "",  # choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
-        "tests/files/online.key",  # Enter 1/1 the ONLINE`s key path
+        "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
+        "tests/files/online.key",  # Enter 1/1 the ONLINE`s private key path
         "strongPass",  # Enter 1/1 the ONLINE`s private key password
     ]
     input_step3 = [
@@ -90,7 +90,7 @@ def test_inputs():
         "strongPass",  # Enter 2/2 the root`s private key password:
     ]
     input_step4 = [
-        "y",  # Is the online Key configuration correct? [y/n]
+        "y",  # Is the online key configuration correct? [y/n]
         "y",  # Is the root configuration correct? [y/n]
         "y",  # Is the targets configuration correct? [y/n]
         "y",  # Is the snapshot configuration correct? [y/n]
