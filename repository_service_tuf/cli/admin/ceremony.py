@@ -163,8 +163,8 @@ STEP_2 = """
 
 ## The Online Key
 The online key is the same one provided to the Repository Service for TUF
-Workers (RSTUF Worker). This key is responsible for signing the Snapshot,
-Timestamp, Targets, and delegated targets (hash bin) roles.
+Workers (RSTUF Worker). This key is responsible for signing the snapshot,
+timestamp, targets, and delegated targets (hash bin) roles.
 
 The RSTUF Worker uses this key during the process of managing the metadata.
 
