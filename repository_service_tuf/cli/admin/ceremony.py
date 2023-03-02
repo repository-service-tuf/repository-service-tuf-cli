@@ -267,10 +267,10 @@ setup = Setup(
 def _key_is_duplicated(key: Dict[str, Any]) -> bool:
     """Check if a key is duplicated, used in a role or the online_key"""
     # verify if the key exists in any role keys
-    for role_key in setup.keys.values():
+    for role_keys in setup.keys.values():
         if any(
             k
-            for k in role_key
+            for k in role_keys
             if (
                 key is not None
                 and k.key is not None
