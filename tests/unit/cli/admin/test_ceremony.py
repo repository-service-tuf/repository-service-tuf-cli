@@ -9,24 +9,24 @@ from repository_service_tuf.cli.admin import ceremony
 
 
 class TestCeremonyFunctions:
-    def test__key_is_duplicated(self, test_setup):
+    def test__key_already_in_use(self, test_setup):
         ceremony.setup = test_setup
-        result = ceremony._key_is_duplicated({"keyid": "ema"})
+        result = ceremony._key_already_in_use({"keyid": "ema"})
         assert result is False
 
-    def test__key_is_duplicated_exists_in_role(self, test_setup):
+    def test__key_already_in_use_exists_in_role(self, test_setup):
         test_setup.keys[ceremony.Roles.ROOT] = [
             ceremony.RSTUFKey(key={"keyid": "ema"})
         ]
         ceremony.setup = test_setup
-        result = ceremony._key_is_duplicated({"keyid": "ema"})
+        result = ceremony._key_already_in_use({"keyid": "ema"})
         assert result is True
 
-    def test__key_is_duplicated_exists_in_online_key(self, test_setup):
+    def test__key_already_in_use_exists_in_online_key(self, test_setup):
         test_setup.online_key = ceremony.RSTUFKey(key={"keyid": "ema"})
 
         ceremony.setup = test_setup
-        result = ceremony._key_is_duplicated({"keyid": "ema"})
+        result = ceremony._key_already_in_use({"keyid": "ema"})
         assert result is True
 
     def test__load_key(self, monkeypatch):

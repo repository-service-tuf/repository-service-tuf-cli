@@ -264,7 +264,7 @@ setup = BootstrapSetup(
 )
 
 
-def _key_is_duplicated(key: Dict[str, Any]) -> bool:
+def _key_already_in_use(key: Dict[str, Any]) -> bool:
     """Check if a key is duplicated, used in a role or the online_key"""
     # verify if the key exists in any role keys
     for role_keys in setup.keys.values():
@@ -466,7 +466,7 @@ def _configure_keys(
             else:
                 raise click.ClickException("Required key not validated.")
 
-        if role_key.key is None or _key_is_duplicated(role_key.key) is True:
+        if role_key.key is None or _key_already_in_use(role_key.key) is True:
             console.print(":cross_mark: [red]Failed[/]: Key is duplicated.")
             continue
 
