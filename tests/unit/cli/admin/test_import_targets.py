@@ -223,15 +223,8 @@ class TestImportTargetsGroupCLI:
 
         test_context["settings"].SERVER = "fake-server"
 
-        import_targets.get_headers = pretend.call_recorder(
-            lambda *a: "headers"
-        )
-        fake_response = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(lambda: {"data": {"bootstrap": True}}),
-        )
-        import_targets.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
+        import_targets.bootstrap_status = pretend.call_recorder(
+            lambda *a: {"data": {"bootstrap": True}, "message": "some msg"}
         )
         import_targets._get_succinct_roles = pretend.call_recorder(
             lambda *a: "fake_succinct_roles"
@@ -276,35 +269,25 @@ class TestImportTargetsGroupCLI:
         )
         assert result.exit_code == 0, result.output
         assert "Finished." in result.output
-        assert import_targets.request_server.calls == [
-            pretend.call(
-                "fake-server",
-                import_targets.URL.bootstrap.value,
-                import_targets.Methods.get,
-                headers="headers",
-            )
-        ]
-        assert import_targets.get_headers.calls == [
+        assert import_targets.bootstrap_status.calls == [
             pretend.call(test_context["settings"])
         ]
         assert import_targets._get_succinct_roles.calls == [
             pretend.call("http://127.0.0.1/metadata/")
         ]
-        assert fake_response.json.calls == [pretend.call()]
-        assert sqlalchemy.create_engine.calls == [
+        assert import_targets.create_engine.calls == [
             pretend.call("postgresql://postgres:secret@127.0.0.1:5433")
         ]
         assert import_targets._check_csv_files.calls == [
             pretend.call(csv_files=("targets1of2.csv", "targets2of2.csv"))
         ]
         assert import_targets.publish_targets.calls == [
-            pretend.call("fake-server", "headers")
+            pretend.call(test_context["settings"])
         ]
         assert import_targets.task_status.calls == [
             pretend.call(
                 "fake_task_id",
-                "fake-server",
-                "headers",
+                test_context["settings"],
                 "Import status: task ",
             )
         ]
@@ -315,15 +298,8 @@ class TestImportTargetsGroupCLI:
 
         test_context["settings"].SERVER = "fake-server"
 
-        import_targets.get_headers = pretend.call_recorder(
-            lambda *a: "headers"
-        )
-        fake_response = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(lambda: {"data": {"bootstrap": True}}),
-        )
-        import_targets.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
+        import_targets.bootstrap_status = pretend.call_recorder(
+            lambda *a: {"data": {"bootstrap": True}, "message": "some msg"}
         )
         import_targets._get_succinct_roles = pretend.call_recorder(
             lambda *a: "fake_succinct_roles"
@@ -370,22 +346,13 @@ class TestImportTargetsGroupCLI:
         assert result.exit_code == 0, result.output
         assert "Finished." in result.output
         assert "Not targets published" in result.output
-        assert import_targets.request_server.calls == [
-            pretend.call(
-                "fake-server",
-                import_targets.URL.bootstrap.value,
-                import_targets.Methods.get,
-                headers="headers",
-            )
-        ]
-        assert import_targets.get_headers.calls == [
+        assert import_targets.bootstrap_status.calls == [
             pretend.call(test_context["settings"])
         ]
         assert import_targets._get_succinct_roles.calls == [
             pretend.call("http://127.0.0.1/metadata/")
         ]
-        assert fake_response.json.calls == [pretend.call()]
-        assert sqlalchemy.create_engine.calls == [
+        assert import_targets.create_engine.calls == [
             pretend.call("postgresql://postgres:secret@127.0.0.1:5433")
         ]
         assert import_targets._check_csv_files.calls == [
@@ -428,15 +395,8 @@ class TestImportTargetsGroupCLI:
     def test_import_targets_bootstrap_check_failed(self, client, test_context):
         test_context["settings"].SERVER = "fake-server"
 
-        import_targets.get_headers = pretend.call_recorder(
-            lambda *a: "headers"
-        )
-        fake_response = pretend.stub(
-            status_code=500,
-            text="Internal Error",
-        )
-        import_targets.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
+        import_targets.bootstrap_status = pretend.raiser(
+            import_targets.click.ClickException("Server ERROR")
         )
 
         options = [
@@ -449,35 +409,18 @@ class TestImportTargetsGroupCLI:
             "--csv",
             "targets2of2.csv",
         ]
+
         result = client.invoke(
             import_targets.import_targets, options, obj=test_context
         )
-        assert result.exit_code == 1, result.output
-        assert "Error 500 Internal Error" in result.output
-        assert import_targets.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
-        assert import_targets.request_server.calls == [
-            pretend.call(
-                "fake-server",
-                import_targets.URL.bootstrap.value,
-                import_targets.Methods.get,
-                headers="headers",
-            )
-        ]
+        assert result.exit_code == 1
+        assert "Server ERROR" in result.output, result.output
 
     def test_import_targets_without_bootstrap(self, client, test_context):
         test_context["settings"].SERVER = "fake-server"
 
-        import_targets.get_headers = pretend.call_recorder(
-            lambda *a: "headers"
-        )
-        fake_response = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(lambda: {"data": {"bootstrap": False}}),
-        )
-        import_targets.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
+        import_targets.bootstrap_status = pretend.call_recorder(
+            lambda *a: {"data": {"bootstrap": False}, "message": "some msg"}
         )
 
         options = [
@@ -497,14 +440,6 @@ class TestImportTargetsGroupCLI:
         assert (
             "import-targets` requires bootstrap process done." in result.output
         )
-        assert import_targets.get_headers.calls == [
+        assert import_targets.bootstrap_status.calls == [
             pretend.call(test_context["settings"])
-        ]
-        assert import_targets.request_server.calls == [
-            pretend.call(
-                "fake-server",
-                import_targets.URL.bootstrap.value,
-                import_targets.Methods.get,
-                headers="headers",
-            )
         ]

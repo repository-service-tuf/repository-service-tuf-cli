@@ -8,9 +8,8 @@ from rich.console import Console
 from repository_service_tuf.cli import click
 from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.helpers.api_client import (
-    URL,
     Methods,
-    get_headers,
+    bootstrap_status,
     publish_targets,
     request_server,
     task_status,
@@ -154,22 +153,12 @@ def import_targets(
         )
 
     settings = context.obj["settings"]
-    server = settings.get("SERVER")
 
-    headers = get_headers(settings)
-
-    bs_response = request_server(
-        settings.SERVER, URL.bootstrap.value, Methods.get, headers=headers
-    )
-    if bs_response.status_code != 200:
+    bs_status = bootstrap_status(settings)
+    if bs_status.get("data", {}).get("bootstrap") is False:
         raise click.ClickException(
-            f"Error {bs_response.status_code} {bs_response.text}"
-        )
-
-    bs_data = bs_response.json()["data"]
-    if bs_data.get("bootstrap") is False:
-        raise click.ClickException(
-            "`import-targets` requires bootstrap process done."
+            "`import-targets` requires bootstrap process done. "
+            f"{bs_status.get('message')}"
         )
 
     # load all required infrastructure
@@ -196,9 +185,9 @@ def import_targets(
         )
     else:
         console.print("Import status: Submitting action publish targets")
-        task_id = publish_targets(server, headers)
+        task_id = publish_targets(settings)
         console.print(f"Import status: Publish targets task id is {task_id}")
         # monitor task status
-        result = task_status(task_id, server, headers, "Import status: task ")
+        result = task_status(task_id, settings, "Import status: task ")
         if result is not None:
             console.print("Import status: [green]Finished.[/]")
