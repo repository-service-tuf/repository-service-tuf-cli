@@ -4,7 +4,9 @@
 
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from enum import Enum
+from math import log
+from typing import Dict, List, Literal, Optional, Tuple
 
 from securesystemslib.signer import Signer, SSlibSigner  # type: ignore
 from tuf.api.metadata import (
@@ -30,22 +32,49 @@ BINS: str = "bins"
 repository_metadata: Dict[str, Metadata] = {}
 
 
+class Roles(Enum):
+    ROOT = "root"
+    TARGETS = "targets"
+    SNAPSHOT = "snapshot"
+    TIMESTAMP = "timestamp"
+    BINS = "bins"
+
+
 @dataclass
-class RolesKeysInput:
-    expiration: int = 1
-    num_of_keys: int = 1
-    threshold: int = 1
-    keys: Dict[str, Any] = field(default_factory=dict)
-    offline_keys: bool = True
-    number_hash_prefixes: int = 0
-    paths: Optional[List[str]] = None
+class ServiceSettings:
+    number_of_delegated_bins: int = 256
+    targets_base_url: str = ""
+    targets_online_key: bool = True
 
     def to_dict(self):
         return asdict(self)
 
 
+@dataclass
+class RSTUFKey:
+    key: Optional[dict] = field(default_factory=dict)
+    key_path: Optional[str] = None
+    error: Optional[str] = None
+
+
+@dataclass
+class BootstrapSetup:
+    expiration: Dict[Roles, int]
+    services: ServiceSettings
+    number_of_keys: Dict[Literal[Roles.ROOT, Roles.TARGETS], int]
+    threshold: Dict[Literal[Roles.ROOT, Roles.TARGETS], int]
+    keys: Dict[Roles, List[RSTUFKey]] = field(default_factory=dict)
+    online_key: RSTUFKey = field(default_factory=RSTUFKey)
+
+    def to_dict(self):
+        return {
+            "expiration": {k.value: v for k, v in self.expiration.items()},
+            "services": self.services.to_dict(),
+        }
+
+
 def initialize_metadata(
-    settings: Dict[str, RolesKeysInput], save=True
+    setup: BootstrapSetup, save=True
 ) -> Dict[str, Metadata]:
     """
     Creates development TUF top-level role metadata (root, targets, snapshot,
@@ -77,12 +106,9 @@ def initialize_metadata(
 
         return repository_metadata[filename]
 
-    def _signers(role_name: str) -> List[Signer]:
+    def _signers(role: Roles) -> List[Signer]:
         """Returns all Signers from the settings for a specific role name"""
-        return [
-            SSlibSigner(key["key"])
-            for key in settings[role_name].keys.values()
-        ]
+        return [SSlibSigner(key.key) for key in setup.keys[role]]
 
     def _sign(role: Metadata, role_name: str) -> None:
         """Re-signs metadata with role-specific key from global key store.
@@ -90,7 +116,7 @@ def initialize_metadata(
         for top-level roles.
         """
         role.signatures.clear()
-        for signer in _signers(role_name):
+        for signer in _signers(Roles[role_name.upper()]):
             role.sign(signer, append=True)
 
     def _add_payload(role: Metadata, role_name: str) -> None:
@@ -107,9 +133,9 @@ def initialize_metadata(
         repository_metadata[filename] = role
 
         if save:
-            role.to_file(f"metadata/{filename}", JSONSerializer())
+            role.to_file(f"metadata/{filename}.json", JSONSerializer())
 
-    def _bump_expiry(role: Metadata, expiry_id: str) -> None:
+    def _bump_expiry(role: Metadata, role_name: str) -> None:
         """Bumps metadata expiration date by role-specific interval.
         The metadata role type is used as default expiry id. This is only
         allowed for top-level roles.
@@ -121,7 +147,7 @@ def initialize_metadata(
         # https://www.python.org/dev/peps/pep-0458/#producing-consistent-snapshots
         role.signed.expires = datetime.now().replace(
             microsecond=0
-        ) + timedelta(days=settings[expiry_id].expiration)
+        ) + timedelta(days=setup.expiration[Roles[role_name.upper()]])
 
     def _bump_version(role: Metadata) -> None:
         """Bumps metadata version by 1."""
@@ -159,8 +185,12 @@ def initialize_metadata(
     roles: dict[str, Role] = {}
     add_key_args: list[tuple[Key, str]] = []
     for role_name in TOP_LEVEL_ROLE_NAMES:
-        threshold = settings[role_name].threshold
-        signers = _signers(role_name)
+        if role_name == Roles.ROOT.value:
+            threshold = setup.threshold[Roles.ROOT]
+        else:
+            threshold = 1
+
+        signers = _signers(Roles[role_name.upper()])
 
         # FIXME: Is this a meaningful check? Should we check more than just
         # the threshold? And maybe in a different place, e.g. independently of
@@ -181,7 +211,6 @@ def initialize_metadata(
 
     # Add signature wrapper, bump expiration, and sign and persist
     for role in [Targets, Snapshot, Timestamp, Root]:
-
         # Bootstrap default top-level metadata to be updated below if necessary
         if role is Root:
             metadata = Metadata(Root(roles=roles))
@@ -205,12 +234,8 @@ def initialize_metadata(
     # to 'bin-n' roles based on file path hash prefixes, a.k.a hash bin
     # delegation.
     targets = _load(Targets.type)
-    if settings[Targets.type].number_hash_prefixes not in range(1, 15):
-        raise ValueError(
-            "Targets `number_hash_prefixes` must be between 1 and 14"
-        )
     succinct_roles = SuccinctRoles(
-        [], 1, settings[Targets.type].number_hash_prefixes, BINS
+        [], 1, int(log(setup.services.number_of_delegated_bins, 2)), BINS
     )
 
     targets.signed.delegations = Delegations(
@@ -218,7 +243,7 @@ def initialize_metadata(
     )
 
     for delegated_name in succinct_roles.get_roles():
-        for signer in _signers(BINS):
+        for signer in _signers(Roles.BINS):
             targets.signed.add_key(
                 Key.from_securesystemslib_key(signer.key_dict), delegated_name
             )
