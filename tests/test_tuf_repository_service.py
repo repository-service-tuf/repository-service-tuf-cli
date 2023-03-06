@@ -12,7 +12,7 @@ class TestRSTUFCLI:
         test_result = client.invoke(rstuf)
         assert test_result.exit_code == 0
 
-    def test_trs_version_parameter(self, client):
+    def test_version_parameter(self, client):
         """Tests the CLI --version parameter existence and output format."""
 
         result = client.invoke(rstuf, ["--version"])

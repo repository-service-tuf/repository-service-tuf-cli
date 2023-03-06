@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Any, Dict, Optional
 
 import requests
+from dynaconf import LazySettings
 from requests.exceptions import ConnectionError
 from rich.console import Console
 
@@ -79,7 +80,7 @@ def is_logged(server: str, token: str):
         )
 
 
-def get_headers(settings: Dict[str, str]) -> Dict[str, str]:
+def get_headers(settings: LazySettings) -> Dict[str, str]:
     server = settings.get("SERVER")
     token = settings.get("TOKEN")
     if server and token:
@@ -110,13 +111,38 @@ def get_headers(settings: Dict[str, str]) -> Dict[str, str]:
     return headers
 
 
+def bootstrap_status(settings: LazySettings) -> Dict[str, Any]:
+    headers = get_headers(settings)
+    response = request_server(
+        settings.SERVER, URL.bootstrap.value, Methods.get, headers=headers
+    )
+    if response.status_code == 404:
+        raise click.ClickException(
+            f"Server {settings.SERVER} does not allow bootstrap"
+        )
+    if response.status_code != 200:
+        raise click.ClickException(
+            f"Error {response.status_code} {response.text}"
+        )
+
+    bootstrap_json = response.json()
+    if bootstrap_json is None:
+        raise click.ClickException(f"Unexpected error {response.text}")
+
+    return bootstrap_json
+
+
 def task_status(
-    task_id: str, server: str, headers: Dict[str, str], title: Optional[str]
+    task_id: str, settings: LazySettings, title: Optional[str]
 ) -> Dict[str, Any]:
+    headers = get_headers(settings)
     received_states = []
     while True:
         state_response = request_server(
-            server, f"{URL.task.value}{task_id}", Methods.get, headers=headers
+            settings.SERVER,
+            f"{URL.task.value}{task_id}",
+            Methods.get,
+            headers=headers,
         )
 
         if state_response.status_code != 200:
@@ -153,9 +179,13 @@ def task_status(
         time.sleep(2)
 
 
-def publish_targets(server: str, headers: Dict[str, str]) -> str:
+def publish_targets(settings: LazySettings) -> str:
+    headers = get_headers(settings)
     publish_targets = request_server(
-        server, URL.publish_targets.value, Methods.post, headers=headers
+        settings.SERVER,
+        URL.publish_targets.value,
+        Methods.post,
+        headers=headers,
     )
     if publish_targets.status_code != 202:
         raise click.ClickException(
