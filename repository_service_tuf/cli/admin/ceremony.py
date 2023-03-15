@@ -508,7 +508,7 @@ def _run_user_validation():
 
     # Validations
     #
-    # Online Key validation
+    # Online key validation
     while True:
         online_key_table = _init_summary_table("ONLINE KEY SUMMARY")
         keys_table = _init_keys_table()

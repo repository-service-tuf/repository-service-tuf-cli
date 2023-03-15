@@ -417,7 +417,7 @@ class TestCeremonyInteraction:
 
         # overwrite the input_step2
         input_step2 = [
-            "",  # Choose 1/1 ONLINE Key type [ed25519/ecdsa/rsa]
+            "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
             "tests/files/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
             "wrong password",  # Enter 1/1 the ONLINE`s private key password
             "n",  # Try again?
