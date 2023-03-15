@@ -46,13 +46,7 @@ def test_setup():
             Roles.ROOT: 1,
             Roles.TARGETS: 1,
         },
-        keys={
-            Roles.ROOT: [],
-            Roles.TARGETS: [],
-            Roles.SNAPSHOT: [],
-            Roles.TIMESTAMP: [],
-            Roles.BINS: [],
-        },
+        root_keys=[],
         online_key=RSTUFKey(),
     )
 

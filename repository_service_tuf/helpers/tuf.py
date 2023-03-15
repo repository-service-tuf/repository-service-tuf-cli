@@ -52,7 +52,8 @@ class ServiceSettings:
 
 @dataclass
 class RSTUFKey:
-    key: Optional[dict] = field(default_factory=dict)
+    # Before key was optional. Not sure why.
+    key: dict = field(default_factory=dict)
     key_path: Optional[str] = None
     error: Optional[str] = None
 
@@ -63,7 +64,7 @@ class BootstrapSetup:
     services: ServiceSettings
     number_of_keys: Dict[Literal[Roles.ROOT, Roles.TARGETS], int]
     threshold: Dict[Literal[Roles.ROOT, Roles.TARGETS], int]
-    keys: Dict[Roles, List[RSTUFKey]] = field(default_factory=dict)
+    root_keys: List[RSTUFKey] = field(default_factory=list)
     online_key: RSTUFKey = field(default_factory=RSTUFKey)
 
     def to_dict(self):
@@ -108,7 +109,10 @@ def initialize_metadata(
 
     def _signers(role: Roles) -> List[Signer]:
         """Returns all Signers from the settings for a specific role name"""
-        return [SSlibSigner(key.key) for key in setup.keys[role]]
+        if role == Roles.ROOT:
+            return [SSlibSigner(key.key) for key in setup.root_keys]
+        else:
+            return [SSlibSigner(setup.online_key.key)]
 
     def _sign(role: Metadata, role_name: str) -> None:
         """Re-signs metadata with role-specific key from global key store.

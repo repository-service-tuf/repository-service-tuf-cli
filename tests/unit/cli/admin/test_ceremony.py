@@ -15,9 +15,7 @@ class TestCeremonyFunctions:
         assert result is False
 
     def test__key_already_in_use_exists_in_role(self, test_setup):
-        test_setup.keys[ceremony.Roles.ROOT] = [
-            ceremony.RSTUFKey(key={"keyid": "ema"})
-        ]
+        test_setup.root_keys = [ceremony.RSTUFKey(key={"keyid": "ema"})]
         ceremony.setup = test_setup
         result = ceremony._key_already_in_use({"keyid": "ema"})
         assert result is True

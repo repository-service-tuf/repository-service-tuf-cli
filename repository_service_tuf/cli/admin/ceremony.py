@@ -253,37 +253,23 @@ setup = BootstrapSetup(
         Roles.ROOT: 1,
         Roles.TARGETS: 1,
     },
-    keys={
-        Roles.ROOT: [],
-        Roles.TARGETS: [],
-        Roles.SNAPSHOT: [],
-        Roles.TIMESTAMP: [],
-        Roles.BINS: [],
-    },
+    root_keys=[],
     online_key=RSTUFKey(),
 )
 
 
 def _key_already_in_use(key: Dict[str, Any]) -> bool:
     """Check if a key is duplicated, used in a role or the online_key"""
-    # verify if the key exists in any role keys
-    for role_keys in setup.keys.values():
-        if any(
-            k
-            for k in role_keys
-            if (
-                key is not None
-                and k.key is not None
-                and key.get("keyid") == k.key.get("keyid")
-            )
-        ):
-            return True
+    if key is None:
+        return False
 
-    # verify if key is used by `online_key`
-    if setup.online_key.key is not None and key.get(
-        "keyid"
-    ) == setup.online_key.key.get("keyid"):
+    keyid = key.get("keyid")
+    if keyid == setup.online_key.key.get("keyid"):
         return True
+
+    for root_key in setup.root_keys:
+        if keyid == root_key.key.get("keyid"):
+            return True
 
     return False
 
@@ -466,7 +452,7 @@ def _configure_keys(
             else:
                 raise click.ClickException("Required key not validated.")
 
-        if role_key.key is None or _key_already_in_use(role_key.key) is True:
+        if _key_already_in_use(role_key.key) is True:
             console.print(":cross_mark: [red]Failed[/]: Key is duplicated.")
             continue
 
@@ -542,7 +528,7 @@ def _run_user_validation():
 
             if role == Roles.ROOT:
                 keys_table = _init_keys_table()
-                for key in setup.keys[Roles.ROOT]:
+                for key in setup.root_keys:
                     keys_table.add_row(
                         f"[yellow]{key.key_path}[/]",
                         "[bright_blue]Offline[/]",
@@ -553,7 +539,7 @@ def _run_user_validation():
                 role_table.add_row(
                     (
                         f"Role: [cyan]{role.value}[/]"
-                        f"\nNumber of Keys: [yellow]{len(setup.keys[role])}[/]"
+                        f"\nNumber of Keys: [yellow]{len(setup.root_keys)}[/]"
                         f"\nThreshold: [yellow]{setup.threshold[Roles.ROOT]}"
                         "[/]"
                         f"\nRole Expiration: [yellow]{setup.expiration[role]} "
@@ -603,12 +589,12 @@ def _run_user_validation():
 
                 # if root, reconfigure also the keys
                 if role == Roles.ROOT:
-                    setup.keys[role].clear()
+                    setup.root_keys.clear()
                     for key in _configure_keys(
                         role.value,
                         setup.number_of_keys[Roles.ROOT],
                     ):
-                        setup.keys[role].append(key)
+                        setup.root_keys.append(key)
             else:
                 break
 
@@ -649,16 +635,10 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
         setup.online_key.key = key.key
         setup.online_key.key_path = key.key_path
 
-    # STEP 3: load the keys
+    # STEP 3: load the root keys
     console.print(markdown.Markdown(STEP_3), width=100)
-    for role in Roles:
-        if role == Roles.ROOT:
-            for key in _configure_keys(
-                role.value, setup.number_of_keys[Roles.ROOT]
-            ):
-                setup.keys[role].append(key)
-        else:
-            setup.keys[role].append(setup.online_key)
+    for key in _configure_keys(role.value, setup.number_of_keys[Roles.ROOT]):
+        setup.root_keys.append(key)
 
     # STEP 4: user validation
     console.print(markdown.Markdown(STEP_4), width=100)
