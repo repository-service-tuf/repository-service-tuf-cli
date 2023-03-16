@@ -40,7 +40,7 @@ from repository_service_tuf.helpers.tuf import (
     Roles,
     RSTUFKey,
     ServiceSettings,
-    initialize_metadata,
+    TUFManagement,
 )
 
 CEREMONY_INTRO = """
@@ -644,7 +644,8 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     console.print(markdown.Markdown(STEP_4), width=100)
     _run_user_validation()
 
-    metadata = initialize_metadata(setup, save)
+    tuf_management = TUFManagement(setup, save)
+    metadata = tuf_management.initialize_metadata()
 
     json_payload: Dict[str, Any] = dict()
     json_payload["settings"] = setup.to_dict()
