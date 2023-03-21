@@ -88,19 +88,27 @@ class TUFManagement:
         """
         if role_name == Timestamp.type:
             filename = f"{role_name}"
+
+            if filename not in self.repository_metadata:
+                raise ValueError("Timestamp is not initialized")
         else:
             filenames = [
                 filename
                 for filename in self.repository_metadata
                 if role_name in filename
             ]
+
+            if len(filenames) < 1:
+                raise ValueError(f"No filename found for {role_name}")
+
             versions = [
                 int(name.split("/")[-1].split(".", 1)[0]) for name in filenames
             ]
-            try:
-                version = max(versions)
-            except ValueError:
-                version = 1
+
+            version = max(versions)
+
+            if version < 1:
+                raise ValueError("Metadata version must be at least 1")
 
             filename = f"{version}.{role_name}"
 
