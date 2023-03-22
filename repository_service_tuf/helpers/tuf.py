@@ -5,21 +5,15 @@
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from math import log
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Dict, List, Literal, Optional
 
 from securesystemslib.signer import Signer, SSlibSigner  # type: ignore
 from tuf.api.metadata import (
     SPECIFICATION_VERSION,
-    Delegations,
     Key,
     Metadata,
-    MetaFile,
     Role,
     Root,
-    Snapshot,
-    SuccinctRoles,
-    Targets,
     Timestamp,
 )
 from tuf.api.serialization.json import JSONSerializer
@@ -163,110 +157,16 @@ class TUFManagement:
         """Bumps metadata version by 1."""
         role.signed.version += 1
 
-    def _update_timestamp(self, snapshot_version: int):
-        """Loads 'timestamp', updates meta info about passed 'snapshot'
-        metadata, bumps version and expiration, signs and persists."""
-        timestamp = self._load(Timestamp.type)
-        timestamp.signed.snapshot_meta = MetaFile(version=snapshot_version)
-
-        self._bump_version(timestamp)
-        self._bump_expiry(timestamp, Timestamp.type)
-        self._sign(timestamp, Timestamp.type)
-        self._add_payload(timestamp, Timestamp.type)
-
-    def _update_snapshot(self, targets_meta: List[Tuple[str, int]]) -> int:
-        """Loads 'snapshot', updates meta info about passed 'targets'
-        metadata, bumps version and expiration, signs and persists. Returns
-        new snapshot version, e.g. to update 'timestamp'."""
-        snapshot = self._load(Snapshot.type)
-
-        for name, version in targets_meta:
-            snapshot.signed.meta[f"{name}.json"] = MetaFile(version=version)
-
-        self._bump_expiry(snapshot, Snapshot.type)
-        self._bump_version(snapshot)
-        self._sign(snapshot, Snapshot.type)
-        self._add_payload(snapshot, Snapshot.type)
-
-        return snapshot.signed.version
-
-    def _validate_all_roles_payload_exist(self):
+    def _validate_root_payload_exist(self):
         """
-        Validate that all top-level roles and the bins role are initialized.
+        Validate that root is initialized with a correct information.
         """
-        for role_name in ["root", "targets", "snapshot", "timestamp"]:
-            try:
-                role_md = self._load(role_name)
-                if not isinstance(role_md, Metadata):
-                    raise ValueError()
-
-                if role_name == "targets":
-                    succinct_roles = role_md.signed.delegations.succinct_roles
-                    # Load all bins and verify their type
-                    for bin in succinct_roles.get_roles():
-                        bin_md = self._load(bin)
-                        if not isinstance(bin_md, Metadata):
-                            raise ValueError()
-
-            except ValueError as err:
-                raise ValueError(f"{role_name} is not initialized") from err
-
-    def _setup_targets_and_delegated_md(self) -> List[Tuple[str, int]]:
-        """
-        Setup targets and all hash bin delegated metadata.
-        """
-        # Track names and versions of new and updated targets for 'snapshot'
-        # update
-        targets_meta: List[Tuple[str, int]] = []
-
-        # Update top-level 'targets' role, to delegate trust for all target
-        # files to 'bin-n' roles based on file path hash prefixes, a.k.a hash
-        # bin delegation.
-        targets = self._load(Targets.type)
-        succinct_roles = SuccinctRoles(
-            [],
-            1,
-            int(log(self.setup.services.number_of_delegated_bins, 2)),
-            BINS,
-        )
-
-        targets.signed.delegations = Delegations(
-            keys={}, succinct_roles=succinct_roles
-        )
-
-        # That's the way to get targets keyid as targets.signatures is a dict.
-        targets_keyid = list(targets.signatures.keys())[0]
-        for delegated_name in succinct_roles.get_roles():
-            bin_signers = self._signers(Roles.BINS)
-            if len(bin_signers) != 1:
-                raise ValueError("BINS role must use exactly one online key")
-
-            targets.signed.add_key(
-                Key.from_securesystemslib_key(bin_signers[0].key_dict),
-                delegated_name,
-            )
-            bin_keyid = targets.signed.delegations.succinct_roles.keyids[0]
-            if bin_keyid != targets_keyid:
-                raise ValueError(
-                    "BINS key id must be the same as the targets key id"
-                )
-
-            bins_hash_role = Metadata(Targets())
-            self._bump_expiry(bins_hash_role, BINS)
-            self._sign(bins_hash_role, BINS)
-            self._add_payload(bins_hash_role, delegated_name)
-            targets_meta.append(
-                (delegated_name, bins_hash_role.signed.version)
-            )
-
-        # Bump version and expiration, and sign and persist updated 'targets'.
-        self._bump_version(targets)
-        self._bump_expiry(targets, Targets.type)
-        self._sign(targets, Targets.type)
-        self._add_payload(targets, Targets.type)
-
-        targets_meta.append((Targets.type, targets.signed.version))
-        return targets_meta
+        try:
+            root_md = self._load(Roles.ROOT.value)
+            if not isinstance(root_md, Metadata):
+                raise ValueError()
+        except ValueError as err:
+            raise ValueError("Root is not initialized") from err
 
     def _verify_correct_keys_usage(self, root: Root):
         """
@@ -287,30 +187,23 @@ class TUFManagement:
         if timestamp_keyid in root.roles["root"].keyids:
             raise ValueError("Root must not use the same key as timestamp")
 
-    def _prepare_top_level_md_and_add_to_payload(
+    def _prepare_root_and_add_it_to_payload(
         self, roles: dict[str, Role], add_key_args: list[tuple[Key, str]]
     ):
         """
-        Prepare top level metadata roles and add them to the payload.
+        Prepare root metadata and add it to the payload.
         """
-        # Add signature wrapper, bump expiration, and sign and persist
-        for role in [Targets, Snapshot, Timestamp, Root]:
-            # Bootstrap default top-level metadata to be updated below if
-            # necessary.
-            if role is Root:
-                metadata = Metadata(Root(roles=roles))
-                root = metadata.signed
-                for arg in add_key_args:
-                    root.add_key(arg[0], arg[1])
+        # Add signature, bump expiration, sign and persist the root role.
+        root_metadata = Metadata(Root(roles=roles))
+        for arg in add_key_args:
+            root_metadata.signed.add_key(arg[0], arg[1])
 
-                self._verify_correct_keys_usage(root)
-            else:
-                metadata = Metadata(role())
+        self._verify_correct_keys_usage(root_metadata.signed)
 
-            metadata_type = metadata.signed.type
-            self._bump_expiry(metadata, metadata_type)
-            self._sign(metadata, metadata_type)
-            self._add_payload(metadata, metadata_type)
+        metadata_type = root_metadata.signed.type
+        self._bump_expiry(root_metadata, metadata_type)
+        self._sign(root_metadata, metadata_type)
+        self._add_payload(root_metadata, metadata_type)
 
     def initialize_metadata(self) -> Dict[str, Metadata]:
         """
@@ -346,11 +239,7 @@ class TUFManagement:
                     (Key.from_securesystemslib_key(signer.key_dict), role_name)
                 )
 
-        self._prepare_top_level_md_and_add_to_payload(roles, add_key_args)
-
-        targets_meta = self._setup_targets_and_delegated_md()
-
-        self._update_timestamp(self._update_snapshot(targets_meta))
-        self._validate_all_roles_payload_exist()
+        self._prepare_root_and_add_it_to_payload(roles, add_key_args)
+        self._validate_root_payload_exist()
 
         return self.repository_metadata

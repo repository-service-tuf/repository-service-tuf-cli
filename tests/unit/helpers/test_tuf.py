@@ -13,13 +13,10 @@ import pytest
 
 from repository_service_tuf.helpers import tuf
 from repository_service_tuf.helpers.tuf import (
-    Delegations,
     Metadata,
     Roles,
     Root,
     RSTUFKey,
-    SuccinctRoles,
-    Targets,
     TUFManagement,
 )
 
@@ -158,336 +155,36 @@ class TestTUFHelper:
         test_tuf_management._bump_version(fake_role)
         assert fake_role.signed.version == 3
 
-    def test__update_timestamp(self, test_tuf_management: TUFManagement):
-        # Give a value to snapshot_meta to distinguish the pretend calls as the
-        # default for snapshot_meta is
-        tuf.MetaFile = pretend.call_recorder(lambda **kwargs: "")
-        fake_role = pretend.stub(
-            signed=pretend.stub(snapshot_meta=None),
-        )
-        test_tuf_management._load = pretend.call_recorder(lambda *a: fake_role)
-        test_tuf_management._bump_version = pretend.call_recorder(
-            lambda *a: None
-        )
-        test_tuf_management._bump_expiry = pretend.call_recorder(
-            lambda *a: None
-        )
-        test_tuf_management._sign = pretend.call_recorder(lambda *a: None)
-        test_tuf_management._add_payload = pretend.call_recorder(
-            lambda *a: None
-        )
-        result = test_tuf_management._update_timestamp(2)
-        assert result is None
-        assert fake_role.signed.snapshot_meta == ""
-        assert tuf.MetaFile.calls == [pretend.call(version=2)]
-        assert test_tuf_management._load.calls == [pretend.call("timestamp")]
-        assert test_tuf_management._bump_version.calls == [
-            pretend.call(fake_role)
-        ]
-        assert test_tuf_management._bump_expiry.calls == [
-            pretend.call(fake_role, "timestamp")
-        ]
-        assert test_tuf_management._sign.calls == [
-            pretend.call(fake_role, "timestamp")
-        ]
-        assert test_tuf_management._add_payload.calls == [
-            pretend.call(fake_role, "timestamp")
-        ]
-
-    def test__update_snapshot(self, test_tuf_management: TUFManagement):
-        targets_meta: List[Tuple[str, int]] = [("targets", 2), ("bins", 3)]
-        fake_role = pretend.stub(
-            signed=pretend.stub(
-                meta={"targets.json": None, "bins.json": None}, version=2
-            ),
-        )
-        test_tuf_management._load = pretend.call_recorder(lambda *a: fake_role)
-        tuf.MetaFile = pretend.call_recorder(lambda **kwargs: "")
-        test_tuf_management._bump_expiry = pretend.call_recorder(
-            lambda *a: None
-        )
-        test_tuf_management._bump_version = pretend.call_recorder(
-            lambda *a: None
-        )
-        test_tuf_management._sign = pretend.call_recorder(lambda *a: None)
-        test_tuf_management._add_payload = pretend.call_recorder(
-            lambda *a: None
-        )
-
-        result = test_tuf_management._update_snapshot(targets_meta)
-        assert result == 2
-        assert fake_role.signed.meta["targets.json"] == ""
-        assert fake_role.signed.meta["bins.json"] == ""
-        assert test_tuf_management._load.calls == [pretend.call("snapshot")]
-        assert tuf.MetaFile.calls == [
-            pretend.call(version=2),
-            pretend.call(version=3),
-        ]
-        assert test_tuf_management._bump_expiry.calls == [
-            pretend.call(fake_role, "snapshot")
-        ]
-        assert test_tuf_management._bump_version.calls == [
-            pretend.call(fake_role)
-        ]
-        assert test_tuf_management._sign.calls == [
-            pretend.call(fake_role, "snapshot")
-        ]
-        assert test_tuf_management._add_payload.calls == [
-            pretend.call(fake_role, "snapshot")
-        ]
-
-    def test__validate_all_roles_payload_exist(
+    def test__validate_root_payload_exist(
         self, test_tuf_management: TUFManagement
     ):
-        metadata = Metadata(Root())
-        targets_md = Metadata(
-            Targets(
-                delegations=Delegations(
-                    keys={}, succinct_roles=SuccinctRoles([], 1, 1, "bin")
-                )
-            )
-        )
-        load_mock = unittest.mock.Mock()
-        # load will be called in this order:
-        # root -> targets -> bin-0 -> bin-1 -> snapshot -> timestamp
-        load_mock.side_effect = [
-            metadata,
-            targets_md,
-            metadata,
-            metadata,
-            metadata,
-            metadata,
-        ]
-        test_tuf_management._load = load_mock
-        test_tuf_management._validate_all_roles_payload_exist()
+        root_md = Metadata(Root())
+        test_tuf_management._load = pretend.call_recorder(lambda *a: root_md)
+        result = test_tuf_management._validate_root_payload_exist()
 
-        load_mock.assert_has_calls(
-            [
-                unittest.mock.call("root"),
-                unittest.mock.call("targets"),
-                unittest.mock.call("bin-0"),
-                unittest.mock.call("bin-1"),
-                unittest.mock.call("snapshot"),
-                unittest.mock.call("timestamp"),
-            ]
-        )
+        assert result is None
+        assert test_tuf_management._load.calls == [pretend.call("root")]
 
-    def test__validate_all_roles_payload_exist_load_raises(
+    def test__validate_root_payload_exist_exist_load_raises(
         self, test_tuf_management: TUFManagement
     ):
         test_tuf_management._load = pretend.raiser(ValueError())
 
         with pytest.raises(ValueError) as err:
-            test_tuf_management._validate_all_roles_payload_exist()
+            test_tuf_management._validate_root_payload_exist()
 
-        assert "root is not initialized" in str(err)
+        assert "Root is not initialized" in str(err)
 
-    def test__validate_all_roles_payload_exist_role_not_metadata_type(
+    def test__validate_root_payload_exist_role_not_metadata_type(
         self, test_tuf_management: TUFManagement
     ):
         test_tuf_management._load = pretend.call_recorder(lambda *a: "")
 
         with pytest.raises(ValueError) as err:
-            test_tuf_management._validate_all_roles_payload_exist()
+            test_tuf_management._validate_root_payload_exist()
 
-        assert "root is not initialized" in str(err)
+        assert "Root is not initialized" in str(err)
         assert test_tuf_management._load.calls == [pretend.call("root")]
-
-    def test__setup_targets_and_delegated_md(
-        self, test_tuf_management: TUFManagement
-    ):
-        bins = ["bin-0", "bin-1"]
-        fake_succinct_roles = pretend.stub(
-            get_roles=pretend.call_recorder(lambda *a: bins),
-            keyids=["targets_keyid"],
-        )
-        test_tuf_management.setup.services.number_of_delegated_bins = 2
-        tuf.SuccinctRoles = pretend.call_recorder(
-            lambda *a: fake_succinct_roles
-        )
-        fake_delegation = pretend.stub(succinct_roles=fake_succinct_roles)
-        tuf.Delegations = pretend.call_recorder(
-            lambda **kwargs: fake_delegation
-        )
-        fake_targets_md = pretend.stub(
-            signed=pretend.stub(
-                delegations=None,
-                version=1,
-                add_key=pretend.call_recorder(lambda *a: None),
-            ),
-            signatures={"targets_keyid": "targets_sig"},
-        )
-        test_tuf_management._load = pretend.call_recorder(
-            lambda *a: fake_targets_md
-        )
-        signer = [pretend.stub(key_dict="key_dict")]
-
-        test_tuf_management._signers = pretend.call_recorder(lambda *a: signer)
-        tuf.Key = pretend.stub(
-            from_securesystemslib_key=pretend.call_recorder(lambda *a: "key")
-        )
-
-        bins_hash_role = pretend.stub(signed=pretend.stub(version=2))
-        fake_targets = pretend.stub()
-        tuf.Targets = pretend.call_recorder(lambda: fake_targets)
-        tuf.Targets.type = "targets"
-        tuf.Metadata = pretend.call_recorder(lambda *a: bins_hash_role)
-        test_tuf_management._bump_expiry = pretend.call_recorder(
-            lambda *a: None
-        )
-        test_tuf_management._bump_version = pretend.call_recorder(
-            lambda *a: None
-        )
-        test_tuf_management._sign = pretend.call_recorder(lambda *a: None)
-        test_tuf_management._add_payload = pretend.call_recorder(
-            lambda *a: None
-        )
-
-        result = test_tuf_management._setup_targets_and_delegated_md()
-        assert result == [("bin-0", 2), ("bin-1", 2), ("targets", 1)]
-        assert test_tuf_management._load.calls == [pretend.call("targets")]
-        assert tuf.SuccinctRoles.calls == [pretend.call([], 1, 1, "bins")]
-        assert fake_targets_md.signed.delegations == fake_delegation
-        assert tuf.Delegations.calls == [
-            pretend.call(keys={}, succinct_roles=fake_succinct_roles)
-        ]
-        assert fake_succinct_roles.get_roles.calls == [pretend.call()]
-        assert test_tuf_management._signers.calls == [
-            pretend.call(Roles.BINS),
-            pretend.call(Roles.BINS),
-        ]
-        assert fake_targets_md.signed.add_key.calls == [
-            pretend.call("key", "bin-0"),
-            pretend.call("key", "bin-1"),
-        ]
-        assert tuf.Key.from_securesystemslib_key.calls == [
-            pretend.call("key_dict"),
-            pretend.call("key_dict"),
-        ]
-        assert tuf.Metadata.calls == [
-            pretend.call(fake_targets),
-            pretend.call(fake_targets),
-        ]
-        assert test_tuf_management._bump_expiry.calls == [
-            pretend.call(bins_hash_role, "bins"),
-            pretend.call(bins_hash_role, "bins"),
-            pretend.call(fake_targets_md, "targets"),
-        ]
-        assert test_tuf_management._sign.calls == [
-            pretend.call(bins_hash_role, "bins"),
-            pretend.call(bins_hash_role, "bins"),
-            pretend.call(fake_targets_md, "targets"),
-        ]
-        assert test_tuf_management._add_payload.calls == [
-            pretend.call(bins_hash_role, "bin-0"),
-            pretend.call(bins_hash_role, "bin-1"),
-            pretend.call(fake_targets_md, "targets"),
-        ]
-        assert test_tuf_management._bump_version.calls == [
-            pretend.call(fake_targets_md)
-        ]
-
-    def test__setup_targets_and_delegated_md_bins_lots_of_keys(
-        self, test_tuf_management: TUFManagement
-    ):
-        bins = ["bin-0", "bin-1"]
-        fake_succinct_roles = pretend.stub(
-            get_roles=pretend.call_recorder(lambda *a: bins),
-        )
-        test_tuf_management.setup.services.number_of_delegated_bins = 2
-        tuf.SuccinctRoles = pretend.call_recorder(
-            lambda *a: fake_succinct_roles
-        )
-        fake_delegation = pretend.stub(succinct_roles=fake_succinct_roles)
-        tuf.Delegations = pretend.call_recorder(
-            lambda **kwargs: fake_delegation
-        )
-        fake_targets_md = pretend.stub(
-            signed=pretend.stub(
-                delegations=None,
-            ),
-            signatures={"keyid": "targets_sig"},
-        )
-        test_tuf_management._load = pretend.call_recorder(
-            lambda *a: fake_targets_md
-        )
-        signers = [
-            pretend.stub(key_dict="key_dict1"),
-            pretend.stub(key_dict="key_dict2"),
-        ]
-
-        test_tuf_management._signers = pretend.call_recorder(
-            lambda *a: signers
-        )
-
-        with pytest.raises(ValueError) as err:
-            test_tuf_management._setup_targets_and_delegated_md()
-
-        assert "BINS role must use exactly one online key" in str(err)
-        assert test_tuf_management._load.calls == [pretend.call("targets")]
-        assert tuf.SuccinctRoles.calls == [pretend.call([], 1, 1, "bins")]
-        assert fake_targets_md.signed.delegations == fake_delegation
-        assert tuf.Delegations.calls == [
-            pretend.call(keys={}, succinct_roles=fake_succinct_roles)
-        ]
-        assert fake_succinct_roles.get_roles.calls == [pretend.call()]
-        assert test_tuf_management._signers.calls == [
-            pretend.call(Roles.BINS),
-        ]
-
-    def test__setup_targets_and_delegated_md_wrong_key_for_bins(
-        self, test_tuf_management: TUFManagement
-    ):
-        bins = ["bin-0", "bin-1"]
-        fake_succinct_roles = pretend.stub(
-            get_roles=pretend.call_recorder(lambda *a: bins),
-            keyids=["other_keyid"],
-        )
-        test_tuf_management.setup.services.number_of_delegated_bins = 2
-        tuf.SuccinctRoles = pretend.call_recorder(
-            lambda *a: fake_succinct_roles
-        )
-        fake_delegation = pretend.stub(succinct_roles=fake_succinct_roles)
-        tuf.Delegations = pretend.call_recorder(
-            lambda **kwargs: fake_delegation
-        )
-        fake_targets_md = pretend.stub(
-            signed=pretend.stub(
-                delegations=None,
-                add_key=pretend.call_recorder(lambda *a: None),
-            ),
-            signatures={"keyid": "targets_sig"},
-        )
-        test_tuf_management._load = pretend.call_recorder(
-            lambda *a: fake_targets_md
-        )
-        signer = [pretend.stub(key_dict="key_dict")]
-
-        test_tuf_management._signers = pretend.call_recorder(lambda *a: signer)
-        tuf.Key = pretend.stub(
-            from_securesystemslib_key=pretend.call_recorder(lambda *a: "key")
-        )
-
-        with pytest.raises(ValueError) as err:
-            test_tuf_management._setup_targets_and_delegated_md()
-
-        assert "BINS key id must be the same as the targets key id" in str(err)
-        assert test_tuf_management._load.calls == [pretend.call("targets")]
-        assert tuf.SuccinctRoles.calls == [pretend.call([], 1, 1, "bins")]
-        assert fake_targets_md.signed.delegations == fake_delegation
-        assert tuf.Delegations.calls == [
-            pretend.call(keys={}, succinct_roles=fake_succinct_roles)
-        ]
-        assert fake_succinct_roles.get_roles.calls == [pretend.call()]
-        assert test_tuf_management._signers.calls == [
-            pretend.call(Roles.BINS),
-        ]
-        assert fake_targets_md.signed.add_key.calls == [
-            pretend.call("key", "bin-0"),
-        ]
-        assert tuf.Key.from_securesystemslib_key.calls == [
-            pretend.call("key_dict"),
-        ]
 
     def test__verify_correct_keys_usage(
         self, test_tuf_management: TUFManagement
@@ -555,27 +252,13 @@ class TestTUFHelper:
     def test__prepare_top_level_md_and_add_to_payload(
         self, test_tuf_management: TUFManagement
     ):
-        fake_targets = pretend.stub(signed=pretend.stub(type="targets"))
-        fake_snapshot = pretend.stub(signed=pretend.stub(type="snapshot"))
-        fake_timestamp = pretend.stub(signed=pretend.stub(type="timestamp"))
         fake_root = pretend.stub(
             signed=pretend.stub(
                 type="root", add_key=pretend.call_recorder(lambda *a: None)
             ),
         )
-        tuf.Targets = pretend.call_recorder(lambda: fake_targets)
-        tuf.Snapshot = pretend.call_recorder(lambda: fake_snapshot)
-        tuf.Timestamp = pretend.call_recorder(lambda: fake_timestamp)
-        tuf.Root = pretend.call_recorder(lambda **kwargs: fake_root)
-
-        mock_md_creation = unittest.mock.Mock()
-        mock_md_creation.side_effect = [
-            fake_targets,
-            fake_snapshot,
-            fake_timestamp,
-            fake_root,
-        ]
-        tuf.Metadata = mock_md_creation
+        tuf.Root = pretend.call_recorder(lambda **kwargs: fake_root.signed)
+        tuf.Metadata = pretend.call_recorder(lambda *a: fake_root)
 
         test_tuf_management._verify_correct_keys_usage = pretend.call_recorder(
             lambda *a: None
@@ -589,38 +272,21 @@ class TestTUFHelper:
         )
         add_key_args = [("key1", "role1"), ("key2", "role2")]
 
-        test_tuf_management._prepare_top_level_md_and_add_to_payload(
+        test_tuf_management._prepare_root_and_add_it_to_payload(
             {}, add_key_args
         )
-        assert tuf.Targets.calls == [pretend.call()]
-        assert tuf.Snapshot.calls == [pretend.call()]
-        assert tuf.Timestamp.calls == [pretend.call()]
         assert tuf.Root.calls == [pretend.call(roles={})]
-        assert tuf.Metadata.call_args_list == [
-            unittest.mock.call(fake_targets),
-            unittest.mock.call(fake_snapshot),
-            unittest.mock.call(fake_timestamp),
-            unittest.mock.call(fake_root),
-        ]
+        assert tuf.Metadata.calls == [pretend.call(fake_root.signed)]
         assert test_tuf_management._verify_correct_keys_usage.calls == [
             pretend.call(fake_root.signed)
         ]
         assert test_tuf_management._bump_expiry.calls == [
-            pretend.call(fake_targets, "targets"),
-            pretend.call(fake_snapshot, "snapshot"),
-            pretend.call(fake_timestamp, "timestamp"),
             pretend.call(fake_root, "root"),
         ]
         assert test_tuf_management._sign.calls == [
-            pretend.call(fake_targets, "targets"),
-            pretend.call(fake_snapshot, "snapshot"),
-            pretend.call(fake_timestamp, "timestamp"),
             pretend.call(fake_root, "root"),
         ]
         assert test_tuf_management._add_payload.calls == [
-            pretend.call(fake_targets, "targets"),
-            pretend.call(fake_snapshot, "snapshot"),
-            pretend.call(fake_timestamp, "timestamp"),
             pretend.call(fake_root, "root"),
         ]
 
@@ -644,19 +310,10 @@ class TestTUFHelper:
         )
 
         tuf.Key.from_securesystemslib_key = key_from_securesystemslib_mock
-        test_tuf_management._prepare_top_level_md_and_add_to_payload = (
+        test_tuf_management._prepare_root_and_add_it_to_payload = (
             pretend.call_recorder(lambda *a: None)
         )
-        test_tuf_management._setup_targets_and_delegated_md = (
-            pretend.call_recorder(lambda *a: [])
-        )
-        test_tuf_management._update_snapshot = pretend.call_recorder(
-            lambda *a: None
-        )
-        test_tuf_management._update_timestamp = pretend.call_recorder(
-            lambda *a: None
-        )
-        test_tuf_management._validate_all_roles_payload_exist = (
+        test_tuf_management._validate_root_payload_exist = (
             pretend.call_recorder(lambda *a: None)
         )
         result = test_tuf_management.initialize_metadata()
@@ -689,17 +346,10 @@ class TestTUFHelper:
             ("targets_key", "targets"),
         ]
         assert (
-            test_tuf_management._prepare_top_level_md_and_add_to_payload.calls
+            test_tuf_management._prepare_root_and_add_it_to_payload.calls
             == [pretend.call(expected_roles, expected_add_key_args)]
         )
-        assert test_tuf_management._setup_targets_and_delegated_md.calls == [
-            pretend.call()
-        ]
-        assert test_tuf_management._update_snapshot.calls == [pretend.call([])]
-        assert test_tuf_management._update_timestamp.calls == [
-            pretend.call(None)
-        ]
-        assert test_tuf_management._validate_all_roles_payload_exist.calls == [
+        assert test_tuf_management._validate_root_payload_exist.calls == [
             pretend.call()
         ]
 
