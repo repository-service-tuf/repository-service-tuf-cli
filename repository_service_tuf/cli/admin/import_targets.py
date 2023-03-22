@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any, Dict, List
 
 from rich.console import Console
+from tuf.api.metadata import Delegations, SuccinctRoles, Targets
 
 from repository_service_tuf.cli import click
 from repository_service_tuf.cli.admin import admin
@@ -14,12 +15,7 @@ from repository_service_tuf.helpers.api_client import (
     request_server,
     task_status,
 )
-from repository_service_tuf.helpers.tuf import (
-    Delegations,
-    Metadata,
-    SuccinctRoles,
-    Targets,
-)
+from repository_service_tuf.helpers.tuf import Metadata
 
 console = Console()
 
