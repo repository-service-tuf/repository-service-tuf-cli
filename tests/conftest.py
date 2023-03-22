@@ -4,6 +4,7 @@
 
 import os
 from tempfile import TemporaryDirectory
+from typing import Any, Dict, List, Tuple
 
 import pytest  # type: ignore
 from click.testing import CliRunner  # type: ignore
@@ -14,24 +15,25 @@ from repository_service_tuf.helpers.tuf import (
     Roles,
     RSTUFKey,
     ServiceSettings,
+    TUFManagement,
 )
 
 
 @pytest.fixture
-def test_context():
+def test_context() -> Dict[str, Any]:
     setting_file = os.path.join(TemporaryDirectory().name, "test_settings.ini")
     test_settings = Dynaconf(settings_files=[setting_file])
     return {"settings": test_settings, "config": setting_file}
 
 
 @pytest.fixture
-def client():
+def client() -> CliRunner:
     runner = CliRunner()
     return runner
 
 
 @pytest.fixture
-def test_setup():
+def test_setup() -> BootstrapSetup:
     setup = BootstrapSetup(
         expiration={
             Roles.ROOT: 365,
@@ -54,7 +56,12 @@ def test_setup():
 
 
 @pytest.fixture
-def test_inputs():
+def test_tuf_management(test_setup: BootstrapSetup) -> TUFManagement:
+    return TUFManagement(test_setup, False)
+
+
+@pytest.fixture
+def test_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
     input_step1 = [
         "y",  # Do you want more information about roles and responsibilities?  # noqa
         "y",  # Do you want to start the ceremony?
