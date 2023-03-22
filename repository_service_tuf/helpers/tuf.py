@@ -191,61 +191,13 @@ class TUFManagement:
 
         return snapshot.signed.version
 
-    def initialize_metadata(self) -> Dict[str, Metadata]:
+    def _setup_targets_and_delegated_md(self) -> List[Tuple[str, int]]:
         """
-        Creates development TUF top-level role metadata (root, targets,
-        snapshot and timestamp).
+        Setup targets and all hash bin delegated metadata.
         """
-        # Populate public key store, and define trusted signing keys and
-        # required signature thresholds for each top-level role in 'root'.
-        roles: dict[str, Role] = {}
-        add_key_args: list[tuple[Key, str]] = []
-        for role_name in TOP_LEVEL_ROLE_NAMES:
-            if role_name == Roles.ROOT.value:
-                threshold = self.setup.threshold[Roles.ROOT]
-            else:
-                threshold = 1
-
-            signers = self._signers(Roles[role_name.upper()])
-
-            # FIXME: Is this a meaningful check? Should we check more than just
-            # the threshold? And maybe in a different place, e.g. independently
-            # of bootstrapping the metadata, because in production we do not
-            # have access to all top-level role signing keys at the time of
-            # bootstrapping the metadata.
-            if len(signers) < threshold:
-                raise ValueError(
-                    f"not enough keys ({len(signers)}) for "
-                    f"signing threshold '{threshold}'"
-                )
-
-            roles[role_name] = Role([], threshold)
-            for signer in signers:
-                add_key_args.append(
-                    (Key.from_securesystemslib_key(signer.key_dict), role_name)
-                )
-
-        # Add signature wrapper, bump expiration, and sign and persist
-        for role in [Targets, Snapshot, Timestamp, Root]:
-            # Bootstrap default top-level metadata to be updated below if
-            # necessary.
-            if role is Root:
-                metadata = Metadata(Root(roles=roles))
-                root = metadata.signed
-                for arg in add_key_args:
-                    root.add_key(arg[0], arg[1])
-
-            else:
-                metadata = Metadata(role())
-
-            metadata_type = metadata.signed.type
-            self._bump_expiry(metadata, metadata_type)
-            self._sign(metadata, metadata_type)
-            self._add_payload(metadata, metadata_type)
-
         # Track names and versions of new and updated targets for 'snapshot'
         # update
-        targets_meta = []
+        targets_meta:  List[Tuple[str, int]] = []
 
         # Update top-level 'targets' role, to delegate trust for all target
         # files to 'bin-n' roles based on file path hash prefixes, a.k.a hash
@@ -283,6 +235,69 @@ class TUFManagement:
         self._add_payload(targets, Targets.type)
 
         targets_meta.append((Targets.type, targets.signed.version))
+        return targets_meta
+
+    def _prepare_top_level_md_and_add_to_payload(
+        self, roles: dict[str, Role], add_key_args: list[tuple[Key, str]]
+    ):
+        """
+        Prepare top level metadata roles and add them to the payload.
+        """
+        # Add signature wrapper, bump expiration, and sign and persist
+        for role in [Targets, Snapshot, Timestamp, Root]:
+            # Bootstrap default top-level metadata to be updated below if
+            # necessary.
+            if role is Root:
+                metadata = Metadata(Root(roles=roles))
+                root = metadata.signed
+                for arg in add_key_args:
+                    root.add_key(arg[0], arg[1])
+
+            else:
+                metadata = Metadata(role())
+
+            metadata_type = metadata.signed.type
+            self._bump_expiry(metadata, metadata_type)
+            self._sign(metadata, metadata_type)
+            self._add_payload(metadata, metadata_type)
+
+    def initialize_metadata(self) -> Dict[str, Metadata]:
+        """
+        Creates development TUF top-level role metadata (root, targets,
+        snapshot and timestamp).
+        """
+        # Populate public key store, and define trusted signing keys and
+        # required signature thresholds for each top-level role in 'root'.
+        roles: dict[str, Role] = {}
+        add_key_args: list[tuple[Key, str]] = []
+        for role_name in ["root", "timestamp", "snapshot", "targets"]:
+            if role_name == Roles.ROOT.value:
+                threshold = self.setup.threshold[Roles.ROOT]
+            else:
+                threshold = 1
+
+            signers = self._signers(Roles[role_name.upper()])
+
+            # FIXME: Is this a meaningful check? Should we check more than just
+            # the threshold? And maybe in a different place, e.g. independently
+            # of bootstrapping the metadata, because in production we do not
+            # have access to all top-level role signing keys at the time of
+            # bootstrapping the metadata.
+            if len(signers) < threshold:
+                raise ValueError(
+                    f"not enough keys ({len(signers)}) for "
+                    f"signing threshold '{threshold}'"
+                )
+
+            roles[role_name] = Role([], threshold)
+            for signer in signers:
+                add_key_args.append(
+                    (Key.from_securesystemslib_key(signer.key_dict), role_name)
+                )
+
+        self._prepare_top_level_md_and_add_to_payload(roles, add_key_args)
+
+        targets_meta = self._setup_targets_and_delegated_md()
 
         self._update_timestamp(self._update_snapshot(targets_meta))
 
