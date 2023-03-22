@@ -11,7 +11,6 @@ from typing import Dict, List, Literal, Optional, Tuple
 from securesystemslib.signer import Signer, SSlibSigner  # type: ignore
 from tuf.api.metadata import (
     SPECIFICATION_VERSION,
-    TOP_LEVEL_ROLE_NAMES,
     Delegations,
     Key,
     Metadata,
@@ -191,13 +190,34 @@ class TUFManagement:
 
         return snapshot.signed.version
 
+    def _validate_all_roles_payload_exist(self):
+        """
+        Validate that all top-level roles and the bins role are initialized.
+        """
+        for role_name in ["root", "targets", "snapshot", "timestamp"]:
+            try:
+                role_md = self._load(role_name)
+                if not isinstance(role_md, Metadata):
+                    raise ValueError()
+
+                if role_name == "targets":
+                    succinct_roles = role_md.signed.delegations.succinct_roles
+                    # Load all bins and verify their type
+                    for bin in succinct_roles.get_roles():
+                        bin_md = self._load(bin)
+                        if not isinstance(bin_md, Metadata):
+                            raise ValueError()
+
+            except ValueError as err:
+                raise ValueError(f"{role_name} is not initialized") from err
+
     def _setup_targets_and_delegated_md(self) -> List[Tuple[str, int]]:
         """
         Setup targets and all hash bin delegated metadata.
         """
         # Track names and versions of new and updated targets for 'snapshot'
         # update
-        targets_meta:  List[Tuple[str, int]] = []
+        targets_meta: List[Tuple[str, int]] = []
 
         # Update top-level 'targets' role, to delegate trust for all target
         # files to 'bin-n' roles based on file path hash prefixes, a.k.a hash
@@ -214,12 +234,23 @@ class TUFManagement:
             keys={}, succinct_roles=succinct_roles
         )
 
+        # That's the way to get targets keyid as targets.signatures is a dict.
+        targets_keyid = list(targets.signatures.keys())[0]
         for delegated_name in succinct_roles.get_roles():
-            for signer in self._signers(Roles.BINS):
-                targets.signed.add_key(
-                    Key.from_securesystemslib_key(signer.key_dict),
-                    delegated_name,
+            bin_signers = self._signers(Roles.BINS)
+            if len(bin_signers) != 1:
+                raise ValueError("BINS role must use exactly one online key")
+
+            targets.signed.add_key(
+                Key.from_securesystemslib_key(bin_signers[0].key_dict),
+                delegated_name,
+            )
+            bin_keyid = targets.signed.delegations.succinct_roles.keyids[0]
+            if bin_keyid != targets_keyid:
+                raise ValueError(
+                    "BINS key id must be the same as the targets key id"
                 )
+
             bins_hash_role = Metadata(Targets())
             self._bump_expiry(bins_hash_role, BINS)
             self._sign(bins_hash_role, BINS)
@@ -237,6 +268,25 @@ class TUFManagement:
         targets_meta.append((Targets.type, targets.signed.version))
         return targets_meta
 
+    def _verify_correct_keys_usage(self, root: Root):
+        """
+        Verify that all top-level roles share the same online key except root.
+        """
+        # We consider the timestamp key as the online key to compare against
+        timestamp_keyid: str = root.roles["timestamp"].keyids[0]
+        for role in ["timestamp", "snapshot", "targets"]:
+            if len(root.roles[role].keyids) != 1:
+                raise ValueError(f"Expected exactly one online key for {role}")
+
+            role_keyid = root.roles[role].keyids[0]
+            if role_keyid != timestamp_keyid:
+                raise ValueError(
+                    f"{role} keyid must be equal to the one used in timestamp"
+                )
+
+        if timestamp_keyid in root.roles["root"].keyids:
+            raise ValueError("Root must not use the same key as timestamp")
+
     def _prepare_top_level_md_and_add_to_payload(
         self, roles: dict[str, Role], add_key_args: list[tuple[Key, str]]
     ):
@@ -253,6 +303,7 @@ class TUFManagement:
                 for arg in add_key_args:
                     root.add_key(arg[0], arg[1])
 
+                self._verify_correct_keys_usage(root)
             else:
                 metadata = Metadata(role())
 
@@ -300,5 +351,6 @@ class TUFManagement:
         targets_meta = self._setup_targets_and_delegated_md()
 
         self._update_timestamp(self._update_snapshot(targets_meta))
+        self._validate_all_roles_payload_exist()
 
         return self.repository_metadata

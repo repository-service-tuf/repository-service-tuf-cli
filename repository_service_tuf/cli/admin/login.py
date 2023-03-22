@@ -21,7 +21,6 @@ console = Console()
 
 
 def _login(server: str, data: Dict[str, str]):
-
     token_response = request_server(
         server, URL.token.value, Methods.post, data=data
     )
