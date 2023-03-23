@@ -34,7 +34,6 @@ class TestTUFHelper:
         # that we want to load and the third string is the expected result.
         positive_test_cases: List[Tuple[List[str], str, str]] = [
             (["1.root", "10.root", "3.root"], "root", "10.root"),
-            (["timestamp"], "timestamp", "timestamp"),
         ]
         for files, role_name, expected in positive_test_cases:
             test_tuf_management.repository_metadata = self._setup_load(files)
@@ -44,7 +43,6 @@ class TestTUFHelper:
 
         # The first list are the existing file names, the second is the role.
         negative_test_cases: Tuple[List[str], str] = [
-            (["root"], "timestamp"),
             (["root"], "root"),
             (["0.root"], "root"),
             (["-1.root"], "root"),

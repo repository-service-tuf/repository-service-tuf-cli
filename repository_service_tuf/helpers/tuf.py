@@ -79,31 +79,25 @@ class TUFManagement:
         Loads latest version of metadata for rolename from metadata_repository
         dict
         """
-        if role_name == Timestamp.type:
-            filename = f"{role_name}"
+        filenames = [
+            filename
+            for filename in self.repository_metadata
+            if role_name in filename
+        ]
 
-            if filename not in self.repository_metadata:
-                raise ValueError("Timestamp is not initialized")
-        else:
-            filenames = [
-                filename
-                for filename in self.repository_metadata
-                if role_name in filename
-            ]
+        if len(filenames) < 1:
+            raise ValueError(f"No filename found for {role_name}")
 
-            if len(filenames) < 1:
-                raise ValueError(f"No filename found for {role_name}")
+        versions = [
+            int(name.split("/")[-1].split(".", 1)[0]) for name in filenames
+        ]
 
-            versions = [
-                int(name.split("/")[-1].split(".", 1)[0]) for name in filenames
-            ]
+        version = max(versions)
 
-            version = max(versions)
+        if version < 1:
+            raise ValueError("Metadata version must be at least 1")
 
-            if version < 1:
-                raise ValueError("Metadata version must be at least 1")
-
-            filename = f"{version}.{role_name}"
+        filename = f"{version}.{role_name}"
 
         return self.repository_metadata[filename]
 
