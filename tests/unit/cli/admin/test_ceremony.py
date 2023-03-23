@@ -6,6 +6,7 @@ import pretend  # type: ignore
 import pytest
 
 from repository_service_tuf.cli.admin import ceremony
+from repository_service_tuf.constants import KeyType
 
 
 class TestCeremonyFunctions:
@@ -36,10 +37,12 @@ class TestCeremonyFunctions:
             pretend.call_recorder(lambda *a: {"keyid": "ema"}),
         )
 
-        result = ceremony._load_key("/p/key", ceremony.KEY_TYPE_ED25519, "pwd")
+        result = ceremony._load_key(
+            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd"
+        )
         assert result == ceremony.RSTUFKey({"keyid": "ema"}, "/p/key", None)
         assert ceremony.import_privatekey_from_file.calls == [
-            pretend.call("/p/key", ceremony.KEY_TYPE_ED25519, "pwd")
+            pretend.call("/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd")
         ]
 
     def test__load_key_CryptoError(self, monkeypatch):
@@ -49,7 +52,9 @@ class TestCeremonyFunctions:
             pretend.raiser(ceremony.CryptoError("wrong password")),
         )
 
-        result = ceremony._load_key("/p/key", ceremony.KEY_TYPE_ED25519, "pwd")
+        result = ceremony._load_key(
+            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd"
+        )
         assert result == ceremony.RSTUFKey(
             {},
             None,
@@ -65,7 +70,9 @@ class TestCeremonyFunctions:
             "import_privatekey_from_file",
             pretend.raiser(OSError("permission denied")),
         )
-        result = ceremony._load_key("/p/key", ceremony.KEY_TYPE_ED25519, "pwd")
+        result = ceremony._load_key(
+            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd"
+        )
         assert result == ceremony.RSTUFKey(
             {}, None, error=":cross_mark: [red]Failed[/]: permission denied"
         )
