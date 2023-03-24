@@ -637,7 +637,8 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
 
     # STEP 3: load the root keys
     console.print(markdown.Markdown(STEP_3), width=100)
-    for key in _configure_keys(role.value, setup.number_of_keys[Roles.ROOT]):
+    root = Roles.ROOT.value
+    for key in _configure_keys(root, setup.number_of_keys[Roles.ROOT]):
         setup.root_keys.append(key)
 
     # STEP 4: user validation
