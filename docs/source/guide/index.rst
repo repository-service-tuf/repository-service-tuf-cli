@@ -191,11 +191,11 @@ Step 1: Configure the Roles
 4. timestamp ``expiration``
 5. bins ``expiration``
 
-- ``expiration`` is the number of days in which the Metadata will expire
-- ``number of keys`` Metadata will have
-- ``threshold`` is the number of keys needed to sign the Metadata
+- ``expiration`` is the number of days in which the metadata will expire
+- ``number of keys`` the metadata will have
+- ``threshold`` is the number of keys needed to sign the metadata
 - ``base URL`` for the artifacts, example: http://www.example.com/download/
-- ``number of delegated hash bins`` is the number of hash bins roles, How many
+- ``number of delegated hash bins`` is the number of hash bin roles, How many
   delegated roles (``bins-X``) will it create?
 
 Step 2: Load the Online Key
@@ -233,9 +233,9 @@ Step 2: Load the Online Key
 Step 3: Load Root Keys
 ......................
 
-It is essential to define the Key Owners. There is a suggestion in the CLI.
+It is essential to define the key owners. There is a suggestion in the CLI.
 
-The owners will need to be present to share the key and use their password to
+The owners will need to be present to share their keys and use their passwords to
 load the keys.
 
 .. code::
