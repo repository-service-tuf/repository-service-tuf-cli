@@ -112,7 +112,7 @@ You can do the Ceremony offline. This means on a disconnected computer
     │ --file       -f  TEXT  Generate specific JSON Payload compatible with TUF Repository Service bootstrap after Ceremony            │
     │                        [default: payload.json]                                                                                   │
     │ --upload     -u        Upload existent payload 'file'. Requires '-b/--bootstrap'. Optional '-f/--file' to use non default file.  │
-    │ --save       -s        Save a copy of the metadata locally. This option saves the metadata files (json) in the 'metadata' folder │
+    │ --save       -s        Save a copy of the metadata locally. This option saves the JSON metadata files in the 'metadata' folder   │
     │                        in the current directory.                                                                                 │
     │ --help       -h        Show this message and exit.                                                                               │
     ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
@@ -236,7 +236,7 @@ Step 3: Load Root Keys
 It is essential to define the key owners. There is a suggestion in the CLI.
 
 The owners will need to be present to insert their keys and use their passwords
-to load the keys.
+to load their keys.
 
 .. code::
 
