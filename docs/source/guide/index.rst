@@ -235,7 +235,7 @@ Step 3: Load Root Keys
 
 It is essential to define the key owners. There is a suggestion in the CLI.
 
-The owners will need to be present to insert their keys and use their passwords
+The owners will need to be present to insert their keys and passwords
 to load their keys.
 
 .. code::
