@@ -235,8 +235,8 @@ Step 3: Load Root Keys
 
 It is essential to define the key owners. There is a suggestion in the CLI.
 
-The owners will need to be present to share their keys and use their passwords to
-load the keys.
+The owners will need to be present to insert their keys and use their passwords
+to load the keys.
 
 .. code::
 
@@ -249,7 +249,7 @@ load the keys.
 
     The keys must have a password, and the file must be accessible.
 
-    Depending on the organization, each key has an owner, and each owner should insert the password
+    Depending on the organization, each key has an owner, and each owner should insert their password
     personally.
 
     Note: the ceremony process won't show any password or key content.
@@ -372,7 +372,7 @@ Using another computer with access to ``repository-service-tuf-api``
 
   1.  Get the generated ``payload.json`` (or the custom name you chose)
   2.  Install ``repository-service-tuf``
-  3.  Run ``rstuf admin ceremony -b [-u filename]``
+  3.  Run ``rstuf admin ceremony -b -u [-f filename]``
 
 Token (``token``)
 -----------------
