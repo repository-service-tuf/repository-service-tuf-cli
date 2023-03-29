@@ -178,7 +178,7 @@ STEP_3 = """
 The keys must have a password, and the file must be accessible.
 
 Depending on the organization, each key has an owner, and each owner should
-insert the password personally.
+insert their password personally.
 
 Note: the ceremony process won't show any password or key content.
 """
@@ -713,8 +713,8 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     "-s",
     "--save",
     help=(
-        "Save a copy of the metadata locally. This option saves the metadata "
-        "files (json) in the 'metadata' folder in the current directory."
+        "Save a copy of the metadata locally. This option saves the JSON "
+        "metadata files in the 'metadata' folder in the current directory."
     ),
     default=False,
     show_default=True,
