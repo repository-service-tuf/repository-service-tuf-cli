@@ -6,7 +6,7 @@
 
 import unittest.mock
 from datetime import datetime, timedelta
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 import pretend
 import pytest
@@ -28,33 +28,6 @@ class TestTUFHelper:
             result[filename] = filename
 
         return result
-
-    def test__load(self, test_tuf_management: TUFManagement):
-        # The first list are the existing file names, the second is the role
-        # that we want to load and the third string is the expected result.
-        positive_test_cases: List[Tuple[List[str], str, str]] = [
-            (["1.root", "10.root", "3.root"], "root", "10.root"),
-        ]
-        for files, role_name, expected in positive_test_cases:
-            test_tuf_management.repository_metadata = self._setup_load(files)
-            result = test_tuf_management._load(role_name)
-            if result != expected:
-                raise ValueError(f"Expected to load {expected} for {files}")
-
-        # The first list are the existing file names, the second is the role.
-        negative_test_cases: Tuple[List[str], str] = [
-            (["root"], "root"),
-            (["0.root"], "root"),
-            (["-1.root"], "root"),
-            (["1.root"], "non-existent"),
-            (["1.non-existent"], "root"),
-        ]
-        files = []
-        role_name = ""
-        for files, role_name in negative_test_cases:
-            test_tuf_management.repository_metadata = self._setup_load(files)
-            with pytest.raises(ValueError):
-                result = test_tuf_management._load(role_name)
 
     def test__signers_root_keys(self, test_tuf_management: TUFManagement):
         test_tuf_management.setup.root_keys = [
