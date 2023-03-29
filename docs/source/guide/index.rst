@@ -117,7 +117,7 @@ You can do the Ceremony offline. This means on a disconnected computer
     │ --help       -h        Show this message and exit.                                                                               │
     ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-There are three steps in the Ceremony.
+There are four steps in the ceremony.
 
 .. note::
 
@@ -264,7 +264,7 @@ to load their keys.
     Enter 2/2 the root`s private key password:
     ✅ Key 2/2 Verified
 
-Step 3: Validate Configuration
+Step 4: Validate Configuration
 ..............................
 
 .. code::
