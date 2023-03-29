@@ -146,13 +146,6 @@ class TestTUFHelper:
         assert fake_role.signed.expires == fake_time + timedelta(days=1)
         assert fake_datetime.now.calls == [pretend.call()]
 
-    def test__bump_version(self, test_tuf_management: TUFManagement):
-        fake_role = pretend.stub(
-            signed=pretend.stub(version=2),
-        )
-        test_tuf_management._bump_version(fake_role)
-        assert fake_role.signed.version == 3
-
     def test__validate_root_payload_exist(
         self, test_tuf_management: TUFManagement
     ):

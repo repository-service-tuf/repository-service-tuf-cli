@@ -147,10 +147,6 @@ class TUFManagement:
             microsecond=0
         ) + timedelta(days=self.setup.expiration[Roles[role_name.upper()]])
 
-    def _bump_version(self, role: Metadata) -> None:
-        """Bumps metadata version by 1."""
-        role.signed.version += 1
-
     def _validate_root_payload_exist(self):
         """
         Validate that root is initialized with a correct information.
