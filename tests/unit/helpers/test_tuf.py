@@ -101,9 +101,9 @@ class TestTUFHelper:
 
     def test__add_payload_root(self, test_tuf_management: TUFManagement):
         test_tuf_management.repository_metadata
-        fake_role = pretend.stub(signed=pretend.stub(version=2))
+        fake_role = pretend.stub()
         test_tuf_management._add_payload(fake_role, "root")
-        assert test_tuf_management.repository_metadata["2.root"] == fake_role
+        assert test_tuf_management.repository_metadata["root"] == fake_role
 
     def test__add_payload_timestamp(self, test_tuf_management: TUFManagement):
         test_tuf_management.repository_metadata
@@ -122,7 +122,7 @@ class TestTUFHelper:
         )
         test_tuf_management.save = True
         test_tuf_management._add_payload(fake_role, "root")
-        assert test_tuf_management.repository_metadata["2.root"] == fake_role
+        assert test_tuf_management.repository_metadata["root"] == fake_role
         assert fake_json_serializer.calls == [pretend.call()]
         assert fake_role.to_file.calls == [
             pretend.call("metadata/2.root.json", None)
@@ -150,17 +150,14 @@ class TestTUFHelper:
         self, test_tuf_management: TUFManagement
     ):
         root_md = Metadata(Root())
-        test_tuf_management._load = pretend.call_recorder(lambda *a: root_md)
+        test_tuf_management.repository_metadata["root"] = root_md
         result = test_tuf_management._validate_root_payload_exist()
 
         assert result is None
-        assert test_tuf_management._load.calls == [pretend.call("root")]
 
-    def test__validate_root_payload_exist_exist_load_raises(
+    def test__validate_root_payload_exist_root_does_not_exist(
         self, test_tuf_management: TUFManagement
     ):
-        test_tuf_management._load = pretend.raiser(ValueError())
-
         with pytest.raises(ValueError) as err:
             test_tuf_management._validate_root_payload_exist()
 
@@ -169,13 +166,12 @@ class TestTUFHelper:
     def test__validate_root_payload_exist_role_not_metadata_type(
         self, test_tuf_management: TUFManagement
     ):
-        test_tuf_management._load = pretend.call_recorder(lambda *a: "")
+        test_tuf_management.repository_metadata["root"] = ""
 
         with pytest.raises(ValueError) as err:
             test_tuf_management._validate_root_payload_exist()
 
         assert "Root is not initialized" in str(err)
-        assert test_tuf_management._load.calls == [pretend.call("root")]
 
     def test__verify_correct_keys_usage(
         self, test_tuf_management: TUFManagement
@@ -261,13 +257,17 @@ class TestTUFHelper:
         test_tuf_management._add_payload = pretend.call_recorder(
             lambda *a: None
         )
-        add_key_args = [("key1", "role1"), ("key2", "role2")]
+        add_key_args = {"role1": ["key1"], "role2": ["key2"]}
 
         test_tuf_management._prepare_root_and_add_it_to_payload(
             {}, add_key_args
         )
         assert tuf.Root.calls == [pretend.call(roles={})]
         assert tuf.Metadata.calls == [pretend.call(fake_root.signed)]
+        assert fake_root.signed.add_key.calls == [
+            pretend.call("key1", "role1"),
+            pretend.call("key2", "role2"),
+        ]
         assert test_tuf_management._verify_correct_keys_usage.calls == [
             pretend.call(fake_root.signed)
         ]
@@ -330,12 +330,12 @@ class TestTUFHelper:
             "snapshot": "role",
             "targets": "role",
         }
-        expected_add_key_args: List[Tuple[str, str]] = [
-            ("root_key", "root"),
-            ("timestamp_key", "timestamp"),
-            ("snapshot_key", "snapshot"),
-            ("targets_key", "targets"),
-        ]
+        expected_add_key_args: Dict[str, List[str]] = {
+            "root": ["root_key"],
+            "timestamp": ["timestamp_key"],
+            "snapshot": ["snapshot_key"],
+            "targets": ["targets_key"],
+        }
         assert (
             test_tuf_management._prepare_root_and_add_it_to_payload.calls
             == [pretend.call(expected_roles, expected_add_key_args)]

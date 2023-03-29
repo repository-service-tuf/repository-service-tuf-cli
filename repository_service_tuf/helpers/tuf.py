@@ -8,14 +8,7 @@ from enum import Enum
 from typing import Dict, List, Literal, Optional
 
 from securesystemslib.signer import Signer, SSlibSigner  # type: ignore
-from tuf.api.metadata import (
-    SPECIFICATION_VERSION,
-    Key,
-    Metadata,
-    Role,
-    Root,
-    Timestamp,
-)
+from tuf.api.metadata import SPECIFICATION_VERSION, Key, Metadata, Role, Root
 from tuf.api.serialization.json import JSONSerializer
 
 SPEC_VERSION: str = ".".join(SPECIFICATION_VERSION)
@@ -42,7 +35,6 @@ class ServiceSettings:
 
 @dataclass
 class RSTUFKey:
-    # Before key was optional. Not sure why.
     key: dict = field(default_factory=dict)
     key_path: Optional[str] = None
     error: Optional[str] = None
@@ -123,15 +115,11 @@ class TUFManagement:
         allowed for top-level roles. All names but 'timestamp' are prefixed
         with a version number.
         """
-        filename = role_name
-
-        if role_name != Timestamp.type:
-            filename = f"{role.signed.version}.{filename}"
-
-        self.repository_metadata[filename] = role
+        self.repository_metadata[role_name] = role
 
         if self.save:
-            role.to_file(f"metadata/{filename}.json", JSONSerializer())
+            ver = role.signed.version
+            role.to_file(f"metadata/{ver}.{role_name}.json", JSONSerializer())
 
     def _bump_expiry(self, role: Metadata, role_name: str) -> None:
         """Bumps metadata expiration date by role-specific interval.
@@ -152,10 +140,10 @@ class TUFManagement:
         Validate that root is initialized with a correct information.
         """
         try:
-            root_md = self._load(Roles.ROOT.value)
+            root_md = self.repository_metadata[Roles.ROOT.value]
             if not isinstance(root_md, Metadata):
                 raise ValueError()
-        except ValueError as err:
+        except (KeyError, ValueError) as err:
             raise ValueError("Root is not initialized") from err
 
     def _verify_correct_keys_usage(self, root: Root):
@@ -178,15 +166,16 @@ class TUFManagement:
             raise ValueError("Root must not use the same key as timestamp")
 
     def _prepare_root_and_add_it_to_payload(
-        self, roles: dict[str, Role], add_key_args: list[tuple[Key, str]]
+        self, roles: dict[str, Role], add_key_args: Dict[str, List[Key]]
     ):
         """
         Prepare root metadata and add it to the payload.
         """
         # Add signature, bump expiration, sign and persist the root role.
         root_metadata = Metadata(Root(roles=roles))
-        for arg in add_key_args:
-            root_metadata.signed.add_key(arg[0], arg[1])
+        for role, keys in add_key_args.items():
+            for key in keys:
+                root_metadata.signed.add_key(key, role)
 
         self._verify_correct_keys_usage(root_metadata.signed)
 
@@ -203,7 +192,7 @@ class TUFManagement:
         # Populate public key store, and define trusted signing keys and
         # required signature thresholds for each top-level role in 'root'.
         roles: dict[str, Role] = {}
-        add_key_args: list[tuple[Key, str]] = []
+        add_key_args: Dict[str, List[Key]] = {}
         for role_name in ["root", "timestamp", "snapshot", "targets"]:
             if role_name == Roles.ROOT.value:
                 threshold = self.setup.threshold[Roles.ROOT]
@@ -222,11 +211,11 @@ class TUFManagement:
                     f"not enough keys ({len(signers)}) for "
                     f"signing threshold '{threshold}'"
                 )
-
+            add_key_args[role_name] = []
             roles[role_name] = Role([], threshold)
             for signer in signers:
-                add_key_args.append(
-                    (Key.from_securesystemslib_key(signer.key_dict), role_name)
+                add_key_args[role_name].append(
+                    Key.from_securesystemslib_key(signer.key_dict)
                 )
 
         self._prepare_root_and_add_it_to_payload(roles, add_key_args)
