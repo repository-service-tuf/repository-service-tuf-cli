@@ -368,6 +368,7 @@ class TestCeremonyInteraction:
 
         test_result = client.invoke(
             ceremony.ceremony,
+            "--save",
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
