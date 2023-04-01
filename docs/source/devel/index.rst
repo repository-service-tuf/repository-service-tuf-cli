@@ -17,5 +17,6 @@ Component level
    repository_service_tuf
    repository_service_tuf.cli
    repository_service_tuf.cli.admin
+   repository_service_tuf.cli.key
    repository_service_tuf.helpers
    modules
