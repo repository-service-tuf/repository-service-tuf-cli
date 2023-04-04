@@ -1,3 +1,4 @@
+
 ==============================
 Repository Service for TUF CLI
 ==============================
@@ -28,6 +29,7 @@ Using pip:
     ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
     ╭─ Commands ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
     │ admin                      Administrative Commands                                                                               │
+    │ key                        Cryptographic Key Commands                                                                            │
     ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 Administration (``admin``)
@@ -542,3 +544,57 @@ See the below CSV file example:
     Import status: task STARTED
     Import status: task SUCCESS
     Import status: Finished.
+
+
+Key Management (``key``)
+========================
+
+.. rstuf-cli-key
+
+It executes commands related to cryptographic key management and may be used
+for managing keys in the Repository Service for TUF.
+
+.. code:: shell
+
+    ❯ rstuf key
+
+    Usage: rstuf key [OPTIONS] COMMAND [ARGS]...
+
+    Cryptographic Key Commands
+
+    ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --help  -h    Show this message and exit.                                                                                        │
+    ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+    ╭─ Commands ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ generate                        Generate cryptographic keys using the `securesystemslib` library                                 │
+    ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+Key Generation (``generate``)
+-----------------------------
+
+.. rstuf-cli-key-generate
+
+This command will generate cryptographic keys using the ``securesystemslib`` library.
+The user is requested to provide:
+
+1. the key type, from the supported list of encryption algorithms
+
+2. the key's filename, whose path will be the current working directory
+
+3. a password, to encrypt the private key file
+
+After the above procedure, two files, the private and public key
+(e.g., ``id_ed25519`` and ``id_ed25519.pub``), will be generated in the current
+working directory.
+
+The generated keys may be used in the Repository Service for TUF Ceremony
+process, for the online key or the TUF roles' keys (``root``, ``targets``, etc. keys).
+
+.. code::
+
+    ❯ rstuf key generate
+
+    Choose key type [ed25519/ecdsa/rsa] (ed25519): ed25519
+    Enter the key's filename: (id_ed25519): id_ed25519
+    Enter password to encrypt private key file 'id_ed25519':
+    Confirm:

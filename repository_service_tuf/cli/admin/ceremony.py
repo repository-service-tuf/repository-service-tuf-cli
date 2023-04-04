@@ -18,14 +18,12 @@ from securesystemslib.exceptions import (  # type: ignore
     StorageError,
 )
 from securesystemslib.interface import (  # type: ignore
-    KEY_TYPE_ECDSA,
-    KEY_TYPE_ED25519,
-    KEY_TYPE_RSA,
     import_privatekey_from_file,
 )
 
 from repository_service_tuf.cli import click
 from repository_service_tuf.cli.admin import admin
+from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.api_client import (
     URL,
     LazySettings,
@@ -443,8 +441,8 @@ def _configure_keys(
     while key_count <= number_of_keys:
         key_type = prompt.Prompt.ask(
             f"\nChoose {key_count}/{number_of_keys} [cyan]{role}[/] key type",
-            choices=[KEY_TYPE_ED25519, KEY_TYPE_ECDSA, KEY_TYPE_RSA],
-            default=KEY_TYPE_ED25519,
+            choices=KeyType.get_all_members(),
+            default=KeyType.KEY_TYPE_ED25519.value,
         )
         filepath = prompt.Prompt.ask(
             f"Enter {key_count}/{number_of_keys} the "
