@@ -159,8 +159,8 @@ class TUFManagement:
 
     def initialize_metadata(self) -> Dict[str, Metadata]:
         """
-        Creates development TUF top-level role metadata (root, targets,
-        snapshot and timestamp).
+        Creates TUF top-level role metadata (root, targets, snapshot and
+        timestamp).
         """
         # Populate public key store, and define trusted signing keys and
         # required signature thresholds for each top-level role in 'root'.
