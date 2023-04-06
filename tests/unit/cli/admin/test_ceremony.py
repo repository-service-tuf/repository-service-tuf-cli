@@ -16,9 +16,7 @@ class TestCeremonyFunctions:
         assert result is False
 
     def test__key_already_in_use_exists_in_role(self, test_setup):
-        test_setup.keys[ceremony.Roles.ROOT] = [
-            ceremony.RSTUFKey(key={"keyid": "ema"})
-        ]
+        test_setup.root_keys = [ceremony.RSTUFKey(key={"keyid": "ema"})]
         ceremony.setup = test_setup
         result = ceremony._key_already_in_use({"keyid": "ema"})
         assert result is True
@@ -425,7 +423,7 @@ class TestCeremonyInteraction:
 
         # overwrite the input_step2
         input_step2 = [
-            "",  # Choose 1/1 ONLINE Key type [ed25519/ecdsa/rsa]
+            "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
             "tests/files/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
             "wrong password",  # Enter 1/1 the ONLINE`s private key password
             "n",  # Try again?

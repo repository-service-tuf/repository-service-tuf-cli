@@ -10,7 +10,6 @@ from repository_service_tuf.cli.admin import login
 
 class TestLoginGroupCLI:
     def test__login(self):
-
         expected_response = {"data": {"k": "v"}}
         login.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
@@ -31,7 +30,6 @@ class TestLoginGroupCLI:
         ]
 
     def test__login_unauthorized(self):
-
         expected_response = {"detail": "Unauthorized."}
         login.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
@@ -81,7 +79,6 @@ class TestLoginGroupCLI:
         ]
 
     def test_login_force(self, client, test_context):
-
         # simulate the settings file
         test_context["settings"].SERVER = "fake-server"
         test_context["settings"].TOKEN = "test-token"
@@ -112,7 +109,6 @@ class TestLoginGroupCLI:
         ]
 
     def test_login_expired_token(self, client, test_context):
-
         # simulate the settings file with invalid/expired token
         test_context["settings"].SERVER = "http://test-rstuf"
         test_context["settings"].TOKEN = "fake-token"
@@ -150,7 +146,6 @@ class TestLoginGroupCLI:
         ]
 
     def test_login_already_logged(self, client, test_context):
-
         # simulate the settings file with invalid/expired token
         test_context["settings"].SERVER = "http://test-rstuf"
         test_context["settings"].TOKEN = "fake-token"
