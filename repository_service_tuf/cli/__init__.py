@@ -6,6 +6,7 @@ import importlib
 import os
 import pkgutil
 import re
+import sys
 from pathlib import Path
 
 import rich_click as click  # type: ignore
@@ -39,13 +40,13 @@ except FileNotFoundError:
     "--config",
     "config",
     default=os.path.join(HOME, ".rstuf.ini"),
-    help="Repository Service for TUF config file",
+    help="Repository Service for TUF config file.",
     required=False,
 )
 @click.option(
     "--no-auth",
     "auth",
-    help="Skips use RSTUF built-in Authentication",
+    help="Skips the use of RSTUF built-in authentication.",
     is_flag=True,
     default=True,
     required=False,
@@ -76,7 +77,14 @@ def rstuf(context, config, auth):
 
 
 # Register all command groups
+groups_required_auth = [
+    "repository_service_tuf.cli.admin.token",
+    "repository_service_tuf.cli.admin.login",
+]
 for _, name, _ in pkgutil.walk_packages(  # type: ignore
     __path__, prefix=__name__ + "."
 ):
-    importlib.import_module(name)
+    if name in groups_required_auth and "--no-auth" in sys.argv:
+        continue
+    else:
+        importlib.import_module(name)

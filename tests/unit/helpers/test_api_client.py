@@ -171,8 +171,6 @@ class TestAPIClient:
         ]
 
     def test_get_headers_no_auth(self, test_context):
-        test_context["settings"].SERVER = "http://server"
-        test_context["settings"].TOKEN = "fake_token"
         test_context["settings"].AUTH = False
         result = api_client.get_headers(test_context["settings"])
 
