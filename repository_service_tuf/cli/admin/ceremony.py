@@ -10,7 +10,6 @@ import os
 from typing import Any, Dict, Generator, Optional
 
 from rich import box, markdown, prompt, table  # type: ignore
-from rich.console import Console  # type: ignore
 from securesystemslib.exceptions import (  # type: ignore
     CryptoError,
     Error,
@@ -21,7 +20,7 @@ from securesystemslib.interface import (  # type: ignore
     import_privatekey_from_file,
 )
 
-from repository_service_tuf.cli import click
+from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.api_client import (
@@ -232,8 +231,6 @@ In this example here is how they will be distributed:
 - "1.bins-5.json" will be responsible for file:
  https://example.com/downloads/productB/updates/servicepack-1.tar
 """
-
-console = Console()
 
 
 # Define all initial settings

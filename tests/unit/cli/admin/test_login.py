@@ -78,6 +78,27 @@ class TestLoginGroupCLI:
             )
         ]
 
+    def test_login_no_auth(self, client, test_context):
+        steps = [
+            "http://test-rstuf",
+            "admin",
+            "pass",
+            "1",
+        ]
+        login._login = pretend.call_recorder(
+            lambda *a: {"access_token": "fake-token"}
+        )
+        test_context["settings"].AUTH = False
+        login.loaders = pretend.stub(
+            write=pretend.call_recorder(lambda *a: None)
+        )
+        test_result = client.invoke(
+            login.login, input="\n".join(steps), obj=test_context
+        )
+
+        assert test_result.exit_code == 0
+        assert login.loaders.write.calls == []
+
     def test_login_force(self, client, test_context):
         # simulate the settings file
         test_context["settings"].SERVER = "fake-server"
@@ -142,7 +163,7 @@ class TestLoginGroupCLI:
             )
         ]
         assert login.is_logged.calls == [
-            pretend.call(test_context["settings"].SERVER, "fake-token")
+            pretend.call(test_context["settings"])
         ]
 
     def test_login_already_logged(self, client, test_context):
@@ -180,7 +201,7 @@ class TestLoginGroupCLI:
             " Valid until '2022-08-23T09:10:14'" in test_result.output
         )
         assert login.is_logged.calls == [
-            pretend.call(test_context["settings"].SERVER, "fake-token")
+            pretend.call(test_context["settings"])
         ]
 
     def test_login_missing_http_protocol(self, client, test_context):

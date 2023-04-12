@@ -6,9 +6,8 @@ from typing import Dict
 
 from dynaconf import loaders
 from rich import markdown, prompt  # type: ignore
-from rich.console import Console  # type: ignore
 
-from repository_service_tuf.cli import click
+from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.helpers.api_client import (
     URL,
@@ -16,8 +15,6 @@ from repository_service_tuf.helpers.api_client import (
     is_logged,
     request_server,
 )
-
-console = Console()
 
 
 def _login(server: str, data: Dict[str, str]):
@@ -117,11 +114,16 @@ def login(context, force, server_, user_, password_, expires_):
     Login to Repository Service for TUF (API).
     """
     settings = context.obj.get("settings")
-    server = settings.get("SERVER")
-    token = settings.get("TOKEN")
 
-    if force is False and server is not None and token is not None:
-        response = is_logged(server, token)
+    if settings.get("AUTH") is False:
+        return None
+
+    elif (
+        force is False
+        and settings.get("SERVER") is not None
+        and settings.get("TOKEN") is not None
+    ):
+        response = is_logged(settings)
         if response.state is False:
             _run_login(context, server_, user_, password_, expires_)
 
@@ -129,7 +131,7 @@ def login(context, force, server_, user_, password_, expires_):
             data = response.data
             if response.data.get("expired") is False:
                 console.print(
-                    f"Already logged to {server}. "
+                    f"Already logged to {settings.get('SERVER')}. "
                     f"Valid until '{data['expiration']}'"
                 )
 

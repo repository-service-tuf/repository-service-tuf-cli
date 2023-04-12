@@ -1,10 +1,7 @@
 # SPDX-FileCopyrightText: 2022-2023 VMware Inc
 #
 # SPDX-License-Identifier: MIT
-
-import click
-from rich.console import Console  # type: ignore
-
+from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.helpers.api_client import (
     URL,
@@ -13,8 +10,6 @@ from repository_service_tuf.helpers.api_client import (
     request_server,
 )
 
-console = Console()
-
 
 @admin.group()
 @click.pass_context
@@ -22,6 +17,10 @@ def token(context):
     """
     Token Management.
     """
+    settings = context.obj.get("settings")
+    if settings.get("AUTH") is False:
+        console.print("[INFO] admin token is disabled with `--no-auth`")
+        raise click.Abort()
 
 
 @token.command()
