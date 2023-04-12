@@ -96,6 +96,4 @@ jobs:
         if: github.repository == 'vmware/repository-service-tuf-cli'
         uses: pypa/gh-action-pypi-publish@0bf742be3ebe032c25dd15117957dc15d0cfc38d
         with:
-          # TODO: Replace secret's name with the repo's one for PyPI (in
-          # Settings -> Security -> Secrets and variables -> Actions)
           password: ${{ secrets.PYPI_API_TOKEN }}
