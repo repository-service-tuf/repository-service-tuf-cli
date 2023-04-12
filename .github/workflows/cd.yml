@@ -84,6 +84,13 @@ jobs:
               name: '${{ github.ref_name }}',
             })
 
+      - name: Publish distribution 📦 to Test PyPI
+        if: github.repository == 'vmware/repository-service-tuf-cli'
+        uses: pypa/gh-action-pypi-publish@0bf742be3ebe032c25dd15117957dc15d0cfc38d
+        with:
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          repository-url: https://test.pypi.org/legacy/
+
       - name: Publish binary wheel and source tarball 📦 on PyPI
         # Only attempt PyPI upload in upstream repository
         if: github.repository == 'vmware/repository-service-tuf-cli'
