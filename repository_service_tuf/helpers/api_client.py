@@ -9,11 +9,8 @@ from typing import Any, Dict, Optional
 import requests
 from dynaconf import LazySettings
 from requests.exceptions import ConnectionError
-from rich.console import Console
 
-from repository_service_tuf.cli import click
-
-console = Console()
+from repository_service_tuf.cli import click, console
 
 
 class URL(Enum):
@@ -62,7 +59,12 @@ def request_server(
     return response
 
 
-def is_logged(server: str, token: str):
+def is_logged(settings: LazySettings):
+    if settings.get("AUTH") is False:
+        return None
+
+    token = settings.get("TOKEN")
+    server = settings.get("SERVER")
     headers = {"Authorization": f"Bearer {token}"}
     url = f"{URL.token.value}?token={token}"
     response = request_server(server, url, Methods.get, headers=headers)
@@ -81,10 +83,13 @@ def is_logged(server: str, token: str):
 
 
 def get_headers(settings: LazySettings) -> Dict[str, str]:
+    if settings.get("AUTH") is False:
+        return {}
+
     server = settings.get("SERVER")
     token = settings.get("TOKEN")
     if server and token:
-        token_access_check = is_logged(server, token)
+        token_access_check = is_logged(settings)
         if token_access_check.state is False:
             raise click.ClickException(
                 f"{str(token_access_check.data)}"

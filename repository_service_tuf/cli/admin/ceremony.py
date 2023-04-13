@@ -10,7 +10,6 @@ import os
 from typing import Any, Dict, Generator, Optional
 
 from rich import box, markdown, prompt, table  # type: ignore
-from rich.console import Console  # type: ignore
 from securesystemslib.exceptions import (  # type: ignore
     CryptoError,
     Error,
@@ -21,7 +20,7 @@ from securesystemslib.interface import (  # type: ignore
     import_privatekey_from_file,
 )
 
-from repository_service_tuf.cli import click
+from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.api_client import (
@@ -232,8 +231,6 @@ In this example here is how they will be distributed:
 - "1.bins-5.json" will be responsible for file:
  https://example.com/downloads/productB/updates/servicepack-1.tar
 """
-
-console = Console()
 
 
 # Define all initial settings
@@ -690,6 +687,12 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     is_flag=True,
 )
 @click.option(
+    "--upload-server",
+    help="[when using '--no-auth'] Upload RSTUF API Server address. ",
+    required=False,
+    hidden=True,
+)
+@click.option(
     "-s",
     "--save",
     help=(
@@ -702,7 +705,12 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
 )
 @click.pass_context
 def ceremony(
-    context: Any, bootstrap: bool, file: str, upload: bool, save: bool
+    context: Any,
+    bootstrap: bool,
+    file: str,
+    upload: bool,
+    save: bool,
+    upload_server: str,
 ) -> None:
     """
     Start a new Metadata Ceremony.
@@ -721,6 +729,14 @@ def ceremony(
 
     # option bootstrap: checks if the server accepts it beforehand
     if bootstrap:
+        if settings.AUTH is False and upload_server is None:
+            raise click.ClickException(
+                "Requires '--upload-server' when using '--no-auth'. "
+                "Example: --upload-server https://rstuf-api.example.com"
+            )
+        else:
+            settings.SERVER = upload_server
+
         bs_status = bootstrap_status(settings)
         if bs_status.get("data", {}).get("bootstrap") is True:
             raise click.ClickException(f"{bs_status.get('message')}")

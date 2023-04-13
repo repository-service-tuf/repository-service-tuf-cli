@@ -3,10 +3,9 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List
 
-from rich.console import Console
 from tuf.api.metadata import Delegations, SuccinctRoles, Targets
 
-from repository_service_tuf.cli import click
+from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.helpers.api_client import (
     Methods,
@@ -16,8 +15,6 @@ from repository_service_tuf.helpers.api_client import (
     task_status,
 )
 from repository_service_tuf.helpers.tuf import Metadata
-
-console = Console()
 
 
 def _check_csv_files(csv_files: List[str]):
