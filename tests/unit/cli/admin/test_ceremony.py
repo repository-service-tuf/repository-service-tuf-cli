@@ -735,6 +735,67 @@ class TestCeremonyOptions:
             )
         ]
 
+    def test_ceremony_option_bootstrap_upload_no_auth(
+        self, client, test_context
+    ):
+        ceremony.bootstrap_status = pretend.call_recorder(
+            lambda *a: {"data": {"bootstrap": False}}
+        )
+        ceremony._load_bootstrap_payload = pretend.call_recorder(
+            lambda *a: {"k": "v"}
+        )
+        ceremony._send_bootstrap = pretend.call_recorder(
+            lambda *a: "fake_task_id"
+        )
+        ceremony.task_status = pretend.call_recorder(lambda *a: None)
+
+        test_context["settings"].AUTH = False
+
+        test_result = client.invoke(
+            ceremony.ceremony,
+            ["--bootstrap", "--upload", "--upload-server", "http://rstuf"],
+            input=None,
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 0, test_result.output
+        assert (
+            "Bootstrap completed using `payload.json`. 🔐 🎉"
+            in test_result.output
+        )
+        assert ceremony.bootstrap_status.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        assert ceremony._load_bootstrap_payload.calls == [
+            pretend.call("payload.json")
+        ]
+        assert ceremony._send_bootstrap.calls == [
+            pretend.call(test_context["settings"], {"k": "v"})
+        ]
+        assert ceremony.task_status.calls == [
+            pretend.call(
+                "fake_task_id", test_context["settings"], "Bootstrap status: "
+            )
+        ]
+
+    def test_ceremony_option_bootstrap_upload_no_auth_missing_upload_server(
+        self, client, test_context
+    ):
+        test_context["settings"].AUTH = False
+
+        test_result = client.invoke(
+            ceremony.ceremony,
+            ["--bootstrap", "--upload"],
+            input=None,
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 1, test_result.output
+        assert (
+            "Requires '--upload-server' when using '--no-auth'"
+            in test_result.output
+        )
+
     def test_ceremony_option_upload_missing_bootstrap(
         self, client, test_context, test_inputs, test_setup
     ):
