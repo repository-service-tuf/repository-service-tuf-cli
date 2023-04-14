@@ -734,7 +734,7 @@ def ceremony(
                 "Requires '--upload-server' when using '--no-auth'. "
                 "Example: --upload-server https://rstuf-api.example.com"
             )
-        else:
+        elif upload_server:
             settings.SERVER = upload_server
 
         bs_status = bootstrap_status(settings)
