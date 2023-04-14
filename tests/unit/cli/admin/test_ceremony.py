@@ -708,6 +708,7 @@ class TestCeremonyOptions:
         )
         ceremony.task_status = pretend.call_recorder(lambda *a: None)
 
+        test_context["settings"].SERVER = "http://server"
         test_result = client.invoke(
             ceremony.ceremony,
             ["--bootstrap", "--upload"],
@@ -734,6 +735,8 @@ class TestCeremonyOptions:
                 "fake_task_id", test_context["settings"], "Bootstrap status: "
             )
         ]
+        # test regression https://github.com/vmware/repository-service-tuf-cli/pull/259  # noqa
+        assert test_context["settings"].SERVER is not None
 
     def test_ceremony_option_bootstrap_upload_no_auth(
         self, client, test_context
