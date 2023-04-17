@@ -394,11 +394,11 @@ class TestCeremonyInteraction:
         # overwrite the input_step2
         input_step2 = [
             "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
-            "tests/files/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
+            "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
             "wrong password",  # Enter 1/1 the ONLINE`s private key password
             "y",  # Try again?
             "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
-            "tests/files/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
+            "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
             "strongPass",  # Enter 1/1 the ONLINE`s private key password
         ]
 
@@ -424,7 +424,7 @@ class TestCeremonyInteraction:
         # overwrite the input_step2
         input_step2 = [
             "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
-            "tests/files/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
+            "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
             "wrong password",  # Enter 1/1 the ONLINE`s private key password
             "n",  # Try again?
         ]
@@ -451,13 +451,13 @@ class TestCeremonyInteraction:
         # overwrite the input_step3 with same key in input_step2 (online key)
         input_step3 = [
             "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
-            "tests/files/online.key",  # Enter 1/2 the root`s private key path
+            "tests/files/key_storage/online.key",  # Enter 1/2 the root`s private key path  # noqa
             "strongPass",  # Enter 1/2 the root`s private key password
             "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
-            "tests/files/JanisJoplin.key",  # Enter 1/2 the root`s private key path  # noqa
+            "tests/files/key_storage/JanisJoplin.key",  # Enter 1/2 the root`s private key path  # noqa
             "strongPass",  # Enter 1/2 the root`s private key password
             "",  # Choose 2/2 root key type [ed25519/ecdsa/rsa]
-            "tests/files/JimiHendrix.key",  # Enter 2/2 the root`s private key path  # noqa
+            "tests/files/key_storage/JimiHendrix.key",  # Enter 2/2 the root`s private key path  # noqa
             "strongPass",  # Enter 2/2 the root`s private key password:
         ]
 
@@ -486,7 +486,7 @@ class TestCeremonyInteraction:
         input_step4 = [
             "n",  # Is the online key configuration correct? [y/n]
             "rsa",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
-            "tests/files/online-rsa.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
+            "tests/files/key_storage/online-rsa.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
             "strongPass",  # Enter 1/1 the ONLINE`s private key password
             "y",  # Is the online key configuration correct? [y/n]
             "y",  # Is the root configuration correct? [y/n]
@@ -525,7 +525,7 @@ class TestCeremonyInteraction:
             "",  # What is the metadata expiration for the root role?(Days)
             "1",  # What is the number of keys for the root role? (2)
             "",  # Choose 1/1 root key type [ed25519/ecdsa/rsa]
-            "tests/files/JanisJoplin.key",  # Enter 1/1 the root`s private key path  # noqa
+            "tests/files/key_storage/JanisJoplin.key",  # Enter 1/1 the root`s private key path  # noqa
             "strongPass",  # Enter 1/2 the root`s private key password
             "y",  # Is the root configuration correct? [y/n]
             "y",  # Is the targets configuration correct? [y/n]
