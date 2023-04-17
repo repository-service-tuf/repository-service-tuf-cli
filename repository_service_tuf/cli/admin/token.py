@@ -52,7 +52,7 @@ def generate(context, scope, expires):
     settings = context.obj.get("settings")
     server = settings.get("SERVER")
     logged_token = settings.get("TOKEN")
-    login = is_logged(server, logged_token)
+    login = is_logged(settings)
     if login.state is False:
         raise click.ClickException("Not logged. Use 'rstuf-cli admin login'")
 
@@ -86,7 +86,7 @@ def inspect(context, token):
     settings = context.obj.get("settings")
     server = settings.get("SERVER")
     logged_token = settings.get("TOKEN")
-    login = is_logged(server, logged_token)
+    login = is_logged(settings)
     if login.state is False:
         raise click.ClickException("Not logged. Use 'rstuf-cli admin login'")
 
