@@ -80,15 +80,15 @@ def test_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
     ]
     input_step2 = [
         "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
-        "tests/files/online.key",  # Enter 1/1 the ONLINE`s private key path
+        "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
         "strongPass",  # Enter 1/1 the ONLINE`s private key password
     ]
     input_step3 = [
         "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
-        "tests/files/JanisJoplin.key",  # Enter 1/2 the root`s private key path
+        "tests/files/key_storage/JanisJoplin.key",  # Enter 1/2 the root`s private key pathh  # noqa
         "strongPass",  # Enter 1/2 the root`s private key password
         "",  # Choose 2/2 root key type [ed25519/ecdsa/rsa]
-        "tests/files/JimiHendrix.key",  # Enter 2/2 the root`s private key path
+        "tests/files/key_storage/JimiHendrix.key",  # Enter 2/2 the root`s private key pathh  # noqa
         "strongPass",  # Enter 2/2 the root`s private key password:
     ]
     input_step4 = [
