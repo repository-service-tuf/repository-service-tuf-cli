@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   functional-latest:
-    uses: vmware/repository-service-tuf/.github/workflows/functional.yml@main
+    uses: repository-service-tuf/repository-service-tuf/.github/workflows/functional.yml@main
     with:
       worker_version: latest
       api_version: latest
