@@ -4,8 +4,8 @@ Repository Service for TUF Command Line Interface
 
 |Tests and Lint| |Coverage|
 
-.. |Tests and Lint| image:: https://github.com/vmware/repository-service-tuf-cli/actions/workflows/ci.yml/badge.svg
-  :target: https://github.com/vmware/repository-service-tuf-cli/actions/workflows/ci.yml
+.. |Tests and Lint| image:: https://github.com/repository-service-tuf/repository-service-tuf-cli/actions/workflows/ci.yml/badge.svg
+  :target: https://github.com/repository-service-tuf/repository-service-tuf-cli/actions/workflows/ci.yml
 .. |Coverage| image:: https://codecov.io/gh/vmware/repository-service-tuf-cli/branch/main/graph/badge.svg
   :target: https://codecov.io/gh/vmware/repository-service-tuf-cli
 
@@ -42,9 +42,9 @@ Contributing
 Please, visit the `Repository Service for TUF Development Guide
 <https://repository-service-tuf.readthedocs.io/en/latest/devel/index.html#development-guide>`_.
 
-Check our `CONTRIBUTING.rst <https://github.com/vmware/repository-service-tuf-cli/blob/main/CONTRIBUTING.rst>`_
+Check our `CONTRIBUTING.rst <https://github.com/repository-service-tuf/repository-service-tuf-cli/blob/main/CONTRIBUTING.rst>`_
 for more details on how to contribute to this repository.
 
 License
 =======
-`MIT <https://github.com/vmware/repository-service-tuf-cli/blob/main/LICENSE>`_
+`MIT <https://github.com/repository-service-tuf/repository-service-tuf-cli/blob/main/LICENSE>`_
