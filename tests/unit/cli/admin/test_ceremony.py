@@ -735,7 +735,7 @@ class TestCeremonyOptions:
                 "fake_task_id", test_context["settings"], "Bootstrap status: "
             )
         ]
-        # test regression https://github.com/vmware/repository-service-tuf-cli/pull/259  # noqa
+        # test regression https://github.com/repository-service-tuf/repository-service-tuf-cli/pull/259  # noqa
         assert test_context["settings"].SERVER is not None
 
     def test_ceremony_option_bootstrap_upload_no_auth(

@@ -50,7 +50,7 @@ Getting the source code
 -----------------------
 
 `Fork <https://docs.github.com/en/get-started/quickstart/fork-a-repo>`_ the
-repository on `GitHub <https://github.com/vmware/repository-service-tuf-cli>`_ and
+repository on `GitHub <https://github.com/repository-service-tuf/repository-service-tuf-cli>`_ and
 `clone <https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository>`_
 it to your local machine:
 
@@ -65,7 +65,7 @@ you stay up-to-date with our repository:
 
 .. code-block:: console
 
-    git remote add upstream https://github.com/vmware/repository-service-tuf-cli
+    git remote add upstream https://github.com/repository-service-tuf/repository-service-tuf-cli
     git checkout main
     git fetch upstream
     git merge upstream/main
