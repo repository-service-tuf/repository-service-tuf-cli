@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 from pathlib import Path
 from unittest import mock
+from unittest.mock import patch
 
 import pretend
 import pytest
@@ -39,6 +40,55 @@ class TestGenerateInteraction:
         )
 
         assert test_result.exit_code == 1
+
+    @pytest.mark.parametrize("key_type", KeyType.get_all_members() + ["test"])
+    def test_generate_key_types_generation(
+        self, key_type, client, monkeypatch
+    ) -> None:
+        """
+        Test that all `KeyType` enum members input choices call the appropriate
+        keypair generate function
+        """
+
+        password = "test-password"
+        filename = "test-filename"
+        inputs = [
+            key_type,  # Choose key type [ed25519/ecdsa/rsa] (ed25519)
+            filename,  # Enter the keys' filename ...
+            "n",  # Do you want to overwrite the existing 'test-filename' file?
+        ]
+
+        generate_key._verify_password = pretend.call_recorder(
+            lambda a: password
+        )
+
+        mock_file_path = "repository_service_tuf.cli.key.generate_key."
+        mocked_functions = {
+            "ed25519": "_generate_and_write_ed25519_keypair",
+            "ecdsa": "_generate_and_write_ecdsa_keypair",
+            "rsa": "_generate_and_write_rsa_keypair",
+        }
+
+        if key_type in KeyType.get_all_members():
+            with patch(
+                mock_file_path + mocked_functions[key_type],
+                return_value=None,
+            ) as mock_keypair:
+                test_result = client.invoke(
+                    generate_key.generate,
+                    input="\n".join(inputs),
+                )
+
+                mock_keypair.called_once()
+                assert test_result.exit_code == 0
+
+        else:
+            test_result = client.invoke(
+                generate_key.generate,
+                input="\n".join(inputs),
+            )
+
+            assert test_result.exit_code == 1
 
     @pytest.mark.parametrize("filename", ["\n", "test-filename"])
     def test_generate(self, filename: str, client, monkeypatch) -> None:
