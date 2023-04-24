@@ -6,8 +6,8 @@ Repository Service for TUF Command Line Interface
 
 .. |Tests and Lint| image:: https://github.com/repository-service-tuf/repository-service-tuf-cli/actions/workflows/ci.yml/badge.svg
   :target: https://github.com/repository-service-tuf/repository-service-tuf-cli/actions/workflows/ci.yml
-.. |Coverage| image:: https://codecov.io/gh/vmware/repository-service-tuf-cli/branch/main/graph/badge.svg
-  :target: https://codecov.io/gh/vmware/repository-service-tuf-cli
+.. |Coverage| image:: https://codecov.io/gh/repository-service-tuf/repository-service-tuf-cli/branch/main/graph/badge.svg
+  :target: https://codecov.io/gh/repository-service-tuf/repository-service-tuf-cli
 
 The Repository Service for TUF Command Line Interface (CLI) is a CLI Python
 application to manage the Repository Service for TUF.
