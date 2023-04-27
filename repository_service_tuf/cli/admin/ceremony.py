@@ -403,14 +403,21 @@ def _configure_role(role: Roles) -> None:
     console.print(
         markdown.Markdown(f"## {role.value} configuration"), width=100
     )
-    setup.expiration[role] = prompt.IntPrompt.ask(
-        (
-            "\nWhat is the [green]metadata expiration[/] for "
-            f"the [cyan]{role.value}[/] role?(Days)"
-        ),
-        default=setup.expiration[role],
-        show_default=True,
-    )
+    role_expiration = 0
+    while role_expiration < 1:
+        role_expiration = prompt.IntPrompt.ask(
+            (
+                "\nWhat is the [green]metadata expiration[/] for "
+                f"the [cyan]{role.value}[/] role?(Days)"
+            ),
+            default=setup.expiration[role],
+            show_default=True,
+        )
+        if role_expiration < 1:
+            console.print(f"Expiration of {role.value} must be at least 1 day")
+            continue
+
+    setup.expiration[role] = role_expiration
 
     if role == Roles.ROOT:
         _configure_role_root()
