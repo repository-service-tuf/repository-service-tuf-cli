@@ -37,6 +37,7 @@ class ServiceSettings:
 class RSTUFKey:
     key: dict = field(default_factory=dict)
     key_path: Optional[str] = None
+    name: Optional[str] = None
     error: Optional[str] = None
 
 
@@ -46,7 +47,7 @@ class BootstrapSetup:
     services: ServiceSettings
     number_of_keys: Dict[Literal[Roles.ROOT, Roles.TARGETS], int]
     threshold: Dict[Literal[Roles.ROOT, Roles.TARGETS], int]
-    root_keys: List[RSTUFKey] = field(default_factory=list)
+    root_keys: Dict[str, RSTUFKey] = field(default_factory=Dict)
     online_key: RSTUFKey = field(default_factory=RSTUFKey)
 
     def to_dict(self):
@@ -69,7 +70,9 @@ class TUFManagement:
     def _signers(self, role: Roles) -> List[Signer]:
         """Returns all Signers from the settings for a specific role name"""
         if role == Roles.ROOT:
-            return [SSlibSigner(key.key) for key in self.setup.root_keys]
+            return [
+                SSlibSigner(key.key) for key in self.setup.root_keys.values()
+            ]
         else:
             return [SSlibSigner(self.setup.online_key.key)]
 
@@ -157,6 +160,18 @@ class TUFManagement:
         self._sign(root_metadata, metadata_type)
         self._add_payload(root_metadata, metadata_type)
 
+    def _setup_key_name(self, key: Key, role: str):
+        rstuf_key: Optional[RSTUFKey]
+        if role == Roles.ROOT.value:
+            rstuf_key = self.setup.root_keys.get(key.keyid)
+
+        else:
+            if self.setup.online_key.key["keyid"] == key.keyid:
+                rstuf_key = self.setup.online_key
+
+        if rstuf_key is not None and rstuf_key.name is not None:
+            key.unrecognized_fields["name"] = rstuf_key.name
+
     def initialize_metadata(self) -> Dict[str, Metadata]:
         """
         Creates TUF top-level role metadata (root, targets, snapshot and
@@ -187,9 +202,9 @@ class TUFManagement:
             add_key_args[role_name] = []
             roles[role_name] = Role([], threshold)
             for signer in signers:
-                add_key_args[role_name].append(
-                    Key.from_securesystemslib_key(signer.key_dict)
-                )
+                key = Key.from_securesystemslib_key(signer.key_dict)
+                self._setup_key_name(key, role_name)
+                add_key_args[role_name].append(key)
 
         self._prepare_root_and_add_it_to_payload(roles, add_key_args)
         self._validate_root_payload_exist()

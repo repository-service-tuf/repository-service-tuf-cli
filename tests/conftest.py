@@ -49,7 +49,7 @@ def test_setup() -> BootstrapSetup:
             Roles.ROOT: 1,
             Roles.TARGETS: 1,
         },
-        root_keys=[],
+        root_keys={},
         online_key=RSTUFKey(),
     )
 
@@ -81,15 +81,18 @@ def test_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
     input_step2 = [
         "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
         "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
-        "strongPass",  # Enter 1/1 the ONLINE`s private key password
+        "strongPass",  # Enter 1/1 the ONLINE`s private key password,
+        "",  # [Optional] Give a name/tag to the key:
     ]
     input_step3 = [
         "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
-        "tests/files/key_storage/JanisJoplin.key",  # Enter 1/2 the root`s private key pathh  # noqa
+        "tests/files/key_storage/JanisJoplin.key",  # Enter 1/2 the root`s private key path  # noqa
         "strongPass",  # Enter 1/2 the root`s private key password
+        "",  # [Optional] Give a name/tag to the key:
         "",  # Choose 2/2 root key type [ed25519/ecdsa/rsa]
-        "tests/files/key_storage/JimiHendrix.key",  # Enter 2/2 the root`s private key pathh  # noqa
+        "tests/files/key_storage/JimiHendrix.key",  # Enter 2/2 the root`s private key path  # noqa
         "strongPass",  # Enter 2/2 the root`s private key password:
+        "",  # [Optional] Give a name/tag to the key:
     ]
     input_step4 = [
         "y",  # Is the online key configuration correct? [y/n]

@@ -13,6 +13,7 @@ import pytest
 
 from repository_service_tuf.helpers import tuf
 from repository_service_tuf.helpers.tuf import (
+    Key,
     Metadata,
     Roles,
     Root,
@@ -30,10 +31,10 @@ class TestTUFHelper:
         return result
 
     def test__signers_root_keys(self, test_tuf_management: TUFManagement):
-        test_tuf_management.setup.root_keys = [
-            RSTUFKey({"a": "b"}),
-            RSTUFKey({"c": "d"}),
-        ]
+        test_tuf_management.setup.root_keys = {
+            "id1": RSTUFKey({"a": "b"}),
+            "id2": RSTUFKey({"c": "d"}),
+        }
         tuf.SSlibSigner = pretend.call_recorder(lambda *a: None)
         result = test_tuf_management._signers(Roles.ROOT)
         assert result == [None, None]
@@ -254,6 +255,30 @@ class TestTUFHelper:
             pretend.call(fake_root, "root"),
         ]
 
+    def test_setup_key_name_root_key(self, test_tuf_management: TUFManagement):
+        key = Key("id", "ed25519", "ed25519-sha256", {"sha256": "abc"})
+        test_tuf_management.setup.root_keys["id"] = RSTUFKey({}, "", "my-key")
+        test_tuf_management._setup_key_name(key, Roles.ROOT.value)
+        assert key.unrecognized_fields["name"] == "my-key"
+
+    def test_setup_key_name_root_key_no_key_name(
+        self, test_tuf_management: TUFManagement
+    ):
+        key = Key("id", "ed25519", "ed25519-sha256", {"sha256": "abc"})
+        test_tuf_management.setup.root_keys["id"] = RSTUFKey({}, "")
+        test_tuf_management._setup_key_name(key, Roles.ROOT.value)
+        assert key.unrecognized_fields == {}
+
+    def test_setup_key_name_online_key(
+        self, test_tuf_management: TUFManagement
+    ):
+        key = Key("id", "ed25519", "ed25519-sha256", {"sha256": "abc"})
+        test_tuf_management.setup.online_key = RSTUFKey(
+            {"keyid": "id"}, "", "my-key"
+        )
+        test_tuf_management._setup_key_name(key, Roles.TIMESTAMP.value)
+        assert key.unrecognized_fields["name"] == "my-key"
+
     def test_initialize_metadata(self, test_tuf_management: TUFManagement):
         signers_mock = unittest.mock.Mock()
         root_signer = pretend.stub(key_dict="root")
@@ -274,6 +299,9 @@ class TestTUFHelper:
         )
 
         tuf.Key.from_securesystemslib_key = key_from_securesystemslib_mock
+        test_tuf_management._setup_key_name = pretend.call_recorder(
+            lambda *a: None
+        )
         test_tuf_management._prepare_root_and_add_it_to_payload = (
             pretend.call_recorder(lambda *a: None)
         )
@@ -296,6 +324,12 @@ class TestTUFHelper:
             pretend.call("timestamp"),
             pretend.call("snapshot"),
             pretend.call("targets"),
+        ]
+        assert test_tuf_management._setup_key_name.calls == [
+            pretend.call("root_key", "root"),
+            pretend.call("timestamp_key", "timestamp"),
+            pretend.call("snapshot_key", "snapshot"),
+            pretend.call("targets_key", "targets"),
         ]
         expected_roles: Dict[str, str] = {
             "root": "role",

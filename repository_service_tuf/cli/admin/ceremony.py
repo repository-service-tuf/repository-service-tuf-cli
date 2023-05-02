@@ -248,7 +248,7 @@ setup = BootstrapSetup(
         Roles.ROOT: 1,
         Roles.TARGETS: 1,
     },
-    root_keys=[],
+    root_keys={},
     online_key=RSTUFKey(),
 )
 
@@ -258,23 +258,25 @@ def _key_already_in_use(key: Dict[str, Any]) -> bool:
     if key is None:
         return False
 
-    keyid = key.get("keyid")
+    keyid = key["keyid"]
     if keyid == setup.online_key.key.get("keyid"):
         return True
 
-    for root_key in setup.root_keys:
-        if keyid == root_key.key.get("keyid"):
-            return True
+    if setup.root_keys.get(keyid) is not None:
+        return True
 
     return False
 
 
 def _load_key(
-    filepath: str, keytype: str, password: Optional[str]
+    filepath: str, keytype: str, password: Optional[str], name: str
 ) -> RSTUFKey:
     try:
         key = import_privatekey_from_file(filepath, keytype, password)
-        return RSTUFKey(key=key, key_path=filepath)
+        # Make sure name cannot be an empty string.
+        # If no name is given use first 7 letters of the keyid.
+        name = name if name != "" else key["keyid"][:7]
+        return RSTUFKey(key=key, key_path=filepath, name=name)
     except CryptoError as err:
         return RSTUFKey(
             error=(
@@ -437,7 +439,12 @@ def _configure_keys(
             f"{role}`s private key password",
             hide_input=True,
         )
-        role_key: RSTUFKey = _load_key(filepath, key_type, password)
+        name = prompt.Prompt.ask(
+            "[Optional] Give a name/tag to the key",
+            default="",
+            show_default=False,
+        )
+        role_key: RSTUFKey = _load_key(filepath, key_type, password, name)
 
         if role_key.error:
             console.print(role_key.error)
@@ -483,6 +490,7 @@ def _run_user_validation():
             )
         keys_table.add_column("type", justify="center")
         keys_table.add_column("verified", justify="center")
+        keys_table.add_column("name/tag", justify="center")
         keys_table.add_column("id", justify="center")
 
         return keys_table
@@ -497,6 +505,7 @@ def _run_user_validation():
             f"[yellow]{setup.online_key.key_path}[/]",
             "[green]Online[/]",
             ":white_heavy_check_mark:",
+            f"[yellow]{setup.online_key.name}",
             f"[yellow]{setup.online_key.key.get('keyid')}[/]",
         )
 
@@ -523,11 +532,12 @@ def _run_user_validation():
 
             if role == Roles.ROOT:
                 keys_table = _init_keys_table()
-                for key in setup.root_keys:
+                for key in setup.root_keys.values():
                     keys_table.add_row(
                         f"[yellow]{key.key_path}[/]",
                         "[bright_blue]Offline[/]",
                         ":white_heavy_check_mark:",
+                        f"[yellow]{key.name}",
                         key.key.get("keyid"),
                     )
 
@@ -548,7 +558,8 @@ def _run_user_validation():
                     keys_table.add_row(
                         "[green]Online[/]",
                         ":white_heavy_check_mark:",
-                        setup.online_key.key.get("keyid"),
+                        f"[yellow]{setup.online_key.name}",
+                        key.key.get("keyid"),
                     )
                 role_table.add_row(
                     (
@@ -589,7 +600,7 @@ def _run_user_validation():
                         role.value,
                         setup.number_of_keys[Roles.ROOT],
                     ):
-                        setup.root_keys.append(key)
+                        setup.root_keys[key.key["keyid"]] = key
             else:
                 break
 
@@ -627,14 +638,13 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     # STEP 2: configure the online key (one)
     console.print(markdown.Markdown(STEP_2), width=100)
     for key in _configure_keys("ONLINE", number_of_keys=1):
-        setup.online_key.key = key.key
-        setup.online_key.key_path = key.key_path
+        setup.online_key = key
 
     # STEP 3: load the root keys
     console.print(markdown.Markdown(STEP_3), width=100)
     root = Roles.ROOT.value
     for key in _configure_keys(root, setup.number_of_keys[Roles.ROOT]):
-        setup.root_keys.append(key)
+        setup.root_keys[key.key["keyid"]] = key
 
     # STEP 4: user validation
     console.print(markdown.Markdown(STEP_4), width=100)

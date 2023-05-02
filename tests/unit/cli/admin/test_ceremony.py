@@ -16,7 +16,7 @@ class TestCeremonyFunctions:
         assert result is False
 
     def test__key_already_in_use_exists_in_role(self, test_setup):
-        test_setup.root_keys = [ceremony.RSTUFKey(key={"keyid": "ema"})]
+        test_setup.root_keys["ema"] = ceremony.RSTUFKey(key={"keyid": "ema"})
         ceremony.setup = test_setup
         result = ceremony._key_already_in_use({"keyid": "ema"})
         assert result is True
@@ -36,7 +36,7 @@ class TestCeremonyFunctions:
         )
 
         result = ceremony._load_key(
-            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd"
+            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd", None
         )
         assert result == ceremony.RSTUFKey({"keyid": "ema"}, "/p/key", None)
         assert ceremony.import_privatekey_from_file.calls == [
@@ -51,7 +51,7 @@ class TestCeremonyFunctions:
         )
 
         result = ceremony._load_key(
-            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd"
+            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd", None
         )
         assert result == ceremony.RSTUFKey(
             {},
@@ -69,7 +69,7 @@ class TestCeremonyFunctions:
             pretend.raiser(OSError("permission denied")),
         )
         result = ceremony._load_key(
-            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd"
+            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd", None
         )
         assert result == ceremony.RSTUFKey(
             {}, None, error=":cross_mark: [red]Failed[/]: permission denied"
@@ -396,10 +396,12 @@ class TestCeremonyInteraction:
             "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
             "wrong password",  # Enter 1/1 the ONLINE`s private key password
+            "",  # [Optional] Give a name/tag to the key
             "y",  # Try again?
             "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
             "strongPass",  # Enter 1/1 the ONLINE`s private key password
+            "",  # [Optional] Give a name/tag to the key
         ]
 
         test_result = client.invoke(
@@ -426,6 +428,7 @@ class TestCeremonyInteraction:
             "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
             "wrong password",  # Enter 1/1 the ONLINE`s private key password
+            "",  # [Optional] Give a name/tag to the key
             "n",  # Try again?
         ]
 
@@ -442,6 +445,42 @@ class TestCeremonyInteraction:
         # passwords not shown in output
         assert "strongPass" not in test_result.output
 
+    def test_ceremony_key_with_name(
+        self, client, test_context, test_inputs, test_setup
+    ):
+        # Test a case when the user gives custom names to the keys.
+        ceremony.setup = test_setup
+        input_step1, input_step2, input_step3, input_step4 = test_inputs
+        input_step2 = [
+            "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
+            "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
+            "strongPass",  # Enter 1/1 the ONLINE`s private key password,
+            "Online key",  # [Optional] Give a name/tag to the key
+        ]
+        input_step3 = [
+            "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
+            "tests/files/key_storage/JanisJoplin.key",  # Enter 1/2 the root`s private key path  # noqa
+            "strongPass",  # Enter 1/2 the root`s private key password
+            "Martin's Key",  # [Optional] Give a name/tag to the key
+            "",  # Choose 2/2 root key type [ed25519/ecdsa/rsa]
+            "tests/files/key_storage/JimiHendrix.key",  # Enter 2/2 the root`s private key path  # noqa
+            "strongPass",  # Enter 2/2 the root`s private key password:
+            "Steven's Key",  # [Optional] Give a name/tag to the key
+        ]
+
+        test_result = client.invoke(
+            ceremony.ceremony,
+            input="\n".join(
+                input_step1 + input_step2 + input_step3 + input_step4
+            ),
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 0, test_result.output
+        assert "Ceremony done. 🔐 🎉." in test_result.output
+        # passwords not shown in output
+        assert "strongPass" not in test_result.output
+
     def test_ceremony_key_duplicated_try_again_yes(
         self, client, test_context, test_inputs, test_setup
     ):
@@ -453,12 +492,15 @@ class TestCeremonyInteraction:
             "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/online.key",  # Enter 1/2 the root`s private key path  # noqa
             "strongPass",  # Enter 1/2 the root`s private key password
+            "",  # [Optional] Give a name/tag to the key
             "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/JanisJoplin.key",  # Enter 1/2 the root`s private key path  # noqa
             "strongPass",  # Enter 1/2 the root`s private key password
+            "",  # [Optional] Give a name/tag to the key
             "",  # Choose 2/2 root key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/JimiHendrix.key",  # Enter 2/2 the root`s private key path  # noqa
             "strongPass",  # Enter 2/2 the root`s private key password:
+            "",  # [Optional] Give a name/tag to the key
         ]
 
         test_result = client.invoke(
@@ -488,6 +530,7 @@ class TestCeremonyInteraction:
             "rsa",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/online-rsa.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
             "strongPass",  # Enter 1/1 the ONLINE`s private key password
+            "",  # [Optional] Give a name/tag to the key
             "y",  # Is the online key configuration correct? [y/n]
             "y",  # Is the root configuration correct? [y/n]
             "y",  # Is the targets configuration correct? [y/n]
@@ -527,6 +570,7 @@ class TestCeremonyInteraction:
             "",  # Choose 1/1 root key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/JanisJoplin.key",  # Enter 1/1 the root`s private key path  # noqa
             "strongPass",  # Enter 1/2 the root`s private key password
+            "",  # [Optional] Give a name/tag to the key
             "y",  # Is the root configuration correct? [y/n]
             "y",  # Is the targets configuration correct? [y/n]
             "y",  # Is the snapshot configuration correct? [y/n]
