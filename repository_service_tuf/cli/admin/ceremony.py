@@ -269,10 +269,13 @@ def _key_already_in_use(key: Dict[str, Any]) -> bool:
 
 
 def _load_key(
-    filepath: str, keytype: str, password: Optional[str], name: Optional[str]
+    filepath: str, keytype: str, password: Optional[str], name: str
 ) -> RSTUFKey:
     try:
         key = import_privatekey_from_file(filepath, keytype, password)
+        # Make sure name cannot be an empty string.
+        # If no name is given use first 7 letters of the keyid.
+        name = name if name != "" else key["keyid"][:7]
         return RSTUFKey(key=key, key_path=filepath, name=name)
     except CryptoError as err:
         return RSTUFKey(
@@ -436,13 +439,11 @@ def _configure_keys(
             f"{role}`s private key password",
             hide_input=True,
         )
-        name: Optional[str] = prompt.Prompt.ask(
-            "You can give a name to the key to have a reference in future",
+        name = prompt.Prompt.ask(
+            "[Optional] Give a name/tag to the key",
             default="",
             show_default=False,
         )
-        # Make sure name cannot be an empty string.
-        name = name if name != "" else None
         role_key: RSTUFKey = _load_key(filepath, key_type, password, name)
 
         if role_key.error:
@@ -489,7 +490,7 @@ def _run_user_validation():
             )
         keys_table.add_column("type", justify="center")
         keys_table.add_column("verified", justify="center")
-        keys_table.add_column("name", justify="center")
+        keys_table.add_column("name/tag", justify="center")
         keys_table.add_column("id", justify="center")
 
         return keys_table
@@ -504,7 +505,7 @@ def _run_user_validation():
             f"[yellow]{setup.online_key.key_path}[/]",
             "[green]Online[/]",
             ":white_heavy_check_mark:",
-            f"{setup.online_key.name}",
+            f"[yellow]{setup.online_key.name}",
             f"[yellow]{setup.online_key.key.get('keyid')}[/]",
         )
 
@@ -536,7 +537,7 @@ def _run_user_validation():
                         f"[yellow]{key.key_path}[/]",
                         "[bright_blue]Offline[/]",
                         ":white_heavy_check_mark:",
-                        f"{key.name}",
+                        f"[yellow]{key.name}",
                         key.key.get("keyid"),
                     )
 
@@ -557,7 +558,8 @@ def _run_user_validation():
                     keys_table.add_row(
                         "[green]Online[/]",
                         ":white_heavy_check_mark:",
-                        setup.online_key.key.get("keyid"),
+                        f"[yellow]{setup.online_key.name}",
+                        key.key.get("keyid"),
                     )
                 role_table.add_row(
                     (

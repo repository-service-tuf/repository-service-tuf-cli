@@ -396,12 +396,12 @@ class TestCeremonyInteraction:
             "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
             "wrong password",  # Enter 1/1 the ONLINE`s private key password
-            "",  # You can give a name to the key to have a reference in future:  # noqa
+            "",  # [Optional] Give a name/tag to the key
             "y",  # Try again?
             "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
             "strongPass",  # Enter 1/1 the ONLINE`s private key password
-            "",  # You can give a name to the key to have a reference in future:  # noqa
+            "",  # [Optional] Give a name/tag to the key
         ]
 
         test_result = client.invoke(
@@ -428,7 +428,7 @@ class TestCeremonyInteraction:
             "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
             "wrong password",  # Enter 1/1 the ONLINE`s private key password
-            "",  # You can give a name to the key to have a reference in future:  # noqa
+            "",  # [Optional] Give a name/tag to the key
             "n",  # Try again?
         ]
 
@@ -455,17 +455,17 @@ class TestCeremonyInteraction:
             "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
             "strongPass",  # Enter 1/1 the ONLINE`s private key password,
-            "Online key",  # You can give a name to the key to have a reference in future:  # noqa
+            "Online key",  # [Optional] Give a name/tag to the key
         ]
         input_step3 = [
             "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/JanisJoplin.key",  # Enter 1/2 the root`s private key path  # noqa
             "strongPass",  # Enter 1/2 the root`s private key password
-            "Martin's Key",  # You can give a name to the key to have a reference in future:  # noqa
+            "Martin's Key",  # [Optional] Give a name/tag to the key
             "",  # Choose 2/2 root key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/JimiHendrix.key",  # Enter 2/2 the root`s private key path  # noqa
             "strongPass",  # Enter 2/2 the root`s private key password:
-            "Steven's Key",  # You can give a name to the key to have a reference in future:  # noqa
+            "Steven's Key",  # [Optional] Give a name/tag to the key
         ]
 
         test_result = client.invoke(
@@ -492,15 +492,15 @@ class TestCeremonyInteraction:
             "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/online.key",  # Enter 1/2 the root`s private key path  # noqa
             "strongPass",  # Enter 1/2 the root`s private key password
-            "",  # You can give a name to the key to have a reference in future:  # noqa
+            "",  # [Optional] Give a name/tag to the key
             "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/JanisJoplin.key",  # Enter 1/2 the root`s private key path  # noqa
             "strongPass",  # Enter 1/2 the root`s private key password
-            "",  # You can give a name to the key to have a reference in future:  # noqa
+            "",  # [Optional] Give a name/tag to the key
             "",  # Choose 2/2 root key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/JimiHendrix.key",  # Enter 2/2 the root`s private key path  # noqa
             "strongPass",  # Enter 2/2 the root`s private key password:
-            "",  # You can give a name to the key to have a reference in future:  # noqa
+            "",  # [Optional] Give a name/tag to the key
         ]
 
         test_result = client.invoke(
@@ -530,7 +530,7 @@ class TestCeremonyInteraction:
             "rsa",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/online-rsa.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
             "strongPass",  # Enter 1/1 the ONLINE`s private key password
-            "",  # You can give a name to the key to have a reference in future:  # noqa
+            "",  # [Optional] Give a name/tag to the key
             "y",  # Is the online key configuration correct? [y/n]
             "y",  # Is the root configuration correct? [y/n]
             "y",  # Is the targets configuration correct? [y/n]
@@ -570,7 +570,7 @@ class TestCeremonyInteraction:
             "",  # Choose 1/1 root key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/JanisJoplin.key",  # Enter 1/1 the root`s private key path  # noqa
             "strongPass",  # Enter 1/2 the root`s private key password
-            "",  # You can give a name to the key to have a reference in future:  # noqa
+            "",  # [Optional] Give a name/tag to the key
             "y",  # Is the root configuration correct? [y/n]
             "y",  # Is the targets configuration correct? [y/n]
             "y",  # Is the snapshot configuration correct? [y/n]

@@ -82,17 +82,17 @@ def test_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
         "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
         "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
         "strongPass",  # Enter 1/1 the ONLINE`s private key password,
-        "",  # You can give a name to the key to have a reference in future:
+        "",  # [Optional] Give a name/tag to the key:
     ]
     input_step3 = [
         "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
         "tests/files/key_storage/JanisJoplin.key",  # Enter 1/2 the root`s private key path  # noqa
         "strongPass",  # Enter 1/2 the root`s private key password
-        "",  # You can give a name to the key to have a reference in future:
+        "",  # [Optional] Give a name/tag to the key:
         "",  # Choose 2/2 root key type [ed25519/ecdsa/rsa]
         "tests/files/key_storage/JimiHendrix.key",  # Enter 2/2 the root`s private key path  # noqa
         "strongPass",  # Enter 2/2 the root`s private key password:
-        "",  # You can give a name to the key to have a reference in future:
+        "",  # [Optional] Give a name/tag to the key:
     ]
     input_step4 = [
         "y",  # Is the online key configuration correct? [y/n]
