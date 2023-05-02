@@ -78,5 +78,7 @@ def generate() -> None:
                 password=password, filepath=filename
             )
 
-        case _:
+        case _:  # pragma: no cover
+            # Current click configuration will never trigger this case, adding
+            # this as a fail-safe if we add new key-types
             raise ValueError(f"Key type `{key_type}` is not supported!")
