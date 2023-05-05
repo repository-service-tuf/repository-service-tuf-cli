@@ -75,7 +75,8 @@ def generate() -> None:
     elif key_type == KeyType.KEY_TYPE_RSA.value:
         _generate_and_write_rsa_keypair(
                 password=password, filepath=filename
-            )
+         )
+        
     else:
         # pragma: no cover
         # Current click configuration will never trigger this case, adding
