@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2022-2023 VMware Inc
-#  
+#
 # SPDX-License-Identifier: MIT
 import os
 
@@ -63,7 +63,8 @@ def generate() -> None:
     password = _verify_password(filename)
 
     if key_type == KeyType.KEY_TYPE_ED25519.value:
-        _generate_and_write_ed25519_keypair(password=password, filepath=filename)
+        _generate_and_write_ed25519_keypair(
+            password=password, filepath=filename)
     elif key_type == KeyType.KEY_TYPE_ECDSA.value:
         _generate_and_write_ecdsa_keypair(password=password, filepath=filename)
     elif key_type == KeyType.KEY_TYPE_RSA.value:
