@@ -61,24 +61,23 @@ def generate() -> None:
             raise click.ClickException("Key creation aborted.")
 
     password = _verify_password(filename)
-
-    match key_type:
-        case KeyType.KEY_TYPE_ED25519.value:
-            _generate_and_write_ed25519_keypair(
+    
+    if key_type == KeyType.KEY_TYPE_ED25519.value:
+         _generate_and_write_ed25519_keypair(
                 password=password, filepath=filename
             )
-
-        case KeyType.KEY_TYPE_ECDSA.value:
-            _generate_and_write_ecdsa_keypair(
+         
+    elif key_type ==  KeyType.KEY_TYPE_ECDSA.value:
+        _generate_and_write_ecdsa_keypair(
                 password=password, filepath=filename
             )
-
-        case KeyType.KEY_TYPE_RSA.value:
-            _generate_and_write_rsa_keypair(
+        
+    elif key_type == KeyType.KEY_TYPE_RSA.value:
+        _generate_and_write_rsa_keypair(
                 password=password, filepath=filename
             )
-
-        case _:  # pragma: no cover
-            # Current click configuration will never trigger this case, adding
-            # this as a fail-safe if we add new key-types
-            raise ValueError(f"Key type `{key_type}` is not supported!")
+    else:
+        # pragma: no cover
+        # Current click configuration will never trigger this case, adding
+        # this as a fail-safe if we add new key-types
+        raise ValueError(f"Key type `{key_type}` is not supported!")
