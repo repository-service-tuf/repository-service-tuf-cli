@@ -65,7 +65,7 @@ def generate() -> None:
     if key_type == KeyType.KEY_TYPE_ED25519.value:
         _generate_and_write_ed25519_keypair(
             password=password, filepath=filename
-            )
+        )
     elif key_type == KeyType.KEY_TYPE_ECDSA.value:
         _generate_and_write_ecdsa_keypair(password=password, filepath=filename)
     elif key_type == KeyType.KEY_TYPE_RSA.value:
