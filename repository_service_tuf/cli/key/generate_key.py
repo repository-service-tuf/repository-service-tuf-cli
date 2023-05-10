@@ -70,8 +70,7 @@ def generate() -> None:
         _generate_and_write_ecdsa_keypair(password=password, filepath=filename)
     elif key_type == KeyType.KEY_TYPE_RSA.value:
         _generate_and_write_rsa_keypair(password=password, filepath=filename)
-    else:
-        # pragma: no cover
+    else:  # pragma: no cover
         # Current click configuration will never trigger this case, adding
         # this as a fail-safe if we add new key-types
         raise ValueError(f"Key type `{key_type}` is not supported!")
