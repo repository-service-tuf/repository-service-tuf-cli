@@ -2,6 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 
-version = "0.1.1a3"
+version = "0.1.2a1"
 copyright = "Copyright (c) 2022-2023 VMware Inc"
 author = "Kairo de Araujo"
