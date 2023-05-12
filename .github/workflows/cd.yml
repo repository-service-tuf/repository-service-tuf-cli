@@ -67,6 +67,7 @@ jobs:
     needs: build
     environment: release
     permissions:
+      contents: write  # to update GitHub releases
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
       - name: Fetch build artifacts
