@@ -5,11 +5,13 @@
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Union
 
 from securesystemslib.signer import Signer, SSlibSigner  # type: ignore
 from tuf.api.metadata import SPECIFICATION_VERSION, Key, Metadata, Role, Root
 from tuf.api.serialization.json import JSONSerializer
+
+from repository_service_tuf.cli import console
 
 SPEC_VERSION: str = ".".join(SPECIFICATION_VERSION)
 BINS: str = "bins"
@@ -40,6 +42,12 @@ class RSTUFKey:
     name: Optional[str] = None
     error: Optional[str] = None
 
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, RSTUFKey):
+            return False
+
+        return self.key["keyid"] == other.key["keyid"]
+
 
 @dataclass
 class BootstrapSetup:
@@ -55,6 +63,189 @@ class BootstrapSetup:
             "expiration": {k.value: v for k, v in self.expiration.items()},
             "services": self.services.to_dict(),
         }
+
+
+class RootInfo:
+    _root_md: Metadata[Root]
+    root_keys: Dict[str, RSTUFKey] # key are the root "names"
+    _current_root_signing_keys: List[RSTUFKey] # required for signing
+    online_key: RSTUFKey
+    expirations: Dict[Roles, int]
+
+    @property
+    def threshold(self) -> int:
+        return self._root_md.signed.roles[Root.type].threshold
+
+    @threshold.setter
+    def threshold(self, value: int) -> None:
+        self._root_md.signed.roles[Root.type].threshold = value
+
+    @property
+    def expiration(self) -> int:
+        return self._root_md.signed.expires
+
+    @expiration.setter
+    def expiration(self, value: int) -> None:
+        self._root_md.signed.expires = value
+
+
+    def __init__(
+        self,
+        root_md: Metadata[Root],
+        root_keys: Dict[str, RSTUFKey],
+        online_key: RSTUFKey,
+        expirations: Dict[Roles, int],
+    ):
+        self._root_md = root_md
+        self.root_keys = root_keys
+        self.online_key = online_key
+        self._current_root_signing_keys = []
+        self.expirations = expirations
+
+    @classmethod
+    def _get_name(cls, key: Union[Key, RSTUFKey]) -> str:
+        name: str
+        if isinstance(key, Key):
+            name = key.keyid[:7]
+            if key.unrecognized_fields.get("name") is not None:
+                name = key.unrecognized_fields["name"]
+
+        elif isinstance(key, RSTUFKey):
+            name = key.name
+            if key.name is None or key.name == "":
+                name = key.key["keyid"][:7]
+
+        return name
+
+    @classmethod
+    def from_md(cls, root_md: Metadata[Root]) -> "RootInfo":
+        root_keys: Dict[str, RSTUFKey] = {}
+        for keyid in root_md.signed.roles[Root.type].keyids:
+            tuf_key: Key = root_md.signed.keys[keyid]
+            name = cls._get_name(tuf_key)
+            tuf_key.unrecognized_fields["name"] = name
+            key_dict = tuf_key.to_securesystemslib_key()
+            root_keys[name] = RSTUFKey(key_dict, name=name)
+
+        online_key_id = root_md.signed.roles["timestamp"].keyids[0]
+        tuf_online_key: Key = root_md.signed.keys[online_key_id]
+        online_key_dict = tuf_online_key.to_securesystemslib_key()
+        name = cls._get_name(tuf_online_key)
+        online_key = RSTUFKey(online_key_dict, name=name)
+
+        expirations: Dict[Roles, int] = {}
+        for role in Roles:
+            if role == Roles.ROOT:
+                expirations[role] = 365
+            else:
+                expirations[role] = 1
+
+        return cls(root_md, root_keys, online_key, expirations)
+
+    def is_keyid_used(self, keyid: Key) -> bool:
+        """Check if keyid is used in root keys"""
+        if keyid not in self._root_md.signed.roles[Root.type].keyids:
+            return False
+
+        return True
+
+    def save_current_root_key(self, key: RSTUFKey):
+        """Update internal information based on 'key' data."""
+        tuf_key = self._root_md.signed.keys[key.key["keyid"]]
+        key.name = tuf_key.unrecognized_fields["name"]
+        self.root_keys[key.name] = key
+        self._current_root_signing_keys.append(key)
+
+    def save_expiry(self, role: Roles, expiry: int):
+        self.expirations[role] = expiry
+        if role == Roles.ROOT:
+            self._root_md.signed.expires = (
+                datetime.now() + timedelta(days=expiry)
+            )
+
+    def remove_key(self, key_name: str) -> bool:
+        """Try to remove a key and return status of the operation"""
+        key = self.root_keys.get(key_name)
+        if key is None:
+            return False
+
+        self._root_md.signed.revoke_key(key.key["keyid"], Root.type)
+        self.root_keys.pop(key_name)
+        return True
+
+    def add_key(self, new_key: RSTUFKey) -> None:
+        """Add a new key."""
+        name = RootInfo._get_name(new_key)
+        new_key.name = name
+        tuf_key = Key.from_securesystemslib_key(new_key.key)
+        tuf_key.unrecognized_fields["name"] = name
+        self._root_md.signed.add_key(tuf_key, Root.type)
+
+        self.root_keys[name] = new_key
+
+    def change_online_key(self, new_online_key: RSTUFKey):
+        """Replace the old online key with a new one."""
+        # Remove the old online key
+        online_key_id = self._root_md.signed.roles["timestamp"].keyids[0]
+        # Top level roles that use the online key
+        online_roles = ["timestamp", "snapshot", "targets"]
+        for role in online_roles:
+            self._root_md.signed.revoke_key(online_key_id, role)
+
+        # Add the new online key
+        name = RootInfo._get_name(new_online_key)
+        new_online_key.name = name
+        online_tuf_key = Key.from_securesystemslib_key(new_online_key.key)
+        online_tuf_key.unrecognized_fields["name"] = name
+        for role in online_roles:
+            self._root_md.signed.add_key(online_tuf_key, role)
+
+        self.online_key = new_online_key
+
+    def generate_payload(self) -> Dict[str, Any]:
+        """Save the root metadata into 'file'"""
+        self._root_md.signed.version += 1
+        self._root_md.signatures.clear()
+
+        # As the spec says: sign the new root with threshold amount of current
+        # root keys where "threshold" comes from the current root.
+        # See https://theupdateframework.github.io/specification/latest/#key-management-and-migration
+        for curr_root_key in self._current_root_signing_keys:
+            self._root_md.sign(SSlibSigner(curr_root_key.key), append=True)
+
+        # Then sign the new root with the rest of the keys
+        for key in self.root_keys.values():
+            # Make sure we don't sign with the same key twice.
+            already_used_key = False
+            for curr_root_key in self._current_root_signing_keys:
+                if key.key["keyid"] == curr_root_key.key["keyid"]:
+                    already_used_key = True
+                    break
+
+            if already_used_key:
+                continue
+
+            # If key.key_path is None this means this key was not loaded by the
+            # user and doesn't have the data required to sign the metadata.
+            if key.key_path is None:
+                continue
+
+            self._root_md.sign(SSlibSigner(key.key), append=True)
+
+        console.print("\nVerify the new root metadata...")
+        self._root_md.verify_delegate(Root.type, self._root_md)
+        console.print("Root metadata is [green]verified[/]")
+
+        expirations = {k.value: v for k, v in self.expirations.items()}
+        return {
+            "settings": {
+                "expiration": expirations,
+                "metadata": {
+                    "root": self._root_md.to_dict()
+                }
+            }
+        }
+
 
 
 class TUFManagement:
