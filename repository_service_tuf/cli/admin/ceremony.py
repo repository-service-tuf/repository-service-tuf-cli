@@ -273,9 +273,9 @@ def _load_key(
 ) -> RSTUFKey:
     try:
         key = import_privatekey_from_file(filepath, keytype, password)
-        # Make sure name cannot be an empty string.
+        # Make sure name cannot be an empty string or None.
         # If no name is given use first 7 letters of the keyid.
-        name = name if name != "" else key["keyid"][:7]
+        name = name if name != "" and name is not None else key["keyid"][:7]
         return RSTUFKey(key=key, key_path=filepath, name=name)
     except CryptoError as err:
         return RSTUFKey(
@@ -339,10 +339,10 @@ def _load_bootstrap_payload(path: str) -> Dict[str, Any]:
     return bootstrap_payload
 
 
-def _save_bootstrap_payload(file: str, bootstrap_payload: Dict[str, Any]):
+def _save_payload(file: str, payload: Dict[str, Any]):
     try:
         with open(file, "w") as f:
-            f.write(json.dumps(bootstrap_payload, indent=2))
+            f.write(json.dumps(payload, indent=2))
     except OSError as err:
         raise click.ClickException(f"Failed to save {file}. {str(err)}")
 
@@ -441,13 +441,13 @@ def _configure_keys(
             f"[cyan]{role}[/]`s private key [green]path[/]"
         )
 
-        password = click.prompt(
+        password = prompt.Prompt.ask(
             f"Enter {key_count}/{number_of_keys} the "
-            f"{role}`s private key password",
-            hide_input=True,
+            f"{role}`s private key [green]password[/]",
+            password=True,
         )
         name = prompt.Prompt.ask(
-            "[Optional] Give a name/tag to the key",
+            "[Optional] Give a [green]name/tag[/] to the key",
             default="",
             show_default=False,
         )
@@ -495,7 +495,7 @@ def _run_user_validation():
             keys_table.add_column(
                 "path", justify="right", style="cyan", no_wrap=True
             )
-        keys_table.add_column("type", justify="center")
+        keys_table.add_column("storage", justify="center")
         keys_table.add_column("verified", justify="center")
         keys_table.add_column("name/tag", justify="center")
         keys_table.add_column("id", justify="center")
@@ -769,7 +769,7 @@ def ceremony(
     # option ceremony: runs the ceremony, save the payload
     else:
         bootstrap_payload = _run_ceremony_steps(save)
-        _save_bootstrap_payload(file, bootstrap_payload)
+        _save_payload(file, bootstrap_payload)
         console.print(
             f"\nCeremony done. 🔐 🎉. Bootstrap payload ({file}) saved."
         )
