@@ -16,6 +16,8 @@ jobs:
       worker_version: latest
       api_version: latest
       cli_version: dev
+    secrets:
+      RSTUF_ONLINE_KEY: ${{ secrets.RSTUF_ONLINE_KEY }}
 
   build:
     name: Build
