@@ -21,14 +21,11 @@ from repository_service_tuf.helpers.tuf import (
 INTRODUCTION = """
 # Metadata Update
 
-The "rstuf admin metadata update" command is created for cases when a user
-wants to:
-- change all roles expiration policy
-- modify the keys used for signing (no matter if root keys or the
+The metadata update allows:
+- changing all roles expiration policy
+- modification of the keys used for signing (no matter if root keys or the
 online key),
-- change the root threshold value
-
-The result of this ceremony will be a new root metadata file.
+- changing of the root threshold value
 """
 
 CURRENT_ROOT_INFO = """
@@ -41,16 +38,16 @@ get familiar with the current state of the root metadata file.
 AUTHORIZATION = """
 # Authorization
 
-Before continuing you are required to authorize yourself by using the current
-root keys.
+Before continuing, you must authorize using the current root key(s).
 
 In order to complete the authorization you will be asked to provide information
 about one or more keys used to sign the current root metadata.
+To complete the authorization, you must provide information about one or more
+keys used to sign the current root metadata.
+The number of required keys is based on the current "threshold".
+
 You will need local access to the keys as well as their corresponding
 passwords.
-
-The number of keys that are required is based on the "threshold" of keys used
-to sign the current root metadata.
 """
 
 EXPIRY_CHANGES_MSG = """
@@ -357,12 +354,12 @@ def _modify_expiration_policy(current_root: RootInfo):
     console.print(markdown.Markdown(EXPIRY_CHANGES_MSG), width=100)
     expiry_table = table.Table()
     expiry_table.add_column("Role", justify="center")
-    expiry_table.add_column("Expiration Policy", justify="center")
+    expiry_table.add_column("Expiration Policy (days)", justify="center")
     for role in Roles:
         msg_prefix = f"\n[cyan]Expiration policy for {role.value}[/] -"
         msg_suffix = "number of days to automatically bump expiration"
         if role == Roles.ROOT:
-            msg_suffix = "number of days to bump expiration"
+            msg_suffix = "number of days to bump expiration now"
 
         msg = f"{msg_prefix} {msg_suffix}"
         default = current_root.expirations[role]
@@ -431,13 +428,15 @@ def _modify_online_key(current_root: RootInfo):
 
         if online_key == current_root.online_key:
             console.print(
-                ":cross_mark: [red]Failed[/]: This is the current online key. "
-                "Cannot be added"
+                ":cross_mark: [red]Failed[/]: The new online key is the same "
+                " as the current online key. "
             )
             continue
 
         if current_root.is_keyid_used(online_key.key["keyid"]):
-            console.print(":cross_mark: [red]Failed[/]: Key is already used")
+            console.print(
+                ":cross_mark: [red]Failed[/]: Key matches one of the root keys"
+            )
             continue
 
         online_key.name = prompt.Prompt.ask(
@@ -458,7 +457,7 @@ def _modify_online_key(current_root: RootInfo):
     "-f",
     "--file",
     "file",
-    default="payload.json",
+    default="metadata-update-payload.json",
     help=(
         "Generate specific JSON payload file"
     ),
@@ -478,6 +477,9 @@ def update(context, current_root: str, file: str) -> None:
         )
 
     console.print(markdown.Markdown(INTRODUCTION), width=100)
+    console.print(
+        f"\nThe result of this ceremony will be a new {file} file.\n"
+    )
 
     console.print(markdown.Markdown(CURRENT_ROOT_INFO), width=100)
 
