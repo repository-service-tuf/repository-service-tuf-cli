@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
@@ -70,7 +70,6 @@ class RootInfo:
     root_keys: Dict[str, RSTUFKey] # key are the root "names"
     _current_root_signing_keys: List[RSTUFKey] # required for signing
     online_key: RSTUFKey
-    expirations: Dict[Roles, int]
 
     @property
     def threshold(self) -> int:
@@ -81,26 +80,27 @@ class RootInfo:
         self._root_md.signed.roles[Root.type].threshold = value
 
     @property
-    def expiration(self) -> int:
+    def expiration(self) -> datetime:
         return self._root_md.signed.expires
 
     @expiration.setter
-    def expiration(self, value: int) -> None:
+    def expiration(self, value: datetime) -> None:
         self._root_md.signed.expires = value
 
+    @property
+    def expiration_str(self) -> str:
+        return f"{self.expiration.strftime('%Y-%b-%d')}"
 
     def __init__(
         self,
         root_md: Metadata[Root],
         root_keys: Dict[str, RSTUFKey],
         online_key: RSTUFKey,
-        expirations: Dict[Roles, int],
     ):
         self._root_md = root_md
         self.root_keys = root_keys
         self.online_key = online_key
         self._current_root_signing_keys = []
-        self.expirations = expirations
 
     @classmethod
     def _get_name(cls, key: Union[Key, RSTUFKey]) -> str:
@@ -133,14 +133,7 @@ class RootInfo:
         name = cls._get_name(tuf_online_key)
         online_key = RSTUFKey(online_key_dict, name=name)
 
-        expirations: Dict[Roles, int] = {}
-        for role in Roles:
-            if role == Roles.ROOT:
-                expirations[role] = 365
-            else:
-                expirations[role] = 1
-
-        return cls(root_md, root_keys, online_key, expirations)
+        return cls(root_md, root_keys, online_key)
 
     def is_keyid_used(self, keyid: Key) -> bool:
         """Check if keyid is used in root keys"""
@@ -155,13 +148,6 @@ class RootInfo:
         key.name = tuf_key.unrecognized_fields["name"]
         self.root_keys[key.name] = key
         self._current_root_signing_keys.append(key)
-
-    def save_expiry(self, role: Roles, expiry: int):
-        self.expirations[role] = expiry
-        if role == Roles.ROOT:
-            self._root_md.signed.expires = (
-                datetime.now() + timedelta(days=expiry)
-            )
 
     def remove_key(self, key_name: str) -> bool:
         """Try to remove a key and return status of the operation"""
@@ -232,19 +218,11 @@ class RootInfo:
 
             self._root_md.sign(SSlibSigner(key.key), append=True)
 
-        console.print("\nVerify the new root metadata...")
+        console.print("\nVerifying the new payload...")
         self._root_md.verify_delegate(Root.type, self._root_md)
-        console.print("Root metadata is [green]verified[/]")
+        console.print("The new payload is [green]verified[/]")
 
-        expirations = {k.value: v for k, v in self.expirations.items()}
-        return {
-            "settings": {
-                "expiration": expirations,
-                "metadata": {
-                    "root": self._root_md.to_dict()
-                }
-            }
-        }
+        return {"metadata": {"root": self._root_md.to_dict()}}
 
 
 

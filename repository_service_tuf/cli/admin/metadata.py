@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 import click
+from datetime import datetime, timedelta
 from rich import box, markdown, prompt, table
 from typing import Any, List
 from tuf.api.metadata import Metadata, Root
@@ -22,7 +23,7 @@ INTRODUCTION = """
 # Metadata Update
 
 The metadata update allows:
-- changing all roles expiration policy
+- extending root expiration
 - modification of the keys used for signing (no matter if root keys or the
 online key),
 - changing of the root threshold value
@@ -51,14 +52,12 @@ passwords.
 """
 
 EXPIRY_CHANGES_MSG = """
-# Expiration Policy Changes
+# Extend Root Expiration
 
-You will be given the opportunity to change the expiration policy value of each
-of the roles.
-For all roles (except the root role) this value is used to automatically bump
-their corresponding expiration date.
+Now, you will be given the opportunity to extend root's expiration.
 
-Note: the root expiration is bumped ONLY during the metadata update ceremony.
+Note: the root expiration can be extended ONLY during the metadata update
+ceremony.
 """
 
 ROOT_CHANGES_MSG = """
@@ -160,7 +159,6 @@ def _print_curr_root(curr_root: RootInfo):
     root_table.add_column("Root", justify="left", vertical="middle")
     root_table.add_column("KEYS", justify="center", vertical="middle")
     number_of_keys = len(curr_root.root_keys)
-    expiration = curr_root.expiration.strftime("%Y-%b-%d")
 
     root_keys_table = _create_keys_table(
         curr_root, is_online_key_table=False, is_minimal=True
@@ -168,10 +166,10 @@ def _print_curr_root(curr_root: RootInfo):
 
     root_table.add_row(
         (
-            f"Role: [cyan]{Root.type}[/]"
+            f"[cyan]{Root.type}[/]"
             f"\nNumber of Keys: [yellow]{number_of_keys}[/]"
             f"\nThreshold: [yellow]{curr_root.threshold}[/]"
-            f"\nRole Expiration: [yellow]{expiration}[/]"
+            f"\nRoot Expiration: [yellow]{curr_root.expiration_str}[/]"
         ),
         root_keys_table,
     )
@@ -258,7 +256,7 @@ def _current_root_keys_validation(current_root: RootInfo):
             f"{key_count}/{threshold} [green]Verified[/]"
         )
 
-    console.print("[green]Authorization is successful [/]\n", width=100)
+    console.print("\n[green]Authorization is successful [/]\n", width=100)
 
 
 def _keys_removal(current_root: RootInfo):
@@ -350,29 +348,42 @@ def _get_positive_int_input(msg: str, input_name: str, default: Any) -> int:
     return input
 
 
-def _modify_expiration_policy(current_root: RootInfo):
+def _modify_expiration(current_root: RootInfo):
     console.print(markdown.Markdown(EXPIRY_CHANGES_MSG), width=100)
-    expiry_table = table.Table()
-    expiry_table.add_column("Role", justify="center")
-    expiry_table.add_column("Expiration Policy (days)", justify="center")
-    for role in Roles:
-        msg_prefix = f"\n[cyan]Expiration policy for {role.value}[/] -"
-        msg_suffix = "number of days to automatically bump expiration"
-        if role == Roles.ROOT:
-            msg_suffix = "number of days to bump expiration now"
-
-        msg = f"{msg_prefix} {msg_suffix}"
-        default = current_root.expirations[role]
-        expiry_bump = _get_positive_int_input(
-            msg, "Expiration policy days", default
+    console.print("\n")
+    while True:
+        console.print(
+            f"Current root expiration: [cyan]{current_root.expiration_str}[/]",
+            highlight=False # disable built-in rich highlight
         )
-        current_root.save_expiry(role, expiry_bump)
-        expiry_table.add_row(
-            f"[cyan]{role.value}", f"[yellow]{str(expiry_bump)}"
+        change = prompt.Confirm.ask(
+            "Do you want to extend the [cyan]root's expiration[/]?"
         )
+        if not change:
+            if current_root.expiration < (datetime.now() + timedelta(days=1)):
+                console.print(
+                    "You must extend root's expiration - root has expired"
+                )
+                continue
+            else:
+                console.print("Skipping root expiration changes")
+                return
+        else:
+            break
 
-    console.print("\nHere is summarization of the expiration policy changes:")
-    console.print("\n", expiry_table)
+    msg = ("Days to extend [cyan]root's expiration[/] starting from today")
+    while True:
+        expiry_bump = _get_positive_int_input(msg, "Expiration extension", 365)
+        new_expiry = datetime.now() + timedelta(days=expiry_bump)
+        new_exp_str = new_expiry.strftime("%Y-%b-%d")
+        agree = prompt.Confirm.ask(
+            f"New root expiration: [cyan]{new_exp_str}[/]. Do you agree?"
+        )
+        if not agree:
+            continue
+        else:
+            current_root.expiration = new_expiry
+            break
 
 
 def _modify_root_md(current_root: RootInfo):
@@ -385,7 +396,7 @@ def _modify_root_md(current_root: RootInfo):
             "Do you want to change the [cyan]root[/] metadata?"
         )
         if not change:
-            console.print("Skipping further root metadata changes.")
+            console.print("Skipping further root metadata changes")
             break
 
         msg = "\nWhat should be the [cyan]root[/] role [green]threshold?[/]"
@@ -418,7 +429,7 @@ def _modify_online_key(current_root: RootInfo):
             "Do you want to change the [cyan]online key[/]?"
         )
         if not change:
-            console.print("Skipping further online key changes.")
+            console.print("Skipping further online key changes")
             break
 
         online_key: RSTUFKey = _get_key(Root.type)
@@ -429,7 +440,7 @@ def _modify_online_key(current_root: RootInfo):
         if online_key == current_root.online_key:
             console.print(
                 ":cross_mark: [red]Failed[/]: The new online key is the same "
-                " as the current online key. "
+                " as the current online key"
             )
             continue
 
@@ -449,7 +460,7 @@ def _modify_online_key(current_root: RootInfo):
 # ADD OPTION TO UPLOAD NEW ROOT CONTENT
 @metadata.command()
 @click.option(
-    "--current-root",
+    "--current-root-uri",
     help="URL or local path to the current root.json file.",
     required=True,
 )
@@ -465,15 +476,15 @@ def _modify_online_key(current_root: RootInfo):
     required=False,
 )
 @click.pass_context
-def update(context, current_root: str, file: str) -> None:
+def update(context, current_root_uri: str, file: str) -> None:
     """
     Start a new metadata update ceremony.
     """
     try:
-        curr_root: RootInfo = _get_curr_root(current_root)
+        curr_root: RootInfo = _get_curr_root(current_root_uri)
     except StorageError:
         raise click.ClickException(
-            f"Cannot fetch/load current root {current_root}"
+            f"Cannot fetch/load current root {current_root_uri}"
         )
 
     console.print(markdown.Markdown(INTRODUCTION), width=100)
@@ -487,7 +498,7 @@ def update(context, current_root: str, file: str) -> None:
 
     _current_root_keys_validation(curr_root)
 
-    _modify_expiration_policy(curr_root)
+    _modify_expiration(curr_root)
 
     _modify_root_md(curr_root)
 
