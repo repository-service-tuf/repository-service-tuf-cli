@@ -510,6 +510,11 @@ def update(context, current_root_uri: str, file: str) -> None:
 
     console.print(markdown.Markdown("## Payload Generation"))
 
-    payload = curr_root.generate_payload()
-    _save_payload(file, payload)
-    console.print(f"Payload successfully generated and saved in file {file}")
+    if curr_root.has_changed():
+        # There are one or more changes to the root metadata file.
+        payload = curr_root.generate_payload()
+        _save_payload(file, payload)
+        console.print(f"File {file} successfully generated")
+    else:
+        # There are no changes made to the root metadata file.
+        console.print("\nNo file will be generated as no changes were made\n")

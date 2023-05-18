@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
+import copy
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -70,6 +71,7 @@ class RootInfo:
     root_keys: Dict[str, RSTUFKey] # key are the root "names"
     _current_root_signing_keys: List[RSTUFKey] # required for signing
     online_key: RSTUFKey
+    _initial_root_md_obj: Metadata[Root] # required to check if root is changed
 
     @property
     def threshold(self) -> int:
@@ -101,6 +103,7 @@ class RootInfo:
         self.root_keys = root_keys
         self.online_key = online_key
         self._current_root_signing_keys = []
+        self._initial_root_md_obj = copy.deepcopy(self._root_md)
 
     @classmethod
     def _get_name(cls, key: Union[Key, RSTUFKey]) -> str:
@@ -187,6 +190,13 @@ class RootInfo:
             self._root_md.signed.add_key(online_tuf_key, role)
 
         self.online_key = new_online_key
+
+    def has_changed(self) -> bool:
+        """Returns whether the root metadata object has changed"""
+        if self._initial_root_md_obj != self._root_md:
+            return True
+        else:
+            return False
 
     def generate_payload(self) -> Dict[str, Any]:
         """Save the root metadata into 'file'"""
