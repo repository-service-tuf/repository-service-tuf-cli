@@ -782,9 +782,7 @@ class TestCeremonyOptions:
         # test regression https://github.com/repository-service-tuf/repository-service-tuf-cli/pull/259  # noqa
         assert test_context["settings"].SERVER is not None
 
-    def test_ceremony_option_bootstrap_upload_no_auth(
-        self, client, test_context
-    ):
+    def test_ceremony_option_bootstrap_upload_auth(self, client, test_context):
         ceremony.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": False}}
         )
@@ -796,7 +794,7 @@ class TestCeremonyOptions:
         )
         ceremony.task_status = pretend.call_recorder(lambda *a: None)
 
-        test_context["settings"].AUTH = False
+        test_context["settings"].AUTH = True
 
         test_result = client.invoke(
             ceremony.ceremony,
@@ -825,10 +823,10 @@ class TestCeremonyOptions:
             )
         ]
 
-    def test_ceremony_option_bootstrap_upload_no_auth_missing_upload_server(
+    def test_ceremony_option_bootstrap_upload_auth_missing_upload_server(
         self, client, test_context
     ):
-        test_context["settings"].AUTH = False
+        test_context["settings"].AUTH = True
 
         test_result = client.invoke(
             ceremony.ceremony,
@@ -839,7 +837,7 @@ class TestCeremonyOptions:
 
         assert test_result.exit_code == 1, test_result.output
         assert (
-            "Requires '--upload-server' when using '--no-auth'"
+            "Requires '--upload-server' when using '--auth'"
             in test_result.output
         )
 

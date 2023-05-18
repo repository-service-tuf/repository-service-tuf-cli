@@ -739,9 +739,9 @@ def ceremony(
 
     # option bootstrap: checks if the server accepts it beforehand
     if bootstrap:
-        if settings.AUTH is False and upload_server is None:
+        if settings.AUTH is True and upload_server is None:
             raise click.ClickException(
-                "Requires '--upload-server' when using '--no-auth'. "
+                "Requires '--upload-server' when using '--auth'. "
                 "Example: --upload-server https://rstuf-api.example.com"
             )
         elif upload_server:

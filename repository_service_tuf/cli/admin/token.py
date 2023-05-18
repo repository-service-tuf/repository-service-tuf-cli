@@ -19,7 +19,7 @@ def token(context):
     """
     settings = context.obj.get("settings")
     if settings.get("AUTH") is False:
-        console.print("[INFO] admin token is disabled with `--no-auth`")
+        console.print("[INFO] admin token is disabled, use `--auth`")
         raise click.Abort()
 
 

@@ -66,6 +66,7 @@ def is_logged(settings: LazySettings):
     token = settings.get("TOKEN")
     server = settings.get("SERVER")
     headers = {"Authorization": f"Bearer {token}"}
+
     url = f"{URL.token.value}?token={token}"
     response = request_server(server, url, Methods.get, headers=headers)
     if response.status_code == 401 or response.status_code == 403:
