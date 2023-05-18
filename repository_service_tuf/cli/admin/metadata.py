@@ -462,7 +462,7 @@ def _modify_online_key(current_root: RootInfo):
 @click.option(
     "--current-root-uri",
     help="URL or local path to the current root.json file.",
-    required=True,
+    required=False,
 )
 @click.option(
     "-f",
@@ -480,6 +480,10 @@ def update(context, current_root_uri: str, file: str) -> None:
     """
     Start a new metadata update ceremony.
     """
+    if current_root_uri is None:
+        current_root_uri = prompt.Prompt.ask(
+            "[cyan]File name or URL[/] to the current root metadata"
+        )
     try:
         curr_root: RootInfo = _get_curr_root(current_root_uri)
     except StorageError:
