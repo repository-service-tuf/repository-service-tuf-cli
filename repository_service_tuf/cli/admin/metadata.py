@@ -1,25 +1,22 @@
 # SPDX-FileCopyrightText: 2022-2023 VMware Inc
 #
 # SPDX-License-Identifier: MIT
-import click
 import json
 from datetime import datetime, timedelta
-from rich import box, markdown, prompt, table
 from typing import Any, List
+
+import click
+from rich import box, markdown, prompt, table
+from securesystemslib.exceptions import StorageError  # type: ignore
 from tuf.api.metadata import Metadata, Root
 from tuf.api.serialization import DeserializationError
-from securesystemslib.exceptions import StorageError
 
 from repository_service_tuf.cli import console
 from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.cli.admin.ceremony import _load_key, _save_payload
-
 from repository_service_tuf.constants import KeyType
-from repository_service_tuf.helpers.api_client import request_server, Methods
-from repository_service_tuf.helpers.tuf import (
-    RSTUFKey,
-    RootInfo
-)
+from repository_service_tuf.helpers.api_client import Methods, request_server
+from repository_service_tuf.helpers.tuf import RootInfo, RSTUFKey
 
 INTRODUCTION = """
 # Metadata Update
@@ -89,7 +86,7 @@ ROOT_KEY_ADDITIONS_MSG = """
 Now, you will be able to add root keys.
 """
 
-ONLINE_KEY_CHANGE= """
+ONLINE_KEY_CHANGE = """
 # Online Key Change
 
 Now you will be given the opportunity to change the online key.
@@ -111,7 +108,7 @@ def metadata(context):
 def _get_curr_root(curr_root_uri: str) -> RootInfo:
     parsed_url = curr_root_uri.split("://")
     protocol = parsed_url[0]
-    curr_root_md: Metadata[Root] = None
+    curr_root_md: Metadata[Root]
     if protocol in ["http", "https"]:
         console.print(f"Fetching current root from: {curr_root_uri}")
         base_url = f"{parsed_url[1].split('/')[0]}"
@@ -204,14 +201,15 @@ def _get_key(role: str) -> RSTUFKey:
 
     return _load_key(filepath, key_type, password, "")
 
+
 def _is_valid_current_key(
     keyid: str, current_root: RootInfo, already_loaded_keyids: List[str]
-) -> False:
+) -> bool:
     """Verify that key with `keyid` have been used to sign the current root"""
     if keyid in already_loaded_keyids:
         console.print(
             ":cross_mark: [red]Failed[/]: You already loaded this key",
-            width=100
+            width=100,
         )
         return False
 
@@ -221,7 +219,7 @@ def _is_valid_current_key(
                 ":cross_mark: [red]Failed[/]: This key has not been used "
                 "to sign current root metadata",
             ),
-            width=100
+            width=100,
         )
         return False
 
@@ -279,11 +277,11 @@ def _keys_removal(current_root: RootInfo):
         console.print(keys_table)
         console.print("\n")
 
-        key_removal = prompt.Confirm.ask(f"Do you want to remove a key")
+        key_removal = prompt.Confirm.ask("Do you want to remove a key")
         if not key_removal:
             break
 
-        name =  prompt.Prompt.ask("[green]Name/Tag[/] of the key to remove")
+        name = prompt.Prompt.ask("[green]Name/Tag[/] of the key to remove")
         if not current_root.remove_key(name):
             console.print(
                 "\n", f":cross_mark: [red]Failed[/]: key {name} is not in root"
@@ -364,7 +362,7 @@ def _modify_expiration(current_root: RootInfo):
     while True:
         console.print(
             f"Current root expiration: [cyan]{current_root.expiration_str}[/]",
-            highlight=False # disable built-in rich highlight
+            highlight=False,  # disable built-in rich highlight
         )
         change = prompt.Confirm.ask(
             "Do you want to extend the [cyan]root's expiration[/]?"
@@ -381,7 +379,7 @@ def _modify_expiration(current_root: RootInfo):
         else:
             break
 
-    msg = ("Days to extend [cyan]root's expiration[/] starting from today")
+    msg = "Days to extend [cyan]root's expiration[/] starting from today"
     while True:
         expiry_bump = _get_positive_int_input(msg, "Expiration extension", 365)
         new_expiry = datetime.now() + timedelta(days=expiry_bump)
@@ -479,9 +477,7 @@ def _modify_online_key(current_root: RootInfo):
     "--file",
     "file",
     default="metadata-update-payload.json",
-    help=(
-        "Generate specific JSON payload file"
-    ),
+    help=("Generate specific JSON payload file"),
     show_default=True,
     required=False,
 )
@@ -510,7 +506,7 @@ def update(context, current_root_uri: str, file: str) -> None:
             f"Cannot fetch/load current root {current_root_uri}"
         )
     except DeserializationError:
-        raise json.decoder.JSONDecodeError("Cannot decode/parse the file")
+        raise click.ClickException("Metadata is invalid JSON file")
 
     console.print(markdown.Markdown(CURRENT_ROOT_INFO), width=100)
 

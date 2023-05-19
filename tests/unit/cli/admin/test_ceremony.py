@@ -403,10 +403,10 @@ class TestCeremonyInteraction:
             "",  # What is the metadata expiration for the targets role?(Days) (365)?  # noqa
             "y",  # Show example?
             "16",  # Choose the number of delegated hash bin roles
-            "http://www.example.com/repository",  # What is the targets base URL
+            "http://www.example.com/repository",  # What is the targets base URL  # noqa
             "",  # What is the metadata expiration for the snapshot role?(Days) (365)?  # noqa
             "",  # What is the metadata expiration for the timestamp role?(Days) (365)?  # noqa
-            "",  # What is the metadata expiration for the bins role?(Days) (365)?
+            "",  # What is the metadata expiration for the bins role?(Days) (365)?  # noqa
             "Y",  # Ready to start loading the keys? Passwords will be required for keys [y/n]  # noqa
         ]
         test_result = client.invoke(
@@ -652,9 +652,7 @@ class TestCeremonyOptions:
         ceremony._run_ceremony_steps = pretend.call_recorder(
             lambda *a: {"k": "v"}
         )
-        ceremony._save_payload = pretend.call_recorder(
-            lambda *a: None
-        )
+        ceremony._save_payload = pretend.call_recorder(lambda *a: None)
 
         test_result = client.invoke(
             ceremony.ceremony,
@@ -717,9 +715,7 @@ class TestCeremonyOptions:
         ceremony._run_ceremony_steps = pretend.call_recorder(
             lambda *a: {"k": "v"}
         )
-        ceremony._save_payload = pretend.call_recorder(
-            lambda *a: None
-        )
+        ceremony._save_payload = pretend.call_recorder(lambda *a: None)
         ceremony.task_status = pretend.call_recorder(lambda *a: None)
 
         test_result = client.invoke(

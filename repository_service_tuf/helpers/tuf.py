@@ -4,7 +4,7 @@
 
 import copy
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
@@ -68,10 +68,12 @@ class BootstrapSetup:
 
 class RootInfo:
     _root_md: Metadata[Root]
-    root_keys: Dict[str, RSTUFKey] # key are the root "names"
-    _current_root_signing_keys: List[RSTUFKey] # required for signing
+    root_keys: Dict[str, RSTUFKey]  # key are the root "names"
+    _current_root_signing_keys: List[RSTUFKey]  # required for signing
     online_key: RSTUFKey
-    _initial_root_md_obj: Metadata[Root] # required to check if root is changed
+    _initial_root_md_obj: Metadata[
+        Root
+    ]  # required to check if root is changed
 
     @property
     def threshold(self) -> int:
@@ -114,9 +116,10 @@ class RootInfo:
                 name = key.unrecognized_fields["name"]
 
         elif isinstance(key, RSTUFKey):
-            name = key.name
             if key.name is None or key.name == "":
                 name = key.key["keyid"][:7]
+            else:
+                name = key.name
 
         return name
 
@@ -138,7 +141,7 @@ class RootInfo:
 
         return cls(root_md, root_keys, online_key)
 
-    def is_keyid_used(self, keyid: Key) -> bool:
+    def is_keyid_used(self, keyid: str) -> bool:
         """Check if keyid is used in root keys"""
         if keyid not in self._root_md.signed.roles[Root.type].keyids:
             return False
@@ -147,8 +150,11 @@ class RootInfo:
 
     def save_current_root_key(self, key: RSTUFKey):
         """Update internal information based on 'key' data."""
-        tuf_key = self._root_md.signed.keys[key.key["keyid"]]
-        key.name = tuf_key.unrecognized_fields["name"]
+        tuf_key: Key = self._root_md.signed.keys[key.key["keyid"]]
+        if isinstance(tuf_key.unrecognized_fields.get("name"), str):
+            key.name = tuf_key.unrecognized_fields["name"]
+
+        key.name = self._get_name(tuf_key)
         self.root_keys[key.name] = key
         self._current_root_signing_keys.append(key)
 
@@ -204,8 +210,8 @@ class RootInfo:
         self._root_md.signatures.clear()
 
         # As the spec says: sign the new root with threshold amount of current
-        # root keys where "threshold" comes from the current root.
-        # See https://theupdateframework.github.io/specification/latest/#key-management-and-migration
+        # root keys where "threshold" comes from the current root. See:
+        # https://theupdateframework.github.io/specification/latest/#key-management-and-migration
         for curr_root_key in self._current_root_signing_keys:
             self._root_md.sign(SSlibSigner(curr_root_key.key), append=True)
 
@@ -233,7 +239,6 @@ class RootInfo:
         console.print("The new payload is [green]verified[/]")
 
         return {"metadata": {"root": self._root_md.to_dict()}}
-
 
 
 class TUFManagement:
