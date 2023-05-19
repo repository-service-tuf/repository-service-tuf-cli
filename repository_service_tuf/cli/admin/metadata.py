@@ -2,10 +2,12 @@
 #
 # SPDX-License-Identifier: MIT
 import click
+import json
 from datetime import datetime, timedelta
 from rich import box, markdown, prompt, table
 from typing import Any, List
 from tuf.api.metadata import Metadata, Root
+from tuf.api.serialization import DeserializationError
 from securesystemslib.exceptions import StorageError
 
 from repository_service_tuf.cli import console
@@ -14,7 +16,6 @@ from repository_service_tuf.cli.admin.ceremony import _load_key, _save_payload
 
 from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.tuf import (
-    Roles,
     RSTUFKey,
     RootInfo
 )
@@ -23,10 +24,10 @@ INTRODUCTION = """
 # Metadata Update
 
 The metadata update allows:
-- extending root expiration
-- modification of the keys used for signing (no matter if root keys or the
-online key),
-- changing of the root threshold value
+- extending Root expiration
+- modification of the keys used for signing (no matter if Root keys or the
+Online key),
+- changing of the Root threshold value
 """
 
 CURRENT_ROOT_INFO = """
@@ -480,6 +481,11 @@ def update(context, current_root_uri: str, file: str) -> None:
     """
     Start a new metadata update ceremony.
     """
+    console.print(markdown.Markdown(INTRODUCTION), width=100)
+    console.print(
+        f"\nThe result of this ceremony will be a new {file} file.\n"
+    )
+
     if current_root_uri is None:
         current_root_uri = prompt.Prompt.ask(
             "[cyan]File name or URL[/] to the current root metadata"
@@ -490,11 +496,8 @@ def update(context, current_root_uri: str, file: str) -> None:
         raise click.ClickException(
             f"Cannot fetch/load current root {current_root_uri}"
         )
-
-    console.print(markdown.Markdown(INTRODUCTION), width=100)
-    console.print(
-        f"\nThe result of this ceremony will be a new {file} file.\n"
-    )
+    except DeserializationError:
+        raise json.decoder.JSONDecodeError("Cannot decode/parse the file")
 
     console.print(markdown.Markdown(CURRENT_ROOT_INFO), width=100)
 
