@@ -482,9 +482,13 @@ def update(context, current_root_uri: str, file: str) -> None:
     Start a new metadata update ceremony.
     """
     console.print(markdown.Markdown(INTRODUCTION), width=100)
-    console.print(
-        f"\nThe result of this ceremony will be a new {file} file.\n"
+    console.print(f"\nThe result of this ceremony will be a new {file} file.")
+    console.print("\n")
+    NOTICE = (
+        "**NOTICE: This is an alpha feature and will get updated over time!**"
     )
+    console.print(markdown.Markdown(NOTICE), width=100)
+    console.print("\n")
 
     if current_root_uri is None:
         current_root_uri = prompt.Prompt.ask(
