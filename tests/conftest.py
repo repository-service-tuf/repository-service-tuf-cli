@@ -23,7 +23,7 @@ from repository_service_tuf.helpers.tuf import (
 def test_context() -> Dict[str, Any]:
     setting_file = os.path.join(TemporaryDirectory().name, "test_settings.ini")
     test_settings = Dynaconf(settings_files=[setting_file])
-    test_settings.AUTH = True
+    test_settings.AUTH = False
     return {"settings": test_settings, "config": setting_file}
 
 

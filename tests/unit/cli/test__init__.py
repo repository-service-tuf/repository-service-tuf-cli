@@ -19,7 +19,7 @@ class TestRSTUFCLI:
         assert result.exit_code == 0
         assert result.output == f"rstuf, version {version}\n"
 
-    def test_no_auth_parameter(self, client):
-        result = client.invoke(rstuf, ["--no-auth", "admin"])
+    def test_auth_parameter(self, client):
+        result = client.invoke(rstuf, ["--auth", "admin"])
         assert result.exit_code == 0
-        assert "Skipping RSTUF authentication (--no-auth)" in result.output
+        assert "Using RSTUF built-in authentication (--auth)" in result.output

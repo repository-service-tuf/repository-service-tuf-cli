@@ -80,6 +80,8 @@ class TestAPIClient:
 
         test_context["settings"].SERVER = "http://server"
         test_context["settings"].TOKEN = "fake_token"
+        test_context["settings"].AUTH = True
+
         result = api_client.is_logged(test_context["settings"])
         assert result == api_client.Login(state=True, data={"expired": False})
         assert api_client.request_server.calls == [
@@ -94,7 +96,7 @@ class TestAPIClient:
     def test_is_logged_no_auth(self, test_context):
         test_context["settings"].SERVER = "http://server"
         test_context["settings"].TOKEN = "fake_token"
-        test_context["settings"].AUTH = False
+
         result = api_client.is_logged(test_context["settings"])
         assert result is None
 
@@ -108,6 +110,8 @@ class TestAPIClient:
 
         test_context["settings"].SERVER = "http://server"
         test_context["settings"].TOKEN = "fake_token"
+        test_context["settings"].AUTH = True
+
         result = api_client.is_logged(test_context["settings"])
         assert result == api_client.Login(state=False, data=None)
         assert api_client.request_server.calls == [
@@ -130,6 +134,8 @@ class TestAPIClient:
 
         test_context["settings"].SERVER = "http://server"
         test_context["settings"].TOKEN = "fake_token"
+        test_context["settings"].AUTH = True
+
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.is_logged(test_context["settings"])
 
@@ -155,6 +161,8 @@ class TestAPIClient:
 
         test_context["settings"].SERVER = "http://server"
         test_context["settings"].TOKEN = "fake_token"
+        test_context["settings"].AUTH = True
+
         result = api_client.get_headers(test_context["settings"])
 
         assert result == {"Authorization": "Bearer fake_token"}
@@ -171,7 +179,6 @@ class TestAPIClient:
         ]
 
     def test_get_headers_no_auth(self, test_context):
-        test_context["settings"].AUTH = False
         result = api_client.get_headers(test_context["settings"])
 
         assert result == {}
@@ -189,6 +196,8 @@ class TestAPIClient:
 
         test_context["settings"].SERVER = "http://server"
         test_context["settings"].TOKEN = "fake_token"
+        test_context["settings"].AUTH = True
+
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.get_headers(test_context["settings"])
 
@@ -206,6 +215,8 @@ class TestAPIClient:
 
         test_context["settings"].SERVER = "http://server"
         test_context["settings"].TOKEN = "fake_token"
+        test_context["settings"].AUTH = True
+
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.get_headers(test_context["settings"])
 
@@ -224,6 +235,8 @@ class TestAPIClient:
 
         test_context["settings"].SERVER = "http://server"
         test_context["settings"].TOKEN = "fake_token"
+        test_context["settings"].AUTH = True
+
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.get_headers(test_context["settings"])
 

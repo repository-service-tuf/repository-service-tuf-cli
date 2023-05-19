@@ -44,11 +44,11 @@ except FileNotFoundError:
     required=False,
 )
 @click.option(
-    "--no-auth",
+    "--auth",
     "auth",
-    help="Skips the use of RSTUF built-in authentication.",
+    help="Use of RSTUF built-in authentication.",
     is_flag=True,
-    default=True,
+    default=False,
     required=False,
 )
 # adds the --version parameter
@@ -64,10 +64,10 @@ def rstuf(context, config, auth):
         "auth": auth,
     }
     settings = context.obj["settings"]
-    if auth is False:
+    if auth is True:
         console.print(
             Panel(
-                "[white]Skipping RSTUF authentication (--no-auth)[/]",
+                "[white]Using RSTUF built-in authentication (--auth)[/]",
                 title="[green]Info[/]",
                 title_align="left",
                 style="green",
@@ -84,7 +84,7 @@ groups_required_auth = [
 for _, name, _ in pkgutil.walk_packages(  # type: ignore
     __path__, prefix=__name__ + "."
 ):
-    if name in groups_required_auth and "--no-auth" in sys.argv:
+    if name in groups_required_auth and "--auth" not in sys.argv:
         continue
     else:
         importlib.import_module(name)

@@ -62,10 +62,11 @@ class TestLoginGroupCLI:
         login._login = pretend.call_recorder(
             lambda *a: {"access_token": "fake-token"}
         )
-
         login.loaders = pretend.stub(
             write=pretend.call_recorder(lambda *a: None)
         )
+        test_context["settings"].AUTH = True
+
         test_result = client.invoke(
             login.login, input="\n".join(steps), obj=test_context
         )
@@ -88,7 +89,6 @@ class TestLoginGroupCLI:
         login._login = pretend.call_recorder(
             lambda *a: {"access_token": "fake-token"}
         )
-        test_context["settings"].AUTH = False
         login.loaders = pretend.stub(
             write=pretend.call_recorder(lambda *a: None)
         )
@@ -117,6 +117,7 @@ class TestLoginGroupCLI:
         login.loaders = pretend.stub(
             write=pretend.call_recorder(lambda *a: None)
         )
+        test_context["settings"].AUTH = True
         test_result = client.invoke(
             login.login, ["--force"], input="\n".join(steps), obj=test_context
         )
@@ -150,6 +151,7 @@ class TestLoginGroupCLI:
         login.loaders = pretend.stub(
             write=pretend.call_recorder(lambda *a: None)
         )
+        test_context["settings"].AUTH = True
 
         test_result = client.invoke(
             login.login, input="\n".join(steps), obj=test_context
@@ -190,6 +192,7 @@ class TestLoginGroupCLI:
         login.loaders = pretend.stub(
             write=pretend.call_recorder(lambda *a: None)
         )
+        test_context["settings"].AUTH = True
 
         test_result = client.invoke(
             login.login, input="\n".join(steps), obj=test_context
@@ -219,6 +222,8 @@ class TestLoginGroupCLI:
         login.loaders = pretend.stub(
             write=pretend.call_recorder(lambda *a: None)
         )
+        test_context["settings"].AUTH = True
+
         test_result = client.invoke(
             login.login, input="\n".join(steps), obj=test_context
         )
@@ -238,6 +243,8 @@ class TestLoginGroupCLI:
         login.loaders = pretend.stub(
             write=pretend.call_recorder(lambda *a: None)
         )
+        test_context["settings"].AUTH = True
+
         test_result = client.invoke(
             login.login,
             ["-s", "http://test-rstuf"],
@@ -262,6 +269,7 @@ class TestLoginGroupCLI:
         login._login = pretend.call_recorder(
             lambda *a: {"access_token": "fake-token"}
         )
+        test_context["settings"].AUTH = True
 
         test_result = client.invoke(
             login.login,
@@ -292,6 +300,8 @@ class TestLoginGroupCLI:
         login.loaders = pretend.stub(
             write=pretend.call_recorder(lambda *a: None)
         )
+        test_context["settings"].AUTH = True
+
         test_result = client.invoke(
             login.login,
             ["-s", "test-rstuf"],
@@ -319,6 +329,8 @@ class TestLoginGroupCLI:
         login.loaders = pretend.stub(
             write=pretend.call_recorder(lambda *a: None)
         )
+        test_context["settings"].AUTH = True
+
         test_result = client.invoke(
             login.login,
             ["-s", "http://test-rstuf", "-u", "admin"],
@@ -346,6 +358,8 @@ class TestLoginGroupCLI:
         login.loaders = pretend.stub(
             write=pretend.call_recorder(lambda *a: None)
         )
+        test_context["settings"].AUTH = True
+
         test_result = client.invoke(
             login.login,
             ["-s", "http://test-rstuf", "-u", "admin", "-p", "pass"],
@@ -369,6 +383,8 @@ class TestLoginGroupCLI:
         login.loaders = pretend.stub(
             write=pretend.call_recorder(lambda *a: None)
         )
+        test_context["settings"].AUTH = True
+
         test_result = client.invoke(
             login.login,
             [
