@@ -15,6 +15,7 @@ from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.cli.admin.ceremony import _load_key, _save_payload
 
 from repository_service_tuf.constants import KeyType
+from repository_service_tuf.helpers.api_client import request_server, Methods
 from repository_service_tuf.helpers.tuf import (
     RSTUFKey,
     RootInfo
@@ -108,10 +109,19 @@ def metadata(context):
 
 
 def _get_curr_root(curr_root_uri: str) -> RootInfo:
-    root_split = curr_root_uri.split("://")
-    curr_root_md: Metadata[Root]
-    if len(root_split) > 1 and root_split[0] in ["http", "https"]:
+    parsed_url = curr_root_uri.split("://")
+    protocol = parsed_url[0]
+    curr_root_md: Metadata[Root] = None
+    if protocol in ["http", "https"]:
         console.print(f"Fetching current root from: {curr_root_uri}")
+        base_url = f"{parsed_url[1].split('/')[0]}"
+        server = f"{protocol}://{base_url}"
+        url = "".join(parsed_url[1].split("/")[1:])
+        response = request_server(server, url, Methods.get)
+        if response.status_code != 200:
+            raise click.ClickException(f"Cannot fetch {curr_root_uri}")
+        json_data = json.loads(response.text)
+        curr_root_md = Metadata.from_dict(json_data)
     else:
         curr_root_md = Metadata.from_file(curr_root_uri)
 
