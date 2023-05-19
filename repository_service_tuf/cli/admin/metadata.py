@@ -167,7 +167,6 @@ def _print_curr_root(curr_root: RootInfo):
 
     root_table.add_row(
         (
-            f"[cyan]{Root.type}[/]"
             f"\nNumber of Keys: [yellow]{number_of_keys}[/]"
             f"\nThreshold: [yellow]{curr_root.threshold}[/]"
             f"\nRoot Expiration: [yellow]{curr_root.expiration_str}[/]"
