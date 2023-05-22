@@ -12,6 +12,14 @@ repository\_service\_tuf.cli.key.generate module
    :undoc-members:
    :show-inheritance:
 
+repository\_service\_tuf.cli.key.info module
+--------------------------------------------
+
+.. automodule:: repository_service_tuf.cli.key.info
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

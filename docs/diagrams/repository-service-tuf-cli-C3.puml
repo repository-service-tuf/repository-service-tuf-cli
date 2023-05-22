@@ -75,6 +75,7 @@ Container(tuf_repository_service_api, "REPOSITORY-SERVICE-TUF-API", "HTTP REST A
 Rel_R(user, trs_cli, "rstuf-cli", $tags="terminal")
 
 Rel(ceremony, tuf, " ")
+Rel(info, tuf, " ")
 Rel(ceremony, api_client, " ")
 Rel(update, tuf, " ")
 Rel(update, api_client, " ")
