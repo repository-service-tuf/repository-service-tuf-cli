@@ -392,17 +392,18 @@ Metadata Management (``metadata``)
 
     Token Management.
 
-    ╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │  --help  -h    Show this message and exit.                                                                             │
-    ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-    ╭─ Commands ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │  update  Start a new metadata update ceremony.                                                                         │
-    ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+    ╭─ Options ───────────────────────────────────────────╮
+    │  --help  -h    Show this message and exit.          │
+    ╰─────────────────────────────────────────────────────╯
+    ╭─ Commands ──────────────────────────────────────────╮
+    │  sign    Start metadata signature                   │
+    │  update  Start a new metadata update ceremony.      │
+    ╰─────────────────────────────────────────────────────╯
 
 .. rstuf-cli-admin-metadata-update
 
-update
-......
+update (``update``)
+...................
 
 The metadata update ceremony allows to:
 - extend Root expiration
@@ -696,6 +697,47 @@ There are a few of ways to you can fully complete the metadata update ceremony:
     * Finish the metadata ceremony and generate ``metadata-update-payload.json`` (or the custom name you chose)
 
     * Run ``rstuf admin metadata update -u [-f filename]``
+
+
+.. rstuf-cli-admin-metadata-sign
+
+sign (``sign``)
+...............
+
+.. Note:: It is required to access the private key for signing.
+
+.. warning:: Do not share the private key.
+
+.. code:: shell
+
+    ❯ rstuf admin metadata sign
+    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+    ┃                               Metadata Signing                               ┃
+    ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+    Metadata signing allows sending signature of pending Repository Service for TUF
+    (RSTUF) role metadata.
+
+    It retrieves the pending metadata from the RSTUF API. Select the metadata role
+    pending signature and the private key to load.
+
+    After loading the key it will sign the role metadata and send the request to the
+    RSTUF API with the signature.
+
+    API URL address: https://api.rstuf.example.com
+
+    Choose a metadata to sign [root]: root
+    Signing root version 1
+
+    Choose a private key to load [Jimi Hendrix]: Jimi Hendrix
+
+    Sending signature
+    Metadata signature status: ACCEPTED (09659992156445238f60bd5f96a43479)
+    Metadata Signature status: STARTED
+    Metadata Signature status: SUCCESS
+
+    Metadata Signed! 🔑
+
 
 .. rstuf-cli-admin-token
 

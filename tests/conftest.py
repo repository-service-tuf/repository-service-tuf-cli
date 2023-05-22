@@ -168,3 +168,17 @@ def md_update_input() -> Tuple[List[str], List[str], List[str], List[str]]:
         "n",  # Do you want to change the online key? [y/n]
     ]
     return input_step1, input_step2, input_step3, input_step4
+
+
+@pytest.fixture
+def metadata_sign_input() -> List[str]:
+    input = [
+        "http://127.0.0.1",  # API URL address
+        "root",  # Choose a metadata to sign [root]
+        "Jimi Hendrix",  # Choose a private key to load [Jimi Hendrix]
+        "",  # Choose Jimi Hendrix key type [ed25519/ecdsa/rsa]
+        "tests/files/key_storage/JimiHendrix.key",  # Enter the Jimi Hendrix`s private key path  # noqa
+        "strongPass",  # Enter the Jimi Hendrix`s private key password
+    ]
+
+    return input

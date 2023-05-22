@@ -283,6 +283,17 @@ class TestMetadataInfo:
         root_info._new_md.signed.version += 1
         assert root_info.has_changed() is True
 
+    def test_get_signer(self, monkeypatch, root_info: MetadataInfo):
+        rstuf_key = RSTUFKey(key={"fake": "key"}, key_path="fake_path")
+        SSlibSigner = pretend.call_recorder(lambda *a: "FakeSSlibSigner")
+        monkeypatch.setattr(
+            "repository_service_tuf.helpers.tuf.SSlibSigner", SSlibSigner
+        )
+        result = root_info.get_signer(rstuf_key)
+
+        assert result == "FakeSSlibSigner"
+        assert SSlibSigner.calls == [pretend.call(rstuf_key.key)]
+
     def test_generate_payload(self, root_info: MetadataInfo):
         for key in root_info.keys:
             root_info.signing_keys[key["keyid"]] = RSTUFKey(key)
@@ -430,16 +441,18 @@ class TestTUFHelper:
             pretend.call({"a": "b"}),
         ]
 
-    def test__sign(self, test_tuf_management: TUFManagement):
+    def test__sign(self, test_tuf_management):
         fake_role = pretend.stub(
             signatures=pretend.stub(
                 clear=pretend.call_recorder(lambda *a: None)
             ),
             sign=pretend.call_recorder(lambda *a, **kw: None),
         )
-        signers = ["signer1", "signer2"]
+        signer1 = pretend.stub(key_dict={"keyval": {"private": "signer1"}})
+        signer2 = pretend.stub(key_dict={"keyval": {"private": None}})
+
         test_tuf_management._signers = pretend.call_recorder(
-            lambda *a: signers
+            lambda *a: [signer1, signer2]
         )
 
         result = test_tuf_management._sign(fake_role, "root")
@@ -447,8 +460,7 @@ class TestTUFHelper:
         assert fake_role.signatures.clear.calls == [pretend.call()]
         assert test_tuf_management._signers.calls == [pretend.call(Roles.ROOT)]
         assert fake_role.sign.calls == [
-            pretend.call("signer1", append=True),
-            pretend.call("signer2", append=True),
+            pretend.call(signer1, append=True),
         ]
 
     def test__add_payload_root(self, test_tuf_management: TUFManagement):
@@ -728,18 +740,3 @@ class TestTUFHelper:
         assert test_tuf_management._validate_root_payload_exist.calls == [
             pretend.call()
         ]
-
-    def test_initialize_metadata_signers_less_than_threshold(
-        self, test_tuf_management: TUFManagement
-    ):
-        signers = pretend.call_recorder(lambda *a: ["root_signer"])
-        test_tuf_management._signers = signers
-        tuf.Role = pretend.call_recorder(lambda *a: "role")
-
-        # Set root threshold higher than the number of keys.
-        test_tuf_management.setup.threshold[Roles.ROOT] = 2
-
-        with pytest.raises(ValueError) as err:
-            test_tuf_management.initialize_metadata()
-
-        assert "not enough keys" in str(err)

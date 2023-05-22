@@ -216,6 +216,9 @@ class MetadataInfo:
         """Returns whether the root metadata object has changed"""
         return self._trusted_md != self._new_md
 
+    def get_signer(self, key: RSTUFKey) -> Signer:
+        return SSlibSigner(key.key)
+
     def generate_payload(self) -> Dict[str, Any]:
         """Save the root metadata into 'file'"""
         self._new_md.signed.version += 1
@@ -280,7 +283,8 @@ class TUFManagement:
         """
         role.signatures.clear()
         for signer in self._signers(Roles[role_name.upper()]):
-            role.sign(signer, append=True)
+            if signer.key_dict["keyval"].get("private") is not None:
+                role.sign(signer, append=True)
 
     def _add_payload(self, role: Metadata, role_name: str) -> None:
         """Persists metadata using the configured storage backend.
@@ -386,16 +390,6 @@ class TUFManagement:
 
             signers = self._signers(Roles[role_name.upper()])
 
-            # FIXME: Is this a meaningful check? Should we check more than just
-            # the threshold? And maybe in a different place, e.g. independently
-            # of bootstrapping the metadata, because in production we do not
-            # have access to all top-level role signing keys at the time of
-            # bootstrapping the metadata.
-            if len(signers) < threshold:
-                raise ValueError(
-                    f"not enough keys ({len(signers)}) for "
-                    f"signing threshold '{threshold}'"
-                )
             add_key_args[role_name] = []
             roles[role_name] = Role([], threshold)
             for signer in signers:
