@@ -13,10 +13,10 @@ from tuf.api.serialization import DeserializationError
 
 from repository_service_tuf.cli import console
 from repository_service_tuf.cli.admin import admin
-from repository_service_tuf.cli.admin.ceremony import _load_key, _save_payload
+from repository_service_tuf.cli.admin.ceremony import _save_payload
 from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.api_client import Methods, request_server
-from repository_service_tuf.helpers.tuf import RootInfo, RSTUFKey
+from repository_service_tuf.helpers.tuf import RootInfo, RSTUFKey, load_key
 
 INTRODUCTION = """
 # Metadata Update
@@ -199,7 +199,7 @@ def _get_key(role: str) -> RSTUFKey:
         password=True,
     )
 
-    return _load_key(filepath, key_type, password, "")
+    return load_key(filepath, key_type, password, "")
 
 
 def _is_valid_current_key(

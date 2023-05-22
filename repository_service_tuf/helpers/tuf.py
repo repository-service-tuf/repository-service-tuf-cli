@@ -8,6 +8,15 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
+from securesystemslib.exceptions import (  # type: ignore
+    CryptoError,
+    Error,
+    FormatError,
+    StorageError,
+)
+from securesystemslib.interface import (  # type: ignore
+    import_privatekey_from_file,
+)
 from securesystemslib.signer import Signer, SSlibSigner  # type: ignore
 from tuf.api.metadata import SPECIFICATION_VERSION, Key, Metadata, Role, Root
 from tuf.api.serialization.json import JSONSerializer
@@ -49,7 +58,7 @@ class RSTUFKey:
         if not isinstance(other, RSTUFKey):
             return False
 
-        return self.key["keyid"] == other.key["keyid"]
+        return self.key.get("keyid") == other.key.get("keyid")
 
 
 @dataclass
@@ -396,3 +405,25 @@ class TUFManagement:
         self._validate_root_payload_exist()
 
         return self.repository_metadata
+
+
+def load_key(
+    filepath: str, keytype: str, password: Optional[str], name: str
+) -> RSTUFKey:
+    """Load a securesystemslib private key file into an RSTUFKey object"""
+    try:
+        key = import_privatekey_from_file(filepath, keytype, password)
+        # Make sure name cannot be an empty string.
+        # If no name is given use first 7 letters of the keyid.
+        name = name if name != "" else key["keyid"][:7]
+        return RSTUFKey(key=key, key_path=filepath, name=name)
+    except CryptoError as err:
+        return RSTUFKey(
+            error=(
+                f":cross_mark: [red]Failed[/]: {str(err)} Check the"
+                " password, type, etc"
+            )
+        )
+
+    except (StorageError, FormatError, Error, OSError) as err:
+        return RSTUFKey(error=f":cross_mark: [red]Failed[/]: {str(err)}")

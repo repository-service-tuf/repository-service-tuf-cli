@@ -6,7 +6,6 @@ import pretend  # type: ignore
 import pytest
 
 from repository_service_tuf.cli.admin import ceremony
-from repository_service_tuf.constants import KeyType
 
 
 class TestCeremonyFunctions:
@@ -27,53 +26,6 @@ class TestCeremonyFunctions:
         ceremony.setup = test_setup
         result = ceremony._key_already_in_use({"keyid": "ema"})
         assert result is True
-
-    def test__load_key(self, monkeypatch):
-        monkeypatch.setattr(
-            ceremony,
-            "import_privatekey_from_file",
-            pretend.call_recorder(lambda *a: {"keyid": "ema"}),
-        )
-
-        result = ceremony._load_key(
-            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd", None
-        )
-        assert result == ceremony.RSTUFKey({"keyid": "ema"}, "/p/key", None)
-        assert ceremony.import_privatekey_from_file.calls == [
-            pretend.call("/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd")
-        ]
-
-    def test__load_key_CryptoError(self, monkeypatch):
-        monkeypatch.setattr(
-            ceremony,
-            "import_privatekey_from_file",
-            pretend.raiser(ceremony.CryptoError("wrong password")),
-        )
-
-        result = ceremony._load_key(
-            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd", None
-        )
-        assert result == ceremony.RSTUFKey(
-            {},
-            None,
-            error=(
-                ":cross_mark: [red]Failed[/]: wrong password Check the "
-                "password, type, etc"
-            ),
-        )
-
-    def test__load_key_OSError(self, monkeypatch):
-        monkeypatch.setattr(
-            ceremony,
-            "import_privatekey_from_file",
-            pretend.raiser(OSError("permission denied")),
-        )
-        result = ceremony._load_key(
-            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd", None
-        )
-        assert result == ceremony.RSTUFKey(
-            {}, None, error=":cross_mark: [red]Failed[/]: permission denied"
-        )
 
     def test__send_bootstrap(self, test_context):
         test_context["settings"].SERVER = "http://fake-rstuf"

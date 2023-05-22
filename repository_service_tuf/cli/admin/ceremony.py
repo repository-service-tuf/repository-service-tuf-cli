@@ -10,15 +10,6 @@ import os
 from typing import Any, Dict, Generator, Optional
 
 from rich import box, markdown, prompt, table  # type: ignore
-from securesystemslib.exceptions import (  # type: ignore
-    CryptoError,
-    Error,
-    FormatError,
-    StorageError,
-)
-from securesystemslib.interface import (  # type: ignore
-    import_privatekey_from_file,
-)
 
 from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.admin import admin
@@ -38,6 +29,7 @@ from repository_service_tuf.helpers.tuf import (
     RSTUFKey,
     ServiceSettings,
     TUFManagement,
+    load_key,
 )
 
 CEREMONY_INTRO = """
@@ -268,27 +260,6 @@ def _key_already_in_use(key: Dict[str, Any]) -> bool:
     return False
 
 
-def _load_key(
-    filepath: str, keytype: str, password: Optional[str], name: str
-) -> RSTUFKey:
-    try:
-        key = import_privatekey_from_file(filepath, keytype, password)
-        # Make sure name cannot be an empty string or None.
-        # If no name is given use first 7 letters of the keyid.
-        name = name if name != "" and name is not None else key["keyid"][:7]
-        return RSTUFKey(key=key, key_path=filepath, name=name)
-    except CryptoError as err:
-        return RSTUFKey(
-            error=(
-                f":cross_mark: [red]Failed[/]: {str(err)} Check the"
-                " password, type, etc"
-            )
-        )
-
-    except (StorageError, FormatError, Error, OSError) as err:
-        return RSTUFKey(error=f":cross_mark: [red]Failed[/]: {str(err)}")
-
-
 def _send_bootstrap(
     settings: LazySettings, bootstrap_payload: Dict[str, Any]
 ) -> str:
@@ -451,7 +422,7 @@ def _configure_keys(
             default="",
             show_default=False,
         )
-        role_key: RSTUFKey = _load_key(filepath, key_type, password, name)
+        role_key: RSTUFKey = load_key(filepath, key_type, password, name)
 
         if role_key.error:
             console.print(role_key.error)

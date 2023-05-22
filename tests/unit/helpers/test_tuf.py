@@ -11,6 +11,7 @@ from typing import Dict, List
 import pretend
 import pytest
 
+from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers import tuf
 from repository_service_tuf.helpers.tuf import (
     Key,
@@ -19,7 +20,57 @@ from repository_service_tuf.helpers.tuf import (
     Root,
     RSTUFKey,
     TUFManagement,
+    load_key,
 )
+
+
+class TestTUFHelperFunctions:
+    def test_load_key(self, monkeypatch):
+        monkeypatch.setattr(
+            tuf,
+            "import_privatekey_from_file",
+            pretend.call_recorder(lambda *a: {"keyid": "ema"}),
+        )
+
+        result = load_key(
+            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd", None
+        )
+        assert result == RSTUFKey({"keyid": "ema"}, "/p/key", None)
+        assert tuf.import_privatekey_from_file.calls == [
+            pretend.call("/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd")
+        ]
+
+    def test_load_key_CryptoError(self, monkeypatch):
+        monkeypatch.setattr(
+            tuf,
+            "import_privatekey_from_file",
+            pretend.raiser(tuf.CryptoError("wrong password")),
+        )
+
+        result = load_key(
+            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd", None
+        )
+        assert result == tuf.RSTUFKey(
+            {},
+            None,
+            error=(
+                ":cross_mark: [red]Failed[/]: wrong password Check the "
+                "password, type, etc"
+            ),
+        )
+
+    def test_load_key_OSError(self, monkeypatch):
+        monkeypatch.setattr(
+            tuf,
+            "import_privatekey_from_file",
+            pretend.raiser(OSError("permission denied")),
+        )
+        result = load_key(
+            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd", None
+        )
+        assert result == RSTUFKey(
+            {}, None, error=":cross_mark: [red]Failed[/]: permission denied"
+        )
 
 
 class TestTUFHelper:
