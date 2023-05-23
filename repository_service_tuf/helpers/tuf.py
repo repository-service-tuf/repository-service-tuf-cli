@@ -12,7 +12,9 @@ from securesystemslib.signer import Signer, SSlibSigner  # type: ignore
 from tuf.api.metadata import SPECIFICATION_VERSION, Key, Metadata, Role, Root
 from tuf.api.serialization.json import JSONSerializer
 
-from repository_service_tuf.cli import console
+from rich.console import Console
+
+console = Console()
 
 SPEC_VERSION: str = ".".join(SPECIFICATION_VERSION)
 BINS: str = "bins"

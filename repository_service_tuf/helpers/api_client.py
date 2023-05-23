@@ -10,7 +10,10 @@ import requests
 from dynaconf import LazySettings
 from requests.exceptions import ConnectionError
 
-from repository_service_tuf.cli import click, console
+import rich_click as click
+from rich.console import Console
+
+console = Console()
 
 
 class URL(Enum):
