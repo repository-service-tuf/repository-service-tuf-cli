@@ -82,9 +82,7 @@ class TestTUFHelperFunctions:
             close=pretend.call_recorder(lambda: None),
             write=pretend.call_recorder(lambda: fake_data),
         )
-        monkeypatch.setitem(
-            tuf.__builtins__, "open", lambda *a: fake_file_obj
-        )
+        monkeypatch.setitem(tuf.__builtins__, "open", lambda *a: fake_file_obj)
         monkeypatch.setattr(
             tuf.json,
             "dumps",
@@ -93,9 +91,7 @@ class TestTUFHelperFunctions:
 
         result = tuf.save_payload("new_file", {"k": "v"})
         assert result is None
-        assert tuf.json.dumps.calls == [
-            pretend.call({"k": "v"}, indent=2)
-        ]
+        assert tuf.json.dumps.calls == [pretend.call({"k": "v"}, indent=2)]
 
     def test_save_payload_OSError(self, monkeypatch):
         monkeypatch.setitem(

@@ -3,13 +3,14 @@
 # SPDX-License-Identifier: MIT
 
 import copy
-import click
 import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Union
 
+import click
+from rich.console import Console
 from securesystemslib.exceptions import (  # type: ignore
     CryptoError,
     Error,
@@ -22,8 +23,6 @@ from securesystemslib.interface import (  # type: ignore
 from securesystemslib.signer import Signer, SSlibSigner  # type: ignore
 from tuf.api.metadata import SPECIFICATION_VERSION, Key, Metadata, Role, Root
 from tuf.api.serialization.json import JSONSerializer
-
-from rich.console import Console
 
 console = Console()
 
