@@ -30,6 +30,7 @@ from repository_service_tuf.helpers.tuf import (
     ServiceSettings,
     TUFManagement,
     load_key,
+    save_payload,
 )
 
 CEREMONY_INTRO = """
@@ -308,14 +309,6 @@ def _load_bootstrap_payload(path: str) -> Dict[str, Any]:
         raise click.ClickException(f"Error to load {path}. {str(err)}")
 
     return bootstrap_payload
-
-
-def _save_payload(file: str, payload: Dict[str, Any]):
-    try:
-        with open(file, "w") as f:
-            f.write(json.dumps(payload, indent=2))
-    except OSError as err:
-        raise click.ClickException(f"Failed to save {file}. {str(err)}")
 
 
 def _configure_role_target():
@@ -740,7 +733,7 @@ def ceremony(
     # option ceremony: runs the ceremony, save the payload
     else:
         bootstrap_payload = _run_ceremony_steps(save)
-        _save_payload(file, bootstrap_payload)
+        save_payload(file, bootstrap_payload)
         console.print(
             f"\nCeremony done. 🔐 🎉. Bootstrap payload ({file}) saved."
         )

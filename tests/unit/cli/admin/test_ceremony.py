@@ -239,43 +239,6 @@ class TestCeremonyFunctions:
         assert "Error to load payload.json" in str(err)
         assert "payload.json not found" in str(err)
 
-    def test__save_payload(self, monkeypatch):
-        fake_data = pretend.stub(
-            write=pretend.call_recorder(lambda *a: "{'k': 'v'}")
-        )
-        fake_file_obj = pretend.stub(
-            __enter__=pretend.call_recorder(lambda: fake_data),
-            __exit__=pretend.call_recorder(lambda *a: None),
-            close=pretend.call_recorder(lambda: None),
-            write=pretend.call_recorder(lambda: fake_data),
-        )
-        monkeypatch.setitem(
-            ceremony.__builtins__, "open", lambda *a: fake_file_obj
-        )
-        monkeypatch.setattr(
-            ceremony.json,
-            "dumps",
-            pretend.call_recorder(lambda *a, **kw: "{'k': 'v'}"),
-        )
-
-        result = ceremony._save_payload("new_file", {"k": "v"})
-        assert result is None
-        assert ceremony.json.dumps.calls == [
-            pretend.call({"k": "v"}, indent=2)
-        ]
-
-    def test__save_payload_OSError(self, monkeypatch):
-        monkeypatch.setitem(
-            ceremony.__builtins__,
-            "open",
-            pretend.raiser(PermissionError("permission denied")),
-        )
-        with pytest.raises(ceremony.click.ClickException) as err:
-            ceremony._save_payload("payload.json", {"k": "v"})
-
-        assert "Failed to save payload.json" in str(err)
-        assert "permission denied" in str(err)
-
 
 class TestCeremonyInteraction:
     """Test the Ceremony Interaction"""
@@ -604,7 +567,7 @@ class TestCeremonyOptions:
         ceremony._run_ceremony_steps = pretend.call_recorder(
             lambda *a: {"k": "v"}
         )
-        ceremony._save_payload = pretend.call_recorder(lambda *a: None)
+        ceremony.save_payload = pretend.call_recorder(lambda *a: None)
 
         test_result = client.invoke(
             ceremony.ceremony,
@@ -622,7 +585,7 @@ class TestCeremonyOptions:
             pretend.call("metadata", exist_ok=True)
         ]
         assert ceremony._run_ceremony_steps.calls == [pretend.call(True)]
-        assert ceremony._save_payload.calls == [
+        assert ceremony.save_payload.calls == [
             pretend.call("payload.json", {"k": "v"})
         ]
 
@@ -667,7 +630,7 @@ class TestCeremonyOptions:
         ceremony._run_ceremony_steps = pretend.call_recorder(
             lambda *a: {"k": "v"}
         )
-        ceremony._save_payload = pretend.call_recorder(lambda *a: None)
+        ceremony.save_payload = pretend.call_recorder(lambda *a: None)
         ceremony.task_status = pretend.call_recorder(lambda *a: None)
 
         test_result = client.invoke(
@@ -689,7 +652,7 @@ class TestCeremonyOptions:
             pretend.call(test_context["settings"], {"k": "v"})
         ]
         assert ceremony._run_ceremony_steps.calls == [pretend.call(False)]
-        assert ceremony._save_payload.calls == [
+        assert ceremony.save_payload.calls == [
             pretend.call("payload.json", {"k": "v"})
         ]
         assert ceremony.task_status.calls == [

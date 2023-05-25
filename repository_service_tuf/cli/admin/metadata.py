@@ -13,10 +13,14 @@ from tuf.api.serialization import DeserializationError
 
 from repository_service_tuf.cli import console
 from repository_service_tuf.cli.admin import admin
-from repository_service_tuf.cli.admin.ceremony import _save_payload
 from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.api_client import Methods, request_server
-from repository_service_tuf.helpers.tuf import RootInfo, RSTUFKey, load_key
+from repository_service_tuf.helpers.tuf import (
+    RootInfo,
+    RSTUFKey,
+    load_key,
+    save_payload,
+)
 
 INTRODUCTION = """
 # Metadata Update
@@ -525,7 +529,7 @@ def update(context, current_root_uri: str, file: str) -> None:
     if curr_root.has_changed():
         # There are one or more changes to the root metadata file.
         payload = curr_root.generate_payload()
-        _save_payload(file, payload)
+        save_payload(file, payload)
         console.print(f"File {file} successfully generated")
     else:
         # There are no changes made to the root metadata file.

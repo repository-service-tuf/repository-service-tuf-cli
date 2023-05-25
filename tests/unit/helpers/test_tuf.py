@@ -72,6 +72,43 @@ class TestTUFHelperFunctions:
             {}, None, error=":cross_mark: [red]Failed[/]: permission denied"
         )
 
+    def test_save_payload(self, monkeypatch):
+        fake_data = pretend.stub(
+            write=pretend.call_recorder(lambda *a: "{'k': 'v'}")
+        )
+        fake_file_obj = pretend.stub(
+            __enter__=pretend.call_recorder(lambda: fake_data),
+            __exit__=pretend.call_recorder(lambda *a: None),
+            close=pretend.call_recorder(lambda: None),
+            write=pretend.call_recorder(lambda: fake_data),
+        )
+        monkeypatch.setitem(
+            tuf.__builtins__, "open", lambda *a: fake_file_obj
+        )
+        monkeypatch.setattr(
+            tuf.json,
+            "dumps",
+            pretend.call_recorder(lambda *a, **kw: "{'k': 'v'}"),
+        )
+
+        result = tuf.save_payload("new_file", {"k": "v"})
+        assert result is None
+        assert tuf.json.dumps.calls == [
+            pretend.call({"k": "v"}, indent=2)
+        ]
+
+    def test_save_payload_OSError(self, monkeypatch):
+        monkeypatch.setitem(
+            tuf.__builtins__,
+            "open",
+            pretend.raiser(PermissionError("permission denied")),
+        )
+        with pytest.raises(tuf.click.ClickException) as err:
+            tuf.save_payload("payload.json", {"k": "v"})
+
+        assert "Failed to save payload.json" in str(err)
+        assert "permission denied" in str(err)
+
 
 class TestTUFHelper:
     def _setup_load(self, filenames: List[str]) -> Dict[str, str]:

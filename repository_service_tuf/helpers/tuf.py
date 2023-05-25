@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 import copy
+import click
+import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
@@ -427,3 +429,12 @@ def load_key(
 
     except (StorageError, FormatError, Error, OSError) as err:
         return RSTUFKey(error=f":cross_mark: [red]Failed[/]: {str(err)}")
+
+
+def save_payload(file_path: str, payload: Dict[str, Any]):
+    """Save the 'payload' into a file with path 'file_path'"""
+    try:
+        with open(file_path, "w") as f:
+            f.write(json.dumps(payload, indent=2))
+    except OSError as err:
+        raise click.ClickException(f"Failed to save {file_path}. {str(err)}")
