@@ -40,7 +40,7 @@ get familiar with the current state of the root metadata file.
 """
 
 AUTHORIZATION = """
-# Authorization
+# STEP 1: Authorization
 
 Before continuing, you must authorize using the current root key(s).
 
@@ -55,7 +55,7 @@ passwords.
 """
 
 EXPIRY_CHANGES_MSG = """
-# Extend Root Expiration
+# STEP 2: Extend Root Expiration
 
 Now, you will be given the opportunity to extend root's expiration.
 
@@ -64,7 +64,7 @@ ceremony.
 """
 
 ROOT_CHANGES_MSG = """
-# Root Metadata Changes
+# STEP 3: Root Metadata Changes
 
 You are starting the root metadata changes procedure.
 
@@ -91,7 +91,7 @@ Now, you will be able to add root keys.
 """
 
 ONLINE_KEY_CHANGE = """
-# Online Key Change
+# STEP 4: Online Key Change
 
 Now you will be given the opportunity to change the online key.
 
