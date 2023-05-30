@@ -208,37 +208,6 @@ class TestCeremonyFunctions:
             )
         ]
 
-    def test__load_bootstrap_payload(self, monkeypatch):
-        fake_data = [
-            pretend.stub(read=pretend.call_recorder(lambda: b"{'k': 'v'}"))
-        ]
-        fake_file_obj = pretend.stub(
-            __enter__=pretend.call_recorder(lambda: fake_data),
-            __exit__=pretend.call_recorder(lambda *a: None),
-            close=pretend.call_recorder(lambda: None),
-            read=pretend.call_recorder(lambda: fake_data),
-        )
-        monkeypatch.setitem(
-            ceremony.__builtins__, "open", lambda *a: fake_file_obj
-        )
-        ceremony.json.load = pretend.call_recorder(lambda *a: {"k": "v"})
-
-        result = ceremony._load_bootstrap_payload("new_file")
-        assert result == {"k": "v"}
-        assert ceremony.json.load.calls == [pretend.call(fake_data)]
-
-    def test__load_bootstrap_payload_OSError(self, monkeypatch):
-        monkeypatch.setitem(
-            ceremony.__builtins__,
-            "open",
-            pretend.raiser(FileNotFoundError("payload.json not found")),
-        )
-        with pytest.raises(ceremony.click.ClickException) as err:
-            ceremony._load_bootstrap_payload("payload.json")
-
-        assert "Error to load payload.json" in str(err)
-        assert "payload.json not found" in str(err)
-
 
 class TestCeremonyInteraction:
     """Test the Ceremony Interaction"""
@@ -693,7 +662,7 @@ class TestCeremonyOptions:
         ceremony.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": False}}
         )
-        ceremony._load_bootstrap_payload = pretend.call_recorder(
+        ceremony.load_payload = pretend.call_recorder(
             lambda *a: {"k": "v"}
         )
         ceremony._send_bootstrap = pretend.call_recorder(
@@ -717,7 +686,7 @@ class TestCeremonyOptions:
         assert ceremony.bootstrap_status.calls == [
             pretend.call(test_context["settings"])
         ]
-        assert ceremony._load_bootstrap_payload.calls == [
+        assert ceremony.load_payload.calls == [
             pretend.call("payload.json")
         ]
         assert ceremony._send_bootstrap.calls == [
@@ -735,7 +704,7 @@ class TestCeremonyOptions:
         ceremony.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": False}}
         )
-        ceremony._load_bootstrap_payload = pretend.call_recorder(
+        ceremony.load_payload = pretend.call_recorder(
             lambda *a: {"k": "v"}
         )
         ceremony._send_bootstrap = pretend.call_recorder(
@@ -760,7 +729,7 @@ class TestCeremonyOptions:
         assert ceremony.bootstrap_status.calls == [
             pretend.call(test_context["settings"])
         ]
-        assert ceremony._load_bootstrap_payload.calls == [
+        assert ceremony.load_payload.calls == [
             pretend.call("payload.json")
         ]
         assert ceremony._send_bootstrap.calls == [

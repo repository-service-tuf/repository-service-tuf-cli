@@ -72,6 +72,35 @@ class TestTUFHelperFunctions:
             {}, None, error=":cross_mark: [red]Failed[/]: permission denied"
         )
 
+    def test_load_payload(self, monkeypatch):
+        fake_data = [
+            pretend.stub(read=pretend.call_recorder(lambda: b"{'k': 'v'}"))
+        ]
+        fake_file_obj = pretend.stub(
+            __enter__=pretend.call_recorder(lambda: fake_data),
+            __exit__=pretend.call_recorder(lambda *a: None),
+            close=pretend.call_recorder(lambda: None),
+            read=pretend.call_recorder(lambda: fake_data),
+        )
+        monkeypatch.setitem(tuf.__builtins__, "open", lambda *a: fake_file_obj)
+        tuf.json.load = pretend.call_recorder(lambda *a: {"k": "v"})
+
+        result = tuf.load_payload("new_file")
+        assert result == {"k": "v"}
+        assert tuf.json.load.calls == [pretend.call(fake_data)]
+
+    def test_load_payload_OSError(self, monkeypatch):
+        monkeypatch.setitem(
+            tuf.__builtins__,
+            "open",
+            pretend.raiser(FileNotFoundError("payload.json not found")),
+        )
+        with pytest.raises(tuf.click.ClickException) as err:
+            tuf.load_payload("payload.json")
+
+        assert "Error to load payload.json" in str(err)
+        assert "payload.json not found" in str(err)
+
     def test_save_payload(self, monkeypatch):
         fake_data = pretend.stub(
             write=pretend.call_recorder(lambda *a: "{'k': 'v'}")

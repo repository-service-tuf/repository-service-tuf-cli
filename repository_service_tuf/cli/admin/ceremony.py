@@ -30,6 +30,7 @@ from repository_service_tuf.helpers.tuf import (
     ServiceSettings,
     TUFManagement,
     load_key,
+    load_payload,
     save_payload,
 )
 
@@ -299,16 +300,6 @@ def _send_bootstrap(
             raise click.ClickException(
                 f"Failed to get task response data {response.text}"
             )
-
-
-def _load_bootstrap_payload(path: str) -> Dict[str, Any]:
-    try:
-        with open(path) as payload_data:
-            bootstrap_payload = json.load(payload_data)
-    except OSError as err:
-        raise click.ClickException(f"Error to load {path}. {str(err)}")
-
-    return bootstrap_payload
 
 
 def _configure_role_target():
@@ -724,7 +715,7 @@ def ceremony(
 
     # option bootstrap + upload: bootstrap payload is available, skips ceremony
     if bootstrap is True and upload is True:
-        bootstrap_payload = _load_bootstrap_payload(file)
+        bootstrap_payload = load_payload(file)
         console.print("Starting online bootstrap")
         task_id = _send_bootstrap(settings, bootstrap_payload)
         task_status(task_id, settings, "Bootstrap status: ")

@@ -430,6 +430,17 @@ def load_key(
         return RSTUFKey(error=f":cross_mark: [red]Failed[/]: {str(err)}")
 
 
+def load_payload(path: str) -> Dict[str, Any]:
+    """Load existing payload file."""
+    try:
+        with open(path) as payload_data:
+            payload = json.load(payload_data)
+    except OSError as err:
+        raise click.ClickException(f"Error to load {path}. {str(err)}")
+
+    return payload
+
+
 def save_payload(file_path: str, payload: Dict[str, Any]):
     """Save the 'payload' into a file with path 'file_path'"""
     try:
