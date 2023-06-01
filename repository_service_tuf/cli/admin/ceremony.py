@@ -407,10 +407,10 @@ def _run_user_validation():
             keys_table.add_column(
                 "path", justify="right", style="cyan", no_wrap=True
             )
-        keys_table.add_column("storage", justify="center")
-        keys_table.add_column("verified", justify="center")
-        keys_table.add_column("name/tag", justify="center")
-        keys_table.add_column("id", justify="center")
+        keys_table.add_column("Storage", justify="center")
+        keys_table.add_column("Verified", justify="center")
+        keys_table.add_column("Name/Tag", justify="center")
+        keys_table.add_column("Id", justify="center")
 
         return keys_table
 
