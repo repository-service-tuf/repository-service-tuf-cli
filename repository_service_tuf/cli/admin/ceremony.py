@@ -680,7 +680,7 @@ def ceremony(
             method=Methods.post,
             payload=bootstrap_payload,
             expected_msg="Bootstrap accepted.",
-            command_name="Bootstrap"
+            command_name="Bootstrap",
         )
         task_status(task_id, settings, "Bootstrap status: ")
         console.print(f"Bootstrap completed using `{file}`. 🔐 🎉")
@@ -700,7 +700,7 @@ def ceremony(
                 method=Methods.post,
                 payload=bootstrap_payload,
                 expected_msg="Bootstrap accepted.",
-                command_name="Bootstrap"
+                command_name="Bootstrap",
             )
             task_status(task_id, settings, "Bootstrap status: ")
             console.print("\nCeremony done. 🔐 🎉. Bootstrap completed.")

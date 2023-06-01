@@ -18,9 +18,8 @@ from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,
     request_server,
-    request_server,
     send_payload,
-    task_status
+    task_status,
 )
 from repository_service_tuf.helpers.tuf import (
     RootInfo,
@@ -538,7 +537,7 @@ def update(
     upload: bool,
     run_ceremony: bool,
     save: bool,
-    upload_server: str
+    upload_server: str,
 ) -> None:
     """
     Start a new metadata update ceremony.
@@ -574,7 +573,8 @@ def update(
         return
 
     console.print(markdown.Markdown(INTRODUCTION), width=100)
-    console.print(f"\nThe result of this ceremony will be a new {file} file.")
+    if save or not upload:
+        console.print(f"\nThis ceremony will generate a new {file} file.")
     console.print("\n")
     NOTICE = (
         "**NOTICE: This is an alpha feature and will get updated over time!**"

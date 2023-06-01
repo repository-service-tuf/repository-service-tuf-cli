@@ -616,7 +616,7 @@ class TestAPIClient:
             method=api_client.Methods.post,
             payload={"payload": "data"},
             expected_msg="Bootstrap accepted.",
-            command_name="Bootstrap"
+            command_name="Bootstrap",
         )
         assert result == "task_id_123"
         assert api_client.get_headers.calls == [
@@ -657,7 +657,7 @@ class TestAPIClient:
                 method=api_client.Methods.post,
                 payload={"payload": "data"},
                 expected_msg="Bootstrap accepted.",
-                command_name="Bootstrap"
+                command_name="Bootstrap",
             )
 
         assert "Error 200" in str(err)
@@ -698,7 +698,7 @@ class TestAPIClient:
                 method=api_client.Methods.post,
                 payload={"payload": "data"},
                 expected_msg="Bootstrap accepted.",
-                command_name="Bootstrap"
+                command_name="Bootstrap",
             )
 
         assert "No message available." in str(err)
@@ -740,7 +740,7 @@ class TestAPIClient:
                 method=api_client.Methods.post,
                 payload={"payload": "data"},
                 expected_msg="Bootstrap accepted.",
-                command_name="Bootstrap"
+                command_name="Bootstrap",
             )
 
         assert "Failed to get `task id`" in str(err)
@@ -782,7 +782,7 @@ class TestAPIClient:
                 method=api_client.Methods.post,
                 payload={"payload": "data"},
                 expected_msg="Bootstrap accepted.",
-                command_name="Bootstrap"
+                command_name="Bootstrap",
             )
 
         assert "Failed to get task response data" in str(err)

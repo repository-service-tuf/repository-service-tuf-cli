@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: MIT
 
 import pretend  # type: ignore
-import pytest
 
 from repository_service_tuf.cli.admin import ceremony
 from repository_service_tuf.helpers.api_client import URL, Methods
@@ -444,7 +443,7 @@ class TestCeremonyOptions:
                 method=Methods.post,
                 payload={"k": "v"},
                 expected_msg="Bootstrap accepted.",
-                command_name="Bootstrap"
+                command_name="Bootstrap",
             )
         ]
         assert ceremony._run_ceremony_steps.calls == [pretend.call(False)]
@@ -489,9 +488,7 @@ class TestCeremonyOptions:
         ceremony.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": False}}
         )
-        ceremony.load_payload = pretend.call_recorder(
-            lambda *a: {"k": "v"}
-        )
+        ceremony.load_payload = pretend.call_recorder(lambda *a: {"k": "v"})
         ceremony.send_payload = pretend.call_recorder(
             lambda **kw: "fake_task_id"
         )
@@ -513,9 +510,7 @@ class TestCeremonyOptions:
         assert ceremony.bootstrap_status.calls == [
             pretend.call(test_context["settings"])
         ]
-        assert ceremony.load_payload.calls == [
-            pretend.call("payload.json")
-        ]
+        assert ceremony.load_payload.calls == [pretend.call("payload.json")]
         assert ceremony.send_payload.calls == [
             pretend.call(
                 settings=test_context["settings"],
@@ -523,7 +518,7 @@ class TestCeremonyOptions:
                 method=Methods.post,
                 payload={"k": "v"},
                 expected_msg="Bootstrap accepted.",
-                command_name="Bootstrap"
+                command_name="Bootstrap",
             )
         ]
         assert ceremony.task_status.calls == [
@@ -538,9 +533,7 @@ class TestCeremonyOptions:
         ceremony.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": False}}
         )
-        ceremony.load_payload = pretend.call_recorder(
-            lambda *a: {"k": "v"}
-        )
+        ceremony.load_payload = pretend.call_recorder(lambda *a: {"k": "v"})
         ceremony.send_payload = pretend.call_recorder(
             lambda **kw: "fake_task_id"
         )
@@ -563,9 +556,7 @@ class TestCeremonyOptions:
         assert ceremony.bootstrap_status.calls == [
             pretend.call(test_context["settings"])
         ]
-        assert ceremony.load_payload.calls == [
-            pretend.call("payload.json")
-        ]
+        assert ceremony.load_payload.calls == [pretend.call("payload.json")]
         assert ceremony.send_payload.calls == [
             pretend.call(
                 settings=test_context["settings"],
@@ -573,7 +564,7 @@ class TestCeremonyOptions:
                 method=Methods.post,
                 payload={"k": "v"},
                 expected_msg="Bootstrap accepted.",
-                command_name="Bootstrap"
+                command_name="Bootstrap",
             )
         ]
         assert ceremony.task_status.calls == [
