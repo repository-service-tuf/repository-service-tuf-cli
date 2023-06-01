@@ -80,6 +80,7 @@ def _run_login(context, server_, password_, expires_):
             "read:token "
             "read:tasks "
             "write:token "
+            "write:metadata "
         ),
         "expires": expires,
     }

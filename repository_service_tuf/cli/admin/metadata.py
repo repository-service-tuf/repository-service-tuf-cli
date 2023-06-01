@@ -14,11 +14,19 @@ from tuf.api.serialization import DeserializationError
 from repository_service_tuf.cli import console
 from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.constants import KeyType
-from repository_service_tuf.helpers.api_client import Methods, request_server
+from repository_service_tuf.helpers.api_client import (
+    URL,
+    Methods,
+    request_server,
+    request_server,
+    send_payload,
+    task_status
+)
 from repository_service_tuf.helpers.tuf import (
     RootInfo,
     RSTUFKey,
     load_key,
+    load_payload,
     save_payload,
 )
 
@@ -469,7 +477,6 @@ def _modify_online_key(current_root: RootInfo):
         current_root.change_online_key(online_key)
 
 
-# ADD OPTION TO UPLOAD NEW ROOT CONTENT
 @metadata.command()
 @click.option(
     "--current-root-uri",
@@ -481,15 +488,91 @@ def _modify_online_key(current_root: RootInfo):
     "--file",
     "file",
     default="metadata-update-payload.json",
-    help=("Generate specific JSON payload file"),
+    help="Generate specific JSON payload file",
     show_default=True,
     required=False,
 )
+@click.option(
+    "-u",
+    "--upload",
+    help=(
+        "Upload existent payload 'file'. "
+        "Optional '-f/--file' to use non default file name."
+    ),
+    required=False,
+    is_flag=True,
+)
+@click.option(
+    "--run-ceremony",
+    help=(
+        "When '--upload' is set this flag can be used to run the ceremony "
+        "and the result will be uploaded."
+    ),
+    default=False,
+    show_default=True,
+    required=False,
+    is_flag=True,
+)
+@click.option(
+    "-s",
+    "--save",
+    help=(
+        "Save a copy of the metadata locally. This option saves the JSON "
+        "metadata update payload file in the in the current directory."
+    ),
+    default=False,
+    show_default=True,
+    is_flag=True,
+)
+@click.option(
+    "--upload-server",
+    help="[when using '--auth'] Upload to RSTUF API Server address. ",
+    required=False,
+    hidden=True,
+)
 @click.pass_context
-def update(context, current_root_uri: str, file: str) -> None:
+def update(
+    context,
+    current_root_uri: str,
+    file: str,
+    upload: bool,
+    run_ceremony: bool,
+    save: bool,
+    upload_server: str
+) -> None:
     """
     Start a new metadata update ceremony.
     """
+    settings = context.obj["settings"]
+    if upload and not run_ceremony:
+        # Sever authentication or setup
+        if settings.AUTH is True and upload_server is None:
+            raise click.ClickException(
+                "Requires '--upload-server' when using '--auth'. "
+                "Example: --upload-server https://rstuf-api.example.com"
+            )
+        elif upload_server:
+            settings.SERVER = upload_server
+
+        console.print(
+            f"Uploading existing metadata update payload {file} to "
+            f"{settings.SERVER}"
+        )
+        payload = load_payload(file)
+
+        task_id = send_payload(
+            settings=settings,
+            url=URL.metadata.value,
+            method=Methods.post,
+            payload=payload,
+            expected_msg="Metadata update accepted.",
+            command_name="Metadata Update",
+        )
+        task_status(task_id, settings, "Metadata Update status: ")
+        console.print("Ceremony done. 🔐 🎉. Root metadata update completed.")
+
+        return
+
     console.print(markdown.Markdown(INTRODUCTION), width=100)
     console.print(f"\nThe result of this ceremony will be a new {file} file.")
     console.print("\n")
@@ -529,8 +612,25 @@ def update(context, current_root_uri: str, file: str) -> None:
     if curr_root.has_changed():
         # There are one or more changes to the root metadata file.
         payload = curr_root.generate_payload()
-        save_payload(file, payload)
-        console.print(f"File {file} successfully generated")
+        # Save if the users asks for it or if the payload won't be uploaded.
+        if save or not upload:
+            save_payload(file, payload)
+            console.print(f"File {file} successfully generated")
+
+        if upload:
+            task_id = send_payload(
+                settings=settings,
+                url=URL.metadata.value,
+                method=Methods.post,
+                payload=payload,
+                expected_msg="Metadata update accepted.",
+                command_name="Metadata Update",
+            )
+            task_status(task_id, settings, "Metadata Update status: ")
+            console.print(
+                "Ceremony done. 🔐 🎉. Root metadata update completed."
+            )
+
     else:
         # There are no changes made to the root metadata file.
         console.print("\nNo file will be generated as no changes were made\n")
