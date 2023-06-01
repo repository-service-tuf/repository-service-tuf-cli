@@ -6,6 +6,7 @@ import pretend  # type: ignore
 import pytest
 
 from repository_service_tuf.cli.admin import ceremony
+from repository_service_tuf.helpers.api_client import URL, Methods
 
 
 class TestCeremonyFunctions:
@@ -26,187 +27,6 @@ class TestCeremonyFunctions:
         ceremony.setup = test_setup
         result = ceremony._key_already_in_use({"keyid": "ema"})
         assert result is True
-
-    def test__send_bootstrap(self, test_context):
-        test_context["settings"].SERVER = "http://fake-rstuf"
-        ceremony.get_headers = pretend.call_recorder(
-            lambda *a: {"auth": "token"}
-        )
-        ceremony.request_server = pretend.call_recorder(
-            lambda *a, **kw: pretend.stub(
-                status_code=202,
-                json=pretend.call_recorder(
-                    lambda: {
-                        "data": {"task_id": "task_id_123"},
-                        "message": "Bootstrap accepted.",
-                    }
-                ),
-            )
-        )
-
-        result = ceremony._send_bootstrap(
-            test_context["settings"], {"payload": "data"}
-        )
-        assert result == "task_id_123"
-        assert ceremony.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
-        assert ceremony.request_server.calls == [
-            pretend.call(
-                test_context["settings"].SERVER,
-                ceremony.URL.bootstrap.value,
-                ceremony.Methods.post,
-                {"payload": "data"},
-                headers={"auth": "token"},
-            )
-        ]
-
-    def test__send_bootstrap_not_202(self, test_context):
-        test_context["settings"].SERVER = "http://fake-rstuf"
-        ceremony.get_headers = pretend.call_recorder(
-            lambda *a: {"auth": "token"}
-        )
-        ceremony.request_server = pretend.call_recorder(
-            lambda *a, **kw: pretend.stub(
-                status_code=200,
-                json=pretend.call_recorder(
-                    lambda: {
-                        "data": {"task_id": "task_id_123"},
-                        "message": "Bootstrap accepted.",
-                    }
-                ),
-                text="Unexpected result data",
-            )
-        )
-
-        with pytest.raises(ceremony.click.ClickException) as err:
-            ceremony._send_bootstrap(
-                test_context["settings"], {"payload": "data"}
-            )
-
-        assert "Error 200" in str(err)
-        assert ceremony.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
-        assert ceremony.request_server.calls == [
-            pretend.call(
-                test_context["settings"].SERVER,
-                ceremony.URL.bootstrap.value,
-                ceremony.Methods.post,
-                {"payload": "data"},
-                headers={"auth": "token"},
-            )
-        ]
-
-    def test__send_bootstrap_no_message(self, test_context):
-        test_context["settings"].SERVER = "http://fake-rstuf"
-        ceremony.get_headers = pretend.call_recorder(
-            lambda *a: {"auth": "token"}
-        )
-        ceremony.request_server = pretend.call_recorder(
-            lambda *a, **kw: pretend.stub(
-                status_code=202,
-                json=pretend.call_recorder(
-                    lambda: {
-                        "data": {"task_id": "task_id_123"},
-                    }
-                ),
-                text="No message available.",
-            )
-        )
-
-        with pytest.raises(ceremony.click.ClickException) as err:
-            ceremony._send_bootstrap(
-                test_context["settings"], {"payload": "data"}
-            )
-
-        assert "No message available." in str(err)
-        assert ceremony.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
-        assert ceremony.request_server.calls == [
-            pretend.call(
-                test_context["settings"].SERVER,
-                ceremony.URL.bootstrap.value,
-                ceremony.Methods.post,
-                {"payload": "data"},
-                headers={"auth": "token"},
-            )
-        ]
-
-    def test__send_bootstrap_no_task_id(self, test_context):
-        test_context["settings"].SERVER = "http://fake-rstuf"
-        ceremony.get_headers = pretend.call_recorder(
-            lambda *a: {"auth": "token"}
-        )
-        ceremony.request_server = pretend.call_recorder(
-            lambda *a, **kw: pretend.stub(
-                status_code=202,
-                json=pretend.call_recorder(
-                    lambda: {
-                        "data": {"task_id": None},
-                        "message": "Bootstrap accepted.",
-                    }
-                ),
-                text="No task id",
-            )
-        )
-
-        with pytest.raises(ceremony.click.ClickException) as err:
-            ceremony._send_bootstrap(
-                test_context["settings"], {"payload": "data"}
-            )
-
-        assert "Failed to get `task id`" in str(err)
-        assert ceremony.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
-        assert ceremony.request_server.calls == [
-            pretend.call(
-                test_context["settings"].SERVER,
-                ceremony.URL.bootstrap.value,
-                ceremony.Methods.post,
-                {"payload": "data"},
-                headers={"auth": "token"},
-            )
-        ]
-
-    def test__send_bootstrap_no_data(self, test_context):
-        test_context["settings"].SERVER = "http://fake-rstuf"
-        ceremony.get_headers = pretend.call_recorder(
-            lambda *a: {"auth": "token"}
-        )
-        ceremony.request_server = pretend.call_recorder(
-            lambda *a, **kw: pretend.stub(
-                status_code=202,
-                json=pretend.call_recorder(
-                    lambda: {
-                        "data": {},
-                        "message": "Bootstrap accepted.",
-                    }
-                ),
-                text="No data",
-            )
-        )
-
-        with pytest.raises(ceremony.click.ClickException) as err:
-            ceremony._send_bootstrap(
-                test_context["settings"], {"payload": "data"}
-            )
-
-        assert "Failed to get task response data" in str(err)
-        assert ceremony.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
-        assert ceremony.request_server.calls == [
-            pretend.call(
-                test_context["settings"].SERVER,
-                ceremony.URL.bootstrap.value,
-                ceremony.Methods.post,
-                {"payload": "data"},
-                headers={"auth": "token"},
-            )
-        ]
 
 
 class TestCeremonyInteraction:
@@ -593,8 +413,8 @@ class TestCeremonyOptions:
         ceremony.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": False}}
         )
-        ceremony._send_bootstrap = pretend.call_recorder(
-            lambda *a: "fake_task_id"
+        ceremony.send_payload = pretend.call_recorder(
+            lambda **kw: "fake_task_id"
         )
         ceremony._run_ceremony_steps = pretend.call_recorder(
             lambda *a: {"k": "v"}
@@ -617,8 +437,15 @@ class TestCeremonyOptions:
         assert ceremony.bootstrap_status.calls == [
             pretend.call(test_context["settings"])
         ]
-        assert ceremony._send_bootstrap.calls == [
-            pretend.call(test_context["settings"], {"k": "v"})
+        assert ceremony.send_payload.calls == [
+            pretend.call(
+                settings=test_context["settings"],
+                url=URL.bootstrap.value,
+                method=Methods.post,
+                payload={"k": "v"},
+                expected_msg="Bootstrap accepted.",
+                command_name="Bootstrap"
+            )
         ]
         assert ceremony._run_ceremony_steps.calls == [pretend.call(False)]
         assert ceremony.save_payload.calls == [
@@ -665,8 +492,8 @@ class TestCeremonyOptions:
         ceremony.load_payload = pretend.call_recorder(
             lambda *a: {"k": "v"}
         )
-        ceremony._send_bootstrap = pretend.call_recorder(
-            lambda *a: "fake_task_id"
+        ceremony.send_payload = pretend.call_recorder(
+            lambda **kw: "fake_task_id"
         )
         ceremony.task_status = pretend.call_recorder(lambda *a: None)
 
@@ -689,8 +516,15 @@ class TestCeremonyOptions:
         assert ceremony.load_payload.calls == [
             pretend.call("payload.json")
         ]
-        assert ceremony._send_bootstrap.calls == [
-            pretend.call(test_context["settings"], {"k": "v"})
+        assert ceremony.send_payload.calls == [
+            pretend.call(
+                settings=test_context["settings"],
+                url=URL.bootstrap.value,
+                method=Methods.post,
+                payload={"k": "v"},
+                expected_msg="Bootstrap accepted.",
+                command_name="Bootstrap"
+            )
         ]
         assert ceremony.task_status.calls == [
             pretend.call(
@@ -707,8 +541,8 @@ class TestCeremonyOptions:
         ceremony.load_payload = pretend.call_recorder(
             lambda *a: {"k": "v"}
         )
-        ceremony._send_bootstrap = pretend.call_recorder(
-            lambda *a: "fake_task_id"
+        ceremony.send_payload = pretend.call_recorder(
+            lambda **kw: "fake_task_id"
         )
         ceremony.task_status = pretend.call_recorder(lambda *a: None)
 
@@ -732,8 +566,15 @@ class TestCeremonyOptions:
         assert ceremony.load_payload.calls == [
             pretend.call("payload.json")
         ]
-        assert ceremony._send_bootstrap.calls == [
-            pretend.call(test_context["settings"], {"k": "v"})
+        assert ceremony.send_payload.calls == [
+            pretend.call(
+                settings=test_context["settings"],
+                url=URL.bootstrap.value,
+                method=Methods.post,
+                payload={"k": "v"},
+                expected_msg="Bootstrap accepted.",
+                command_name="Bootstrap"
+            )
         ]
         assert ceremony.task_status.calls == [
             pretend.call(

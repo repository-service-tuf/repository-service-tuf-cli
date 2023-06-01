@@ -593,3 +593,208 @@ class TestAPIClient:
                 headers={"Auth": "Token"},
             )
         ]
+
+    def test_send_payload(self, test_context):
+        test_context["settings"].SERVER = "http://fake-rstuf"
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"auth": "token"}
+        )
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=202,
+                json=pretend.call_recorder(
+                    lambda: {
+                        "data": {"task_id": "task_id_123"},
+                        "message": "Bootstrap accepted.",
+                    }
+                ),
+            )
+        )
+        result = api_client.send_payload(
+            settings=test_context["settings"],
+            url=api_client.URL.bootstrap.value,
+            method=api_client.Methods.post,
+            payload={"payload": "data"},
+            expected_msg="Bootstrap accepted.",
+            command_name="Bootstrap"
+        )
+        assert result == "task_id_123"
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        assert api_client.request_server.calls == [
+            pretend.call(
+                test_context["settings"].SERVER,
+                api_client.URL.bootstrap.value,
+                api_client.Methods.post,
+                {"payload": "data"},
+                headers={"auth": "token"},
+            )
+        ]
+
+    def test_send_payload_not_202(self, test_context):
+        test_context["settings"].SERVER = "http://fake-rstuf"
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"auth": "token"}
+        )
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=200,
+                json=pretend.call_recorder(
+                    lambda: {
+                        "data": {"task_id": "task_id_123"},
+                        "message": "Bootstrap accepted.",
+                    }
+                ),
+                text="Unexpected result data",
+            )
+        )
+
+        with pytest.raises(api_client.click.ClickException) as err:
+            api_client.send_payload(
+                settings=test_context["settings"],
+                url=api_client.URL.bootstrap.value,
+                method=api_client.Methods.post,
+                payload={"payload": "data"},
+                expected_msg="Bootstrap accepted.",
+                command_name="Bootstrap"
+            )
+
+        assert "Error 200" in str(err)
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        assert api_client.request_server.calls == [
+            pretend.call(
+                test_context["settings"].SERVER,
+                api_client.URL.bootstrap.value,
+                api_client.Methods.post,
+                {"payload": "data"},
+                headers={"auth": "token"},
+            )
+        ]
+
+    def test_send_payload_no_message(self, test_context):
+        test_context["settings"].SERVER = "http://fake-rstuf"
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"auth": "token"}
+        )
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=202,
+                json=pretend.call_recorder(
+                    lambda: {
+                        "data": {"task_id": "task_id_123"},
+                    }
+                ),
+                text="No message available.",
+            )
+        )
+
+        with pytest.raises(api_client.click.ClickException) as err:
+            api_client.send_payload(
+                settings=test_context["settings"],
+                url=api_client.URL.bootstrap.value,
+                method=api_client.Methods.post,
+                payload={"payload": "data"},
+                expected_msg="Bootstrap accepted.",
+                command_name="Bootstrap"
+            )
+
+        assert "No message available." in str(err)
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        assert api_client.request_server.calls == [
+            pretend.call(
+                test_context["settings"].SERVER,
+                api_client.URL.bootstrap.value,
+                api_client.Methods.post,
+                {"payload": "data"},
+                headers={"auth": "token"},
+            )
+        ]
+
+    def test_send_payload_no_task_id(self, test_context):
+        test_context["settings"].SERVER = "http://fake-rstuf"
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"auth": "token"}
+        )
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=202,
+                json=pretend.call_recorder(
+                    lambda: {
+                        "data": {"task_id": None},
+                        "message": "Bootstrap accepted.",
+                    }
+                ),
+                text="No task id",
+            )
+        )
+
+        with pytest.raises(api_client.click.ClickException) as err:
+            api_client.send_payload(
+                settings=test_context["settings"],
+                url=api_client.URL.bootstrap.value,
+                method=api_client.Methods.post,
+                payload={"payload": "data"},
+                expected_msg="Bootstrap accepted.",
+                command_name="Bootstrap"
+            )
+
+        assert "Failed to get `task id`" in str(err)
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        assert api_client.request_server.calls == [
+            pretend.call(
+                test_context["settings"].SERVER,
+                api_client.URL.bootstrap.value,
+                api_client.Methods.post,
+                {"payload": "data"},
+                headers={"auth": "token"},
+            )
+        ]
+
+    def test_send_payload_no_data(self, test_context):
+        test_context["settings"].SERVER = "http://fake-rstuf"
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"auth": "token"}
+        )
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=202,
+                json=pretend.call_recorder(
+                    lambda: {
+                        "data": {},
+                        "message": "Bootstrap accepted.",
+                    }
+                ),
+                text="No data",
+            )
+        )
+
+        with pytest.raises(api_client.click.ClickException) as err:
+            api_client.send_payload(
+                settings=test_context["settings"],
+                url=api_client.URL.bootstrap.value,
+                method=api_client.Methods.post,
+                payload={"payload": "data"},
+                expected_msg="Bootstrap accepted.",
+                command_name="Bootstrap"
+            )
+
+        assert "Failed to get task response data" in str(err)
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        assert api_client.request_server.calls == [
+            pretend.call(
+                test_context["settings"].SERVER,
+                api_client.URL.bootstrap.value,
+                api_client.Methods.post,
+                {"payload": "data"},
+                headers={"auth": "token"},
+            )
+        ]

@@ -5,7 +5,6 @@
 #
 # Ceremony
 #
-import json
 import os
 from typing import Any, Dict, Generator, Optional
 
@@ -16,11 +15,9 @@ from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.api_client import (
     URL,
-    LazySettings,
     Methods,
     bootstrap_status,
-    get_headers,
-    request_server,
+    send_payload,
     task_status,
 )
 from repository_service_tuf.helpers.tuf import (
@@ -132,7 +129,7 @@ timelines of available updates. Timelines information is made available by
 frequently signing a new timestamp.json file with a short expiration time.
 This file indicates the latest version of `snapshot.json`.
 
-Uses one single online key,
+Uses one single online key.
 """
 
 STEP_1 = """
@@ -260,46 +257,6 @@ def _key_already_in_use(key: Dict[str, Any]) -> bool:
         return True
 
     return False
-
-
-def _send_bootstrap(
-    settings: LazySettings, bootstrap_payload: Dict[str, Any]
-) -> str:
-    headers = get_headers(settings)
-    response = request_server(
-        settings.SERVER,
-        URL.bootstrap.value,
-        Methods.post,
-        bootstrap_payload,
-        headers=headers,
-    )
-
-    if response.status_code != 202:
-        raise click.ClickException(
-            f"Error {response.status_code} {response.text}"
-        )
-
-    response_json = response.json()
-    if (
-        response_json.get("message") is None
-        or response_json.get("message") != "Bootstrap accepted."
-    ):
-        raise click.ClickException(response.text)
-
-    else:
-        if data := response_json.get("data"):
-            task_id = data.get("task_id")
-            if task_id is None:
-                raise click.ClickException(
-                    f"Failed to get `task id` {response.text}"
-                )
-            console.print(f"Bootstrap status: ACCEPTED ({task_id})")
-
-            return task_id
-        else:
-            raise click.ClickException(
-                f"Failed to get task response data {response.text}"
-            )
 
 
 def _configure_role_target():
@@ -653,14 +610,14 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     "--upload",
     help=(
         "Upload existent payload 'file'. Requires '-b/--bootstrap'. "
-        "Optional '-f/--file' to use non default file."
+        "Optional '-f/--file' to use non default file name."
     ),
     required=False,
     is_flag=True,
 )
 @click.option(
     "--upload-server",
-    help="[when using '--no-auth'] Upload RSTUF API Server address. ",
+    help="[when using '--no-auth'] Upload to RSTUF API Server address. ",
     required=False,
     hidden=True,
 )
@@ -717,7 +674,14 @@ def ceremony(
     if bootstrap is True and upload is True:
         bootstrap_payload = load_payload(file)
         console.print("Starting online bootstrap")
-        task_id = _send_bootstrap(settings, bootstrap_payload)
+        task_id = send_payload(
+            settings=settings,
+            url=URL.bootstrap.value,
+            method=Methods.post,
+            payload=bootstrap_payload,
+            expected_msg="Bootstrap accepted.",
+            command_name="Bootstrap"
+        )
         task_status(task_id, settings, "Bootstrap status: ")
         console.print(f"Bootstrap completed using `{file}`. 🔐 🎉")
 
@@ -730,6 +694,13 @@ def ceremony(
         )
 
         if bootstrap is True:
-            task_id = _send_bootstrap(settings, bootstrap_payload)
+            task_id = send_payload(
+                settings=settings,
+                url=URL.bootstrap.value,
+                method=Methods.post,
+                payload=bootstrap_payload,
+                expected_msg="Bootstrap accepted.",
+                command_name="Bootstrap"
+            )
             task_status(task_id, settings, "Bootstrap status: ")
             console.print("\nCeremony done. 🔐 🎉. Bootstrap completed.")

@@ -204,3 +204,62 @@ def publish_targets(settings: LazySettings) -> str:
     task_id = publish_targets.json()["data"]["task_id"]
 
     return task_id
+
+
+def send_payload(
+    settings: LazySettings,
+    url: str,
+    method: Methods,
+    payload: Dict[str, Any],
+    expected_msg: str,
+    command_name: str,
+) -> str:
+    """
+    Send 'payload' to a given 'settings.SERVER'.
+
+    Args:
+        settings: the command context settings object
+        url: one of the URLs to a given endpoint as defined in api_client.py
+        method: REST API method to use as defined in api_client.py
+        payload: dictionary containing the payload to send
+        expected_msg: expected message to receive as a response to the request
+        command_name: name of the command sending the payload, used for logging
+
+    Returns:
+        Task id of the job sending the payload.
+    """
+    headers = get_headers(settings)
+    response = request_server(
+        settings.SERVER,
+        url,
+        method,
+        payload,
+        headers=headers,
+    )
+
+    if response.status_code != 202:
+        raise click.ClickException(
+            f"Error {response.status_code} {response.text}"
+        )
+
+    response_json = response.json()
+    if (
+        response_json.get("message") is None
+        or response_json.get("message") != expected_msg
+    ):
+        raise click.ClickException(response.text)
+
+    else:
+        if data := response_json.get("data"):
+            task_id = data.get("task_id")
+            if task_id is None:
+                raise click.ClickException(
+                    f"Failed to get `task id` {response.text}"
+                )
+            console.print(f"{command_name} status: ACCEPTED ({task_id})")
+
+            return task_id
+        else:
+            raise click.ClickException(
+                f"Failed to get task response data {response.text}"
+            )
