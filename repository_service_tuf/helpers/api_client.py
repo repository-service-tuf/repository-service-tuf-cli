@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2022-2023 VMware Inc
 #
 # SPDX-License-Identifier: MIT
+import json
 import time
 from dataclasses import dataclass
 from enum import Enum
@@ -11,6 +12,8 @@ import rich_click as click
 from dynaconf import LazySettings
 from requests.exceptions import ConnectionError
 from rich.console import Console
+
+from tuf.api.metadata import Metadata
 
 console = Console()
 
@@ -264,3 +267,23 @@ def send_payload(
             raise click.ClickException(
                 f"Failed to get task response data {response.text}"
             )
+
+
+def get_md_file(file_uri: str) -> Metadata:
+    parsed_url = file_uri.split("://")
+    protocol = parsed_url[0]
+    role_md: Metadata
+    if protocol in ["http", "https"]:
+        console.print(f"Fetching file {file_uri}")
+        base_url = f"{parsed_url[1].split('/')[0]}"
+        server = f"{protocol}://{base_url}"
+        url = "".join(parsed_url[1].split("/")[1:])
+        response = request_server(server, url, Methods.get)
+        if response.status_code != 200:
+            raise click.ClickException(f"Cannot fetch {file_uri}")
+        json_data = json.loads(response.text)
+        role_md = Metadata.from_dict(json_data)
+    else:
+        role_md = Metadata.from_file(file_uri)
+
+    return role_md

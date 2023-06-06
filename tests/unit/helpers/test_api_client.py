@@ -6,6 +6,7 @@ from unittest.mock import Mock
 
 import pretend
 import pytest
+import rich_click as click
 
 from repository_service_tuf.helpers import api_client
 
@@ -797,4 +798,58 @@ class TestAPIClient:
                 {"payload": "data"},
                 headers={"auth": "token"},
             )
+        ]
+
+    def test_get_md_file_local_file(self):
+        api_client.Metadata.from_file = pretend.call_recorder(
+            lambda *a: bytes("abc", "utf-8")
+        )
+        result = api_client.get_md_file("root.json")
+        assert result == bytes("abc", "utf-8")
+        assert api_client.Metadata.from_file.calls == [
+            pretend.call("root.json")
+        ]
+
+    def test_get_md_file_url(self):
+        api_client.console.print = pretend.call_recorder(lambda *a: None)
+        json_data = {"metadata": "root"}
+        api_client.request_server = pretend.call_recorder(
+            lambda *a : pretend.stub(
+                status_code=200,
+                text='{"metadata": "root"}'
+            )
+        )
+        api_client.Metadata.from_dict = pretend.call_recorder(
+            lambda *a: bytes("abc", "utf-8")
+        )
+        file = "root.json"
+        url = f"http://localhost/{file}"
+        result = api_client.get_md_file(url)
+        assert result == bytes("abc", "utf-8")
+        assert api_client.console.print.calls == [
+            pretend.call(f"Fetching file {url}"),
+        ]
+        assert api_client.request_server.calls == [
+            pretend.call("http://localhost", file, api_client.Methods.get),
+        ]
+        assert api_client.Metadata.from_dict.calls == [pretend.call(json_data)]
+
+    def test_get_md_file_url_response_not_200(self):
+        api_client.console.print = pretend.call_recorder(lambda *a: None)
+        api_client.request_server = pretend.call_recorder(
+            lambda *a : pretend.stub(
+                status_code=404,
+            )
+        )
+        file = "root.json"
+        url = f"http://localhost/{file}"
+        with pytest.raises(click.ClickException) as err:
+            result = api_client.get_md_file(url)
+            assert result is None
+
+        assert api_client.console.print.calls == [
+            pretend.call(f"Fetching file {url}"),
+        ]
+        assert api_client.request_server.calls == [
+            pretend.call("http://localhost", file, api_client.Methods.get),
         ]

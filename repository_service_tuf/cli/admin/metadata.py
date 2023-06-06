@@ -17,7 +17,7 @@ from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,
-    request_server,
+    get_md_file,
     send_payload,
     task_status,
 )
@@ -116,28 +116,8 @@ def metadata(context):
     """
 
 
-def _get_curr_root(curr_root_uri: str) -> RootInfo:
-    parsed_url = curr_root_uri.split("://")
-    protocol = parsed_url[0]
-    curr_root_md: Metadata[Root]
-    if protocol in ["http", "https"]:
-        console.print(f"Fetching current root from: {curr_root_uri}")
-        base_url = f"{parsed_url[1].split('/')[0]}"
-        server = f"{protocol}://{base_url}"
-        url = "".join(parsed_url[1].split("/")[1:])
-        response = request_server(server, url, Methods.get)
-        if response.status_code != 200:
-            raise click.ClickException(f"Cannot fetch {curr_root_uri}")
-        json_data = json.loads(response.text)
-        curr_root_md = Metadata.from_dict(json_data)
-    else:
-        curr_root_md = Metadata.from_file(curr_root_uri)
-
-    return RootInfo.from_md(curr_root_md)
-
-
 def _create_keys_table(
-    curr_root: RootInfo, is_online_key_table: bool, is_minimal: bool
+    root_info: RootInfo, is_online_key_table: bool, is_minimal: bool
 ) -> table.Table:
     """Gets a new keys table."""
     keys_table: table.Table
@@ -156,10 +136,10 @@ def _create_keys_table(
     keys: List[RSTUFKey] = []
     if is_online_key_table:
         key_location = "[green]Online[/]"
-        keys = [curr_root.online_key]
+        keys = [root_info.online_key]
     else:
         key_location = "[bright_blue]Offline[/]"
-        keys = list(curr_root.root_keys.values())
+        keys = list(root_info.root_keys.values())
 
     for key in keys:
         keys_table.add_row(
@@ -173,21 +153,21 @@ def _create_keys_table(
     return keys_table
 
 
-def _print_curr_root(curr_root: RootInfo):
+def _print_root_info(root_info: RootInfo):
     root_table = table.Table()
     root_table.add_column("Root", justify="left", vertical="middle")
     root_table.add_column("KEYS", justify="center", vertical="middle")
-    number_of_keys = len(curr_root.root_keys)
+    number_of_keys = len(root_info.root_keys)
 
     root_keys_table = _create_keys_table(
-        curr_root, is_online_key_table=False, is_minimal=True
+        root_info, is_online_key_table=False, is_minimal=True
     )
 
     root_table.add_row(
         (
             f"\nNumber of Keys: [yellow]{number_of_keys}[/]"
-            f"\nThreshold: [yellow]{curr_root.threshold}[/]"
-            f"\nRoot Expiration: [yellow]{curr_root.expiration_str}[/]"
+            f"\nThreshold: [yellow]{root_info.threshold}[/]"
+            f"\nRoot Expiration: [yellow]{root_info.expiration_str}[/]"
         ),
         root_keys_table,
     )
@@ -431,7 +411,7 @@ def _modify_root_md(current_root: RootInfo):
 
         console.print("\nHere is the current content of root:")
 
-        _print_curr_root(current_root)
+        _print_root_info(current_root)
 
 
 def _modify_online_key(current_root: RootInfo):
@@ -587,7 +567,8 @@ def update(
             "[cyan]File name or URL[/] to the current root metadata"
         )
     try:
-        curr_root: RootInfo = _get_curr_root(current_root_uri)
+        root_md: Metadata = get_md_file(current_root_uri)
+        root_info: RootInfo = RootInfo.from_md(root_md)
     except StorageError:
         raise click.ClickException(
             f"Cannot fetch/load current root {current_root_uri}"
@@ -597,21 +578,21 @@ def update(
 
     console.print(markdown.Markdown(CURRENT_ROOT_INFO), width=100)
 
-    _print_curr_root(curr_root)
+    _print_root_info(root_info)
 
-    _current_root_keys_validation(curr_root)
+    _current_root_keys_validation(root_info)
 
-    _modify_expiration(curr_root)
+    _modify_expiration(root_info)
 
-    _modify_root_md(curr_root)
+    _modify_root_md(root_info)
 
-    _modify_online_key(curr_root)
+    _modify_online_key(root_info)
 
     console.print(markdown.Markdown("## Payload Generation"))
 
-    if curr_root.has_changed():
+    if root_info.has_changed():
         # There are one or more changes to the root metadata file.
-        payload = curr_root.generate_payload()
+        payload = root_info.generate_payload()
         # Save if the users asks for it or if the payload won't be uploaded.
         if save or not upload:
             save_payload(file, payload)
