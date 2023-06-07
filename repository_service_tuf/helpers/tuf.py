@@ -163,15 +163,12 @@ class RootInfo:
     def save_current_root_key(self, key: RSTUFKey):
         """Update internal information based on 'key' data."""
         tuf_key: Key = self._root_md.signed.keys[key.key["keyid"]]
-        if isinstance(tuf_key.unrecognized_fields.get("name"), str):
-            key.name = tuf_key.unrecognized_fields["name"]
-
         key.name = self._get_name(tuf_key)
         self.root_keys[key.name] = key
         self._current_root_signing_keys.append(key)
 
     def remove_key(self, key_name: str) -> bool:
-        """Try to remove a key and return status of the operation"""
+        """Try to remove a root key and return status of the operation"""
         key = self.root_keys.get(key_name)
         if key is None:
             return False
@@ -181,8 +178,8 @@ class RootInfo:
         return True
 
     def add_key(self, new_key: RSTUFKey) -> None:
-        """Add a new key."""
-        name = RootInfo._get_name(new_key)
+        """Add a new root key."""
+        name = self._get_name(new_key)
         new_key.name = name
         tuf_key = Key.from_securesystemslib_key(new_key.key)
         tuf_key.unrecognized_fields["name"] = name
@@ -190,9 +187,9 @@ class RootInfo:
 
         self.root_keys[name] = new_key
 
-    def change_online_key(self, new_online_key: RSTUFKey):
-        """Replace the old online key with a new one."""
-        # Remove the old online key
+    def change_online_key(self, new_online_key: RSTUFKey) -> None:
+        """Replace the current online key with a new one."""
+        # Remove the current online key
         online_key_id = self._root_md.signed.roles["timestamp"].keyids[0]
         # Top level roles that use the online key
         online_roles = ["timestamp", "snapshot", "targets"]
@@ -200,7 +197,7 @@ class RootInfo:
             self._root_md.signed.revoke_key(online_key_id, role)
 
         # Add the new online key
-        name = RootInfo._get_name(new_online_key)
+        name = self._get_name(new_online_key)
         new_online_key.name = name
         online_tuf_key = Key.from_securesystemslib_key(new_online_key.key)
         online_tuf_key.unrecognized_fields["name"] = name

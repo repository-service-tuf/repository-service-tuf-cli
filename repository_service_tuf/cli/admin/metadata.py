@@ -32,11 +32,10 @@ from repository_service_tuf.helpers.tuf import (
 INTRODUCTION = """
 # Metadata Update
 
-The metadata update allows:
-- extending Root expiration
-- modification of the keys used for signing (no matter if Root keys or the
-Online key),
-- changing of the Root threshold value
+The metadata update ceremony allows to:
+- extend Root expiration
+- change Root signature threshold
+- change any signing key
 """
 
 CURRENT_ROOT_INFO = """
@@ -71,9 +70,9 @@ ceremony.
 """
 
 ROOT_CHANGES_MSG = """
-# STEP 3: Root Metadata Changes
+# STEP 3:  Root Keys Changes
 
-You are starting the root metadata changes procedure.
+You are starting the Root keys changes procedure.
 
 Note: when asked about specific attributes the default values that are
 suggested will be the ones used in the current root metadata.
@@ -497,7 +496,7 @@ def _modify_online_key(current_root: RootInfo):
     "--save",
     help=(
         "Save a copy of the metadata locally. This option saves the JSON "
-        "metadata update payload file in the in the current directory."
+        "metadata update payload file in the current directory."
     ),
     default=False,
     show_default=True,
@@ -566,6 +565,7 @@ def update(
         current_root_uri = prompt.Prompt.ask(
             "[cyan]File name or URL[/] to the current root metadata"
         )
+        console.print("\n")
     try:
         root_md: Metadata = get_md_file(current_root_uri)
         root_info: RootInfo = RootInfo.from_md(root_md)

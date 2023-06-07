@@ -404,11 +404,10 @@ Metadata Management (``metadata``)
 update
 ......
 
-The metadata update ceremony allows:
-- extending Root expiration
-- modification of the keys used for signing (no matter if Root keys or the
-Online key),
-- changing of the Root threshold value
+The metadata update ceremony allows to:
+- extend Root expiration
+- change Root signature threshold
+- change any signing key
 
 .. code::
 
@@ -418,19 +417,15 @@ Online key),
 
     Start a new metadata update ceremony.
 
-    ╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ --current-root-uri      TEXT  URL or local path to the current root.json file.                                                                     │
-    │ --file              -f  TEXT  Generate specific JSON payload file [default: metadata-update-payload.json]                                          │
-    │ --upload            -u        Upload existent payload 'file'. Optional '-f/--file' to use non default file name.                                   │
-    │ --run-ceremony                When '--upload' is set this flag can be used to run the ceremony and the result will be uploaded.                    │
-    │ --save              -s        Save a copy of the metadata locally. This option saves the JSON metadata update payload file in the in the current   │
-    │                               directory.                                                                                                           │
-    │ --help              -h        Show this message and exit.                                                                                          │
-    ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-You can start the metadata update ceremony by providing value for the required
-``--current-root-ur`` argument when you call the ceremony or you will be asked
-about this:
+    ╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --current-root-uri      TEXT  URL or local path to the current root.json file.                                                             │
+    │ --file              -f  TEXT  Generate specific JSON payload file [default: metadata-update-payload.json]                                  │
+    │ --upload            -u        Upload existent payload 'file'. Optional '-f/--file' to use non default file name.                           │
+    │ --run-ceremony                When '--upload' is set this flag can be used to run the ceremony and the result will be uploaded.            │
+    │ --save              -s        Save a copy of the metadata locally. This option saves the JSON metadata update payload file in the current  │
+    │                               directory.                                                                                                   │
+    │ --help              -h        Show this message and exit.                                                                                  │
+    ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 .. code::
 
@@ -440,11 +435,11 @@ about this:
     ┃                                         Metadata Update                                          ┃
     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-    The metadata update allows:
+    The metadata update ceremony allows to:
 
-    • extending Root expiration
-    • modification of the keys used for signing (no matter if Root keys or the Online key),
-    • changing of the Root threshold value
+    • extend Root expiration
+    • change Root signature threshold
+    • change any signing key
 
     The result of this ceremony will be a new metadata-update-payload.json file.
 
@@ -453,15 +448,6 @@ about this:
 
 
     File name or URL to the current root metadata: rstuf/cli/root.json
-
-
-Here we have the current root.json downloaded locally.
-You can instead give a URL to the current root.
-
-Before starting the ceremony you will be given information about the current
-root metadata file, so you can better decide what you want to update.
-
-.. code::
 
     ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
     ┃                                       Current Root Content                                       ┃
@@ -531,10 +517,8 @@ Step 2: Extend Root Expiration
 Note: Root's expiration is extended starting from today and not from the
 current root expiration date.
 
-Step 3: Root Metadata Changes
-"""""""""""""""""""""""""""""
-This step will give you the opportunity to change root's threshold, remove keys
-or add keys.
+Step 3: Root Keys Changes
+"""""""""""""""""""""""""
 
 .. code::
 
@@ -542,7 +526,7 @@ or add keys.
     ┃                                  STEP 3: Root Metadata Changes                                   ┃
     ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
 
-    You are starting the root metadata changes procedure.
+    You are starting the Root keys changes procedure.
 
     Note: when asked about specific attributes the default values that are suggested will be the ones
     used in the current root metadata.
@@ -698,7 +682,7 @@ Finishing
 """""""""
 
 The metadata update ceremony should be used when a user wants to update the
-content of his metadata files.
+content of their metadata files.
 In order to fully complete this besides finishing the ceremony steps you need
 to send the resulting payload to the active RSTUF API deployment
 (```repository-service-tuf-api``) you already use.
