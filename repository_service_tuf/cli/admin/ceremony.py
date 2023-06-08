@@ -617,7 +617,7 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
 )
 @click.option(
     "--upload-server",
-    help="[when using '--no-auth'] Upload to RSTUF API Server address. ",
+    help="[when using '--auth'] Upload to RSTUF API Server address. ",
     required=False,
     hidden=True,
 )
