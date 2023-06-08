@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: 2022-2023 VMware Inc
 #
 # SPDX-License-Identifier: MIT
-import json
 from datetime import datetime, timedelta
 from typing import Any, List
 

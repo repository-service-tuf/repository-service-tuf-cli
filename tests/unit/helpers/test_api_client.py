@@ -814,9 +814,8 @@ class TestAPIClient:
         api_client.console.print = pretend.call_recorder(lambda *a: None)
         json_data = {"metadata": "root"}
         api_client.request_server = pretend.call_recorder(
-            lambda *a : pretend.stub(
-                status_code=200,
-                text='{"metadata": "root"}'
+            lambda *a: pretend.stub(
+                status_code=200, text='{"metadata": "root"}'
             )
         )
         api_client.Metadata.from_dict = pretend.call_recorder(
@@ -837,7 +836,7 @@ class TestAPIClient:
     def test_get_md_file_url_response_not_200(self):
         api_client.console.print = pretend.call_recorder(lambda *a: None)
         api_client.request_server = pretend.call_recorder(
-            lambda *a : pretend.stub(
+            lambda *a: pretend.stub(
                 status_code=404,
             )
         )
@@ -847,6 +846,7 @@ class TestAPIClient:
             result = api_client.get_md_file(url)
             assert result is None
 
+        assert f"Cannot fetch {url}" in str(err.value)
         assert api_client.console.print.calls == [
             pretend.call(f"Fetching file {url}"),
         ]

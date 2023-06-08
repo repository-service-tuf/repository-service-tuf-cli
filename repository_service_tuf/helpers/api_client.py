@@ -12,7 +12,6 @@ import rich_click as click
 from dynaconf import LazySettings
 from requests.exceptions import ConnectionError
 from rich.console import Console
-
 from tuf.api.metadata import Metadata
 
 console = Console()

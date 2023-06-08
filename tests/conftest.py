@@ -3,16 +3,19 @@
 # SPDX-License-Identifier: MIT
 
 import os
+from datetime import datetime
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, List, Tuple
 
 import pytest  # type: ignore
 from click.testing import CliRunner  # type: ignore
 from dynaconf import Dynaconf
+from tuf.api.metadata import Key, Metadata, Root
 
 from repository_service_tuf.helpers.tuf import (
     BootstrapSetup,
     Roles,
+    RootInfo,
     RSTUFKey,
     ServiceSettings,
     TUFManagement,
@@ -104,3 +107,24 @@ def test_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
     ]
 
     return input_step1, input_step2, input_step3, input_step4
+
+
+@pytest.fixture
+def root() -> Metadata[Root]:
+    return Metadata(Root(expires=datetime.now()))
+
+
+@pytest.fixture
+def root_info(root: Metadata[Root]) -> RootInfo:
+    root_keys = [
+        Key("id1", "ed25519", "", {"sha256": "abc"}),
+        Key("id2", "ed25519", "", {"sha256": "foo"}),
+    ]
+    for key in root_keys:
+        root.signed.add_key(key, "root")
+
+    online_key = Key("id3", "ed25519", "", {"sha256": "doo"})
+    for online_role in ["timestamp", "snapshot", "targets"]:
+        root.signed.add_key(online_key, online_role)
+
+    return RootInfo.from_md(root)
