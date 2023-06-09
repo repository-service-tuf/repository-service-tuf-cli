@@ -172,6 +172,11 @@ class TestRootInfo:
         name = RootInfo._get_name(key)
         assert name == "1234567"
 
+    def test__get_name_tuf_key_with_empty_string_name(self):
+        key = Key("123456789a", "ed25519", "", {"sha256": "abc"}, {"name": ""})
+        name = RootInfo._get_name(key)
+        assert name == "1234567"
+
     def test__get_name_rstuf_key_with_custom_name(self):
         key = RSTUFKey(
             {"keyid": "123456789a", "keyval": {"sha256": "abc"}}, name="my_key"
@@ -181,6 +186,13 @@ class TestRootInfo:
 
     def test__get_name_rstuf_key_without_custom_name(self):
         key = RSTUFKey({"keyid": "123456789a", "keyval": {"sha256": "abc"}})
+        name = RootInfo._get_name(key)
+        assert name == "1234567"
+
+    def test__get_name_rstuf_key_with_empty_string_name(self):
+        key = RSTUFKey(
+            {"keyid": "123456789a", "keyval": {"sha256": "abc"}}, name=""
+        )
         name = RootInfo._get_name(key)
         assert name == "1234567"
 

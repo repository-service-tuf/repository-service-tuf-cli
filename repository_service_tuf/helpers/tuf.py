@@ -124,7 +124,10 @@ class RootInfo:
         name: str
         if isinstance(key, Key):
             name = key.keyid[:7]
-            if key.unrecognized_fields.get("name") is not None:
+            if (
+                key.unrecognized_fields.get("name") is not None
+                and key.unrecognized_fields.get("name") != ""
+            ):
                 name = key.unrecognized_fields["name"]
 
         elif isinstance(key, RSTUFKey):
