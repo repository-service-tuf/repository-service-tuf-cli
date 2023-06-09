@@ -353,9 +353,11 @@ def _configure_keys(
             f"[cyan]{role}[/]`s private key [green]path[/]"
         )
 
+        colored_role = click.style(role, fg="cyan")
+        colored_pass = click.style("password", fg="green")
         password = click.prompt(
             f"Enter {key_count}/{number_of_keys} the "
-            f"{role}`s private key [green]password[/]",
+            f"{colored_role}`s private key {colored_pass}",
             hide_input=True,
         )
         name = prompt.Prompt.ask(

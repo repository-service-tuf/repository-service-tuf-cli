@@ -4,13 +4,12 @@
 from datetime import datetime, timedelta
 from typing import Any, List
 
-import click
 from rich import box, markdown, prompt, table
 from securesystemslib.exceptions import StorageError  # type: ignore
 from tuf.api.metadata import Metadata, Root
 from tuf.api.serialization import DeserializationError
 
-from repository_service_tuf.cli import console
+from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.api_client import (
@@ -183,9 +182,11 @@ def _get_key(role: str) -> RSTUFKey:
     filepath = prompt.Prompt.ask(
         f"Enter the [cyan]{role}[/]`s private key [green]path[/]"
     )
-    password = prompt.Prompt.ask(
-        f"Enter the [cyan]{role}[/]`s private key [green]password[/]",
-        password=True,
+    colored_role = click.style(role, fg="cyan")
+    colored_pass = click.style("password", fg="green")
+    password = click.prompt(
+        f"Enter the {colored_role}`s private key {colored_pass}",
+        hide_input=True,
     )
 
     return load_key(filepath, key_type, password, "")
