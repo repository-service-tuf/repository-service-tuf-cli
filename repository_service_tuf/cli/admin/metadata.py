@@ -68,7 +68,7 @@ Note: the root expiration can be extended ONLY during the metadata update
 ceremony.
 """
 
-ROOT_CHANGES_MSG = """
+ROOT_KEYS_CHANGES_MSG = """
 # STEP 3:  Root Keys Changes
 
 You are starting the Root keys changes procedure.
@@ -270,7 +270,9 @@ def _keys_removal(current_root: RootInfo):
         if not key_removal:
             break
 
-        name = prompt.Prompt.ask("[green]Name/Tag[/] of the key to remove")
+        name = prompt.Prompt.ask(
+            "[green]Name/Tag/ID prefix[/] of the key to remove"
+        )
         if not current_root.remove_key(name):
             console.print(
                 "\n", f":cross_mark: [red]Failed[/]: key {name} is not in root"
@@ -383,17 +385,17 @@ def _modify_expiration(current_root: RootInfo):
             break
 
 
-def _modify_root_md(current_root: RootInfo):
-    """Update root metadata file"""
-    console.print(markdown.Markdown(ROOT_CHANGES_MSG), width=100)
+def _modify_root_keys(current_root: RootInfo):
+    """Modify root keys"""
+    console.print(markdown.Markdown(ROOT_KEYS_CHANGES_MSG), width=100)
     console.print("\n")
 
     while True:
         change = prompt.Confirm.ask(
-            "Do you want to change the [cyan]root[/] metadata?"
+            "Do you want to modify [cyan]root[/] keys?"
         )
         if not change:
-            console.print("Skipping further root metadata changes")
+            console.print("Skipping further root keys changes")
             break
 
         msg = "\nWhat should be the [cyan]root[/] role [green]threshold?[/]"
@@ -583,7 +585,7 @@ def update(
 
     _modify_expiration(root_info)
 
-    _modify_root_md(root_info)
+    _modify_root_keys(root_info)
 
     _modify_online_key(root_info)
 
