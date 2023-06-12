@@ -268,7 +268,7 @@ def _keys_removal(current_root: RootInfo):
         console.print("\n")
 
         key_removal = prompt.Confirm.ask("Do you want to remove a key")
-        if not key_removal:
+        if key_removal is False:
             break
 
         name = prompt.Prompt.ask(
@@ -295,7 +295,7 @@ def _keys_additions(current_root: RootInfo):
         console.print("\nHere are the current root keys:")
         console.print(keys_table)
         response = prompt.Confirm.ask("\nDo you want to add a new key?")
-        if not response:
+        if response is False:
             keys_amount = len(current_root.root_keys)
             if keys_amount < root_threshold:
                 remaining_keys = root_threshold - keys_amount
@@ -359,7 +359,7 @@ def _modify_expiration(current_root: RootInfo):
         change = prompt.Confirm.ask(
             "Do you want to extend the [cyan]root's expiration[/]?"
         )
-        if not change:
+        if change is False:
             if current_root.expiration < (datetime.now() + timedelta(days=1)):
                 console.print(
                     "You must extend root's expiration - root has expired"
@@ -379,7 +379,7 @@ def _modify_expiration(current_root: RootInfo):
         agree = prompt.Confirm.ask(
             f"New root expiration: [cyan]{new_exp_str}[/]. Do you agree?"
         )
-        if not agree:
+        if agree is False:
             continue
         else:
             current_root.expiration = new_expiry
@@ -395,7 +395,7 @@ def _modify_root_keys(current_root: RootInfo):
         change = prompt.Confirm.ask(
             "Do you want to modify [cyan]root[/] keys?"
         )
-        if not change:
+        if change is False:
             console.print("Skipping further root keys changes")
             break
 
@@ -428,7 +428,7 @@ def _modify_online_key(current_root: RootInfo):
         change = prompt.Confirm.ask(
             "Do you want to change the [cyan]online key[/]?"
         )
-        if not change:
+        if change is False:
             console.print("Skipping further online key changes")
             break
 
@@ -549,7 +549,7 @@ def update(
             command_name="Metadata Update",
         )
         task_status(task_id, settings, "Metadata Update status: ")
-        console.print("Ceremony done. 🔐 🎉. Root metadata update completed.")
+        console.print(f"Existing payload {file} sent")
 
         return
 
@@ -610,9 +610,8 @@ def update(
                 command_name="Metadata Update",
             )
             task_status(task_id, settings, "Metadata Update status: ")
-            console.print(
-                "Ceremony done. 🔐 🎉. Root metadata update completed."
-            )
+
+        console.print("Ceremony done. 🔐 🎉. Root metadata update completed.")
 
     else:
         # There are no changes made to the root metadata file.
