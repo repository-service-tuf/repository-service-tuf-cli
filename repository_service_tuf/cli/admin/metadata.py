@@ -448,8 +448,7 @@ def _modify_online_key(current_root: RootInfo):
 
         if online_key == current_root.online_key:
             console.print(
-                ":cross_mark: [red]Failed[/]: The new online key is the same "
-                " as the current online key"
+                ":cross_mark: [red]Failed[/]: New online key and current match"
             )
             continue
 

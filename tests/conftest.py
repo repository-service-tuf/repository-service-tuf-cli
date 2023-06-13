@@ -128,3 +128,42 @@ def root_info(root: Metadata[Root]) -> RootInfo:
         root.signed.add_key(online_key, online_role)
 
     return RootInfo.from_md(root)
+
+
+@pytest.fixture
+def md_update_input() -> Tuple[List[str], List[str], List[str], List[str]]:
+    # Step1 will combine current root file name and authorization.
+    input_step1 = [
+        "tests/files/root.json",  # File name or URL to the current root metadata  # noqa
+        "",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
+        "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+        "strongPass",  # Enter the root`s private key password
+    ]
+    input_step2 = [
+        "y",  # Do you want to extend the root's expiration? [y/n]
+        "",  # Days to extend root's expiration starting from today (365)
+        "y",  # New root expiration: YYYY-M-DD. Do you agree? [y/n]
+    ]
+    input_step3 = [
+        "y",  # Do you want to modify root keys? [y/n]
+        "",  # What should be the root role threshold? (CURRENT_KEY_THRESHOLD)
+        "y",  # Do you want to remove a key [y/n]
+        "Martin's Key",  # Name/Tag/ID prefix of the key to remove
+        "n",  # Do you want to remove a key [y/n]
+        "y",  # Do you want to add a new key? [y/n]
+        "",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
+        "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+        "strongPass",  # Enter the root`s private key password
+        "Kairo's Key",  # [Optional] Give a name/tag to the key
+        "n",  # Do you want to add a new key? [y/n]
+        "n",  # Do you want to modify root keys? [y/n]
+    ]
+    input_step4 = [
+        "y",  # Do you want to change the online key? [y/n]
+        "rsa",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
+        "tests/files/key_storage/online-rsa.key",  # Enter the root`s private key path  # noqa
+        "strongPass",  # Enter the root`s private key password
+        "New RSA Online Key",  # [Optional] Give a name/tag to the key
+        "n",  # Do you want to change the online key? [y/n]
+    ]
+    return input_step1, input_step2, input_step3, input_step4
