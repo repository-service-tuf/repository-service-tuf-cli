@@ -114,7 +114,7 @@ def metadata(context):
 
 
 def _create_keys_table(
-    root_info: RootInfo, is_online_key_table: bool, is_minimal: bool
+    keys: List[RSTUFKey], is_online_key_table: bool, is_minimal: bool
 ) -> table.Table:
     """Gets a new keys table."""
     keys_table: table.Table
@@ -127,23 +127,25 @@ def _create_keys_table(
     keys_table.add_column("Name/Tag", justify="center")
     keys_table.add_column("Key Type", justify="center")
     keys_table.add_column("Storage", justify="center")
+    keys_table.add_column("Singing Key", justify="center")
     keys_table.add_column("Public Value", justify="center")
 
     key_location: str
-    keys: List[RSTUFKey] = []
     if is_online_key_table:
         key_location = "[green]Online[/]"
-        keys = [root_info.online_key]
     else:
         key_location = "[bright_blue]Offline[/]"
-        keys = list(root_info.root_keys.values())
 
     for key in keys:
+        is_signing_key = "False"
+        if key.key_path is not None:
+            is_signing_key = "[green]True[/]"
         keys_table.add_row(
             f'[yellow]{key.key["keyid"]}',
             f"[yellow]{key.name}",
             key.key["keytype"],
             key_location,
+            is_signing_key,
             f'[yellow]{key.key["keyval"]["public"]}',
         )
 
@@ -157,7 +159,7 @@ def _print_root_info(root_info: RootInfo):
     number_of_keys = len(root_info.root_keys)
 
     root_keys_table = _create_keys_table(
-        root_info, is_online_key_table=False, is_minimal=True
+        root_info.keys_list, is_online_key_table=False, is_minimal=True
     )
 
     root_table.add_row(
@@ -238,7 +240,7 @@ def _current_root_keys_validation(current_root: RootInfo):
                 continue
             else:
                 raise click.ClickException(
-                    f"Failed authorization. Required: {threshold}, loaded"
+                    f"Failed authorization. Required: {threshold}, loaded "
                     f"{len(loaded)} keys"
                 )
 
@@ -261,7 +263,7 @@ def _keys_removal(current_root: RootInfo):
     """Asking the user if he wants to remove any of the root keys"""
     while True:
         keys_table = _create_keys_table(
-            current_root, is_online_key_table=False, is_minimal=False
+            current_root.keys_list, is_online_key_table=False, is_minimal=False
         )
         console.print("Here are the current root keys:")
         console.print(keys_table)
@@ -278,6 +280,7 @@ def _keys_removal(current_root: RootInfo):
             console.print(
                 "\n", f":cross_mark: [red]Failed[/]: key {name} is not in root"
             )
+            continue
         else:
             console.print(f"Key with name/tag [yellow]{name}[/] removed\n")
             if len(current_root.root_keys) < 1:
@@ -287,20 +290,24 @@ def _keys_removal(current_root: RootInfo):
 
 def _keys_additions(current_root: RootInfo):
     root_threshold = current_root.threshold
-    console.print(f"You need to have at least [cyan]{root_threshold}[/] keys.")
+    console.print(
+        f"You need to have at least [cyan]{root_threshold}[/] signing keys."
+    )
     while True:
         keys_table = _create_keys_table(
-            current_root, is_online_key_table=False, is_minimal=False
+            current_root.signing_keys,
+            is_online_key_table=False,
+            is_minimal=False,
         )
-        console.print("\nHere are the current root keys:")
+        console.print("\nHere are the current root signing keys:")
         console.print(keys_table)
         response = prompt.Confirm.ask("\nDo you want to add a new key?")
         if response is False:
-            keys_amount = len(current_root.root_keys)
+            keys_amount = len(current_root.signing_keys)
             if keys_amount < root_threshold:
-                remaining_keys = root_threshold - keys_amount
+                remaining = root_threshold - keys_amount
                 console.print(
-                    f"You need to add an additional {remaining_keys} keys"
+                    f"You need to add an additional {remaining} signing keys"
                 )
                 abort = prompt.Confirm.ask(
                     "Do you want to abort the root metadata update",
@@ -401,7 +408,7 @@ def _modify_root_keys(current_root: RootInfo):
 
         msg = "\nWhat should be the [cyan]root[/] role [green]threshold?[/]"
         current_root.threshold = _get_positive_int_input(
-            msg, "threshold", current_root.threshold
+            msg, "Threshold", current_root.threshold
         )
 
         console.print(markdown.Markdown(ROOT_KEYS_REMOVAL_MSG), width=100)
@@ -419,7 +426,9 @@ def _modify_online_key(current_root: RootInfo):
     console.print(markdown.Markdown(ONLINE_KEY_CHANGE), width=100)
     while True:
         online_key_table = _create_keys_table(
-            current_root, is_online_key_table=True, is_minimal=False
+            [current_root.online_key],
+            is_online_key_table=True,
+            is_minimal=False,
         )
         console.print("\nHere is the information for the current online key:")
         console.print("\n")
