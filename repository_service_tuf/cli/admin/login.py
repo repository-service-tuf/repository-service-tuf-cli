@@ -27,7 +27,7 @@ def _login(server: str, data: Dict[str, str]):
     return token_response.json()
 
 
-def _run_login(context, server_, user_, password_, expires_):
+def _run_login(context, server_, password_, expires_):
     settings = context.obj.get("settings")
     console.print(
         markdown.Markdown(
@@ -55,15 +55,10 @@ def _run_login(context, server_, user_, password_, expires_):
         else:
             break
 
-    if user_ is None:
-        username = prompt.Prompt.ask(
-            "Username", default="admin", show_default=True
-        )
-    else:
-        username = user_
+    username = "admin"
 
     if password_ is None:
-        password = click.prompt("Password", hide_input=True)
+        password = click.prompt(f"Password for {username}", hide_input=True)
     else:
         password = password_
 
@@ -103,13 +98,12 @@ def _run_login(context, server_, user_, password_, expires_):
     "-f", "--force", "force", help="Force login/Renew token", is_flag=True
 )
 @click.option("-s", "server_", help="Server", required=False, default=None)
-@click.option("-u", "user_", help="User", required=False, default=None)
 @click.option("-p", "password_", help="Password", required=False, default=None)
 @click.option(
     "-e", "expires_", help="Expires in Hours", required=False, default=None
 )
 @click.pass_context
-def login(context, force, server_, user_, password_, expires_):
+def login(context, force, server_, password_, expires_):
     """
     Login to Repository Service for TUF (API).
     """
@@ -125,7 +119,7 @@ def login(context, force, server_, user_, password_, expires_):
     ):
         response = is_logged(settings)
         if response.state is False:
-            _run_login(context, server_, user_, password_, expires_)
+            _run_login(context, server_, password_, expires_)
 
         else:
             data = response.data
@@ -136,4 +130,4 @@ def login(context, force, server_, user_, password_, expires_):
                 )
 
     else:
-        _run_login(context, server_, user_, password_, expires_)
+        _run_login(context, server_, password_, expires_)
