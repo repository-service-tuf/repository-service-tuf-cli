@@ -16,12 +16,12 @@ from repository_service_tuf.helpers.api_client import URL, Methods
 class TestMetadataUpdate:
     """Test the Ceremony Interaction"""
 
-    def test_md_update_start(self, client, test_context):
+    def test_metadata_update_start(self, client, test_context):
         test_result = client.invoke(metadata.update, obj=test_context)
         assert test_result.exit_code == 1
         assert "Metadata Update" in test_result.output
 
-    def test_md_update(self, client, test_context, md_update_input):
+    def test_metadata_update(self, client, test_context, md_update_input):
         input_step1, input_step2, input_step3, input_step4 = md_update_input
 
         test_result = client.invoke(
@@ -63,7 +63,7 @@ class TestMetadataUpdate:
         online_key = root.signed.keys[online_key_id]
         assert online_key.unrecognized_fields["name"] == "New RSA Online Key"
 
-    def test_md_update_no_root_changes(
+    def test_metadata_update_no_root_changes(
         self, client, test_context, md_update_input
     ):
         input_step1, _, _, _ = md_update_input
@@ -85,7 +85,7 @@ class TestMetadataUpdate:
         assert finish_msg in test_result.output
         assert test_result.exit_code == 0
 
-    def test_md_update_fail_authorization(self, client, test_context):
+    def test_metadata_update_fail_authorization(self, client, test_context):
         input_step1 = [
             "tests/files/root.json",  # File name or URL to the current root metadata  # noqa
             "",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
@@ -102,7 +102,7 @@ class TestMetadataUpdate:
         assert expected_msg in test_result.output
         assert test_result.exit_code != 0
 
-    def test_md_update_authorize_wrong_key_info_and_retry(
+    def test_metadata_update_authorize_wrong_key_info_and_retry(
         self, client, test_context, md_update_input
     ):
         _, input_step2, input_step3, input_step4 = md_update_input
@@ -127,7 +127,7 @@ class TestMetadataUpdate:
         assert finish_msg in test_result.output
         assert test_result.exit_code == 0
 
-    def test_md_update_no_update_expiration(
+    def test_metadata_update_no_update_expiration(
         self, client, test_context, md_update_input
     ):
         input_step1, _, input_step3, input_step4 = md_update_input
@@ -147,7 +147,7 @@ class TestMetadataUpdate:
         skipping_expiration_change_msg = "Skipping root expiration changes"
         assert skipping_expiration_change_msg in test_result.output
 
-    def test_md_update_no_update_expired_expiration(
+    def test_metadata_update_no_update_expired_expiration(
         self, client, test_context, monkeypatch, md_update_input
     ):
         fake_date = datetime(2050, 6, 16, 9, 5, 1)
@@ -178,7 +178,7 @@ class TestMetadataUpdate:
         warning_msg = "You must extend root's expiration - root has expired"
         assert warning_msg in test_result.output
 
-    def test_md_update_no_update_expiration_negative(
+    def test_metadata_update_no_update_expiration_negative(
         self, client, test_context, md_update_input
     ):
         input_step1, _, input_step3, input_step4 = md_update_input
@@ -200,7 +200,7 @@ class TestMetadataUpdate:
         assert test_result.exit_code == 0
         assert "Expiration extension must be at least 1" in test_result.output
 
-    def test_md_update_no_root_keys_modification(
+    def test_metadata_update_no_root_keys_modification(
         self, client, test_context, md_update_input
     ):
         input_step1, input_step2, _, input_step4 = md_update_input
@@ -219,7 +219,7 @@ class TestMetadataUpdate:
         assert test_result.exit_code == 0
         assert "Skipping further root keys changes" in test_result.output
 
-    def test_md_update_negative_threshold(
+    def test_metadata_update_negative_threshold(
         self, client, test_context, md_update_input
     ):
         input_step1, input_step2, _, input_step4 = md_update_input
@@ -243,7 +243,7 @@ class TestMetadataUpdate:
         assert test_result.exit_code == 0
         assert "Threshold must be at least 1" in test_result.output
 
-    def test_md_update_key_removal_of_non_existent_key(
+    def test_metadata_update_key_removal_of_non_existent_key(
         self, client, test_context, md_update_input
     ):
         input_step1, input_step2, _, input_step4 = md_update_input
@@ -269,7 +269,7 @@ class TestMetadataUpdate:
         assert test_result.exit_code == 0
         assert f"Failed: key {key_name} is not in root" in test_result.output
 
-    def test_md_update_key_remove_all_keys(
+    def test_metadata_update_key_remove_all_keys(
         self, client, test_context, md_update_input
     ):
         input_step1, input_step2, _, input_step4 = md_update_input
@@ -300,7 +300,7 @@ class TestMetadataUpdate:
         assert test_result.exit_code == 0
         assert "No keys are left for removal." in test_result.output
 
-    def test_md_update_skip_adding_keys_but_reconsider(
+    def test_metadata_update_skip_adding_keys_but_reconsider(
         self, client, test_context, md_update_input
     ):
         input_step1, input_step2, _, _ = md_update_input
@@ -338,7 +338,7 @@ class TestMetadataUpdate:
         warning = "You need to add an additional 1 signing keys"
         assert warning in test_result.output
 
-    def test_md_update_skip_adding_keys_fail_threshold_requirement(
+    def test_metadata_update_skip_adding_keys_fail_threshold_requirement(
         self, client, test_context, md_update_input
     ):
         input_step1, input_step2, _, input_step4 = md_update_input
@@ -364,7 +364,7 @@ class TestMetadataUpdate:
         warning = "You need to add an additional 9 signing keys"
         assert warning in test_result.output
 
-    def test_md_update_add_curr_online_key(
+    def test_metadata_update_add_curr_online_key(
         self, client, test_context, md_update_input
     ):
         input_step1, input_step2, _, input_step4 = md_update_input
@@ -394,7 +394,7 @@ class TestMetadataUpdate:
         warning = "Failed: This is the current online key. Cannot be added"
         assert warning in test_result.output
 
-    def test_md_update_add_used_key(
+    def test_metadata_update_add_used_key(
         self, client, test_context, md_update_input
     ):
         input_step1, input_step2, _, input_step4 = md_update_input
@@ -424,7 +424,7 @@ class TestMetadataUpdate:
         warning = "Failed: Key is already used"
         assert warning in test_result.output
 
-    def test_md_update_change_online_key_to_the_same(
+    def test_metadata_update_change_online_key_to_the_same(
         self, client, test_context, md_update_input
     ):
         input_step1, input_step2, input_step3, _ = md_update_input
@@ -450,7 +450,7 @@ class TestMetadataUpdate:
         warning = "Failed: New online key and current match"
         assert warning in test_result.output
 
-    def test_md_update_change_online_key_to_one_of_root_keys(
+    def test_metadata_update_change_online_key_to_one_of_root_keys(
         self, client, test_context, md_update_input
     ):
         input_step1, input_step2, input_step3, _ = md_update_input
@@ -482,7 +482,7 @@ class TestMetadataUpdateOptions:
 
     path = "repository_service_tuf.cli.admin.metadata"
 
-    def test_md_update_auth_set_without_upload_server_ClickException(
+    def test_metadata_update_auth_set_without_upload_server_ClickException(
         self, client, test_context
     ):
         test_context["settings"].AUTH = True
@@ -493,7 +493,7 @@ class TestMetadataUpdateOptions:
         error_msg = "Requires '--upload-server' when using '--auth'."
         assert error_msg in test_result.output
 
-    def test_md_update_send_payload_to_upload_server(
+    def test_metadata_update_send_payload_to_upload_server(
         self, client, test_context
     ):
         test_context["settings"].SERVER = "foo"
@@ -525,7 +525,7 @@ class TestMetadataUpdateOptions:
             )
         ]
 
-    def test_md_update_passing_current_root(
+    def test_metadata_update_passing_current_root(
         self, client, test_context, md_update_input
     ):
         input_step1, input_step2, input_step3, input_step4 = md_update_input
@@ -545,7 +545,7 @@ class TestMetadataUpdateOptions:
         assert finish_msg in test_result.output
         assert test_result.exit_code == 0
 
-    def test_md_update_custom_name_payload(
+    def test_metadata_update_custom_name_payload(
         self, client, test_context, md_update_input
     ):
         input_step1, input_step2, input_step3, input_step4 = md_update_input
@@ -571,7 +571,7 @@ class TestMetadataUpdateOptions:
 
         os.remove(custom_payload)
 
-    def test_md_update_full_upload_and_run_ceremony(
+    def test_metadata_update_full_upload_and_run_ceremony(
         self, client, test_context, md_update_input, monkeypatch
     ):
         input_step1, input_step2, input_step3, input_step4 = md_update_input
