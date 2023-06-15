@@ -480,6 +480,8 @@ class TestMetadataUpdate:
 class TestMetadataUpdateOptions:
     """Test the metadata update command with options."""
 
+    path = "repository_service_tuf.cli.admin.metadata"
+
     def test_md_update_auth_set_without_upload_server_ClickException(
         self, client, test_context
     ):
@@ -570,13 +572,16 @@ class TestMetadataUpdateOptions:
         os.remove(custom_payload)
 
     def test_md_update_full_upload_and_run_ceremony(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, monkeypatch
     ):
         input_step1, input_step2, input_step3, input_step4 = md_update_input
         # We won't be able to check generate_payload calls as the function
         # will be called from a RootInfo object we don't have access to.
-        metadata.RootInfo.generate_payload = pretend.call_recorder(
+        fake_generate_payload = pretend.call_recorder(
             lambda *a: {"data": "foo"}
+        )
+        monkeypatch.setattr(
+            f"{self.path}.RootInfo.generate_payload", fake_generate_payload
         )
         metadata.send_payload = pretend.call_recorder(lambda **kw: "task_id")
         metadata.task_status = pretend.call_recorder(lambda *a: None)

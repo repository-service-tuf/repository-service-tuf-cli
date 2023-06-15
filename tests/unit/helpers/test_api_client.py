@@ -12,6 +12,8 @@ from repository_service_tuf.helpers import api_client
 
 
 class TestAPIClient:
+    path = "repository_service_tuf.helpers.api_client"
+
     def test_request_server_get(self):
         fake_response = pretend.stub(
             status_code=200,
@@ -810,7 +812,7 @@ class TestAPIClient:
             pretend.call("root.json")
         ]
 
-    def test_get_md_file_url(self):
+    def test_get_md_file_url(self, monkeypatch):
         api_client.console.print = pretend.call_recorder(lambda *a: None)
         json_data = {"metadata": "root"}
         api_client.request_server = pretend.call_recorder(
@@ -818,9 +820,10 @@ class TestAPIClient:
                 status_code=200, text='{"metadata": "root"}'
             )
         )
-        api_client.Metadata.from_dict = pretend.call_recorder(
+        fake_from_dict = pretend.call_recorder(
             lambda *a: bytes("abc", "utf-8")
         )
+        monkeypatch.setattr(f"{self.path}.Metadata.from_dict", fake_from_dict)
         file = "root.json"
         url = f"http://localhost/{file}"
         result = api_client.get_md_file(url)
@@ -831,7 +834,7 @@ class TestAPIClient:
         assert api_client.request_server.calls == [
             pretend.call("http://localhost", file, api_client.Methods.get),
         ]
-        assert api_client.Metadata.from_dict.calls == [pretend.call(json_data)]
+        assert fake_from_dict.calls == [pretend.call(json_data)]
 
     def test_get_md_file_url_response_not_200(self):
         api_client.console.print = pretend.call_recorder(lambda *a: None)
