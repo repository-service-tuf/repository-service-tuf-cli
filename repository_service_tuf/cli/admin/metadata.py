@@ -551,7 +551,6 @@ def update(
         task_id = send_payload(
             settings=settings,
             url=URL.metadata.value,
-            method=Methods.post,
             payload=payload,
             expected_msg="Metadata update accepted.",
             command_name="Metadata Update",
@@ -612,7 +611,6 @@ def update(
             task_id = send_payload(
                 settings=settings,
                 url=URL.metadata.value,
-                method=Methods.post,
                 payload=payload,
                 expected_msg="Metadata update accepted.",
                 command_name="Metadata Update",

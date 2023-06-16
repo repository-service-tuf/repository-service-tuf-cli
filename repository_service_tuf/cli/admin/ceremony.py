@@ -679,7 +679,6 @@ def ceremony(
         task_id = send_payload(
             settings=settings,
             url=URL.bootstrap.value,
-            method=Methods.post,
             payload=bootstrap_payload,
             expected_msg="Bootstrap accepted.",
             command_name="Bootstrap",
@@ -699,7 +698,6 @@ def ceremony(
             task_id = send_payload(
                 settings=settings,
                 url=URL.bootstrap.value,
-                method=Methods.post,
                 payload=bootstrap_payload,
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",

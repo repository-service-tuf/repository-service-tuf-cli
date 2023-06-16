@@ -513,7 +513,6 @@ class TestMetadataUpdateOptions:
             pretend.call(
                 settings=test_context["settings"],
                 url=URL.metadata.value,
-                method=Methods.post,
                 payload={"data": "а"},
                 expected_msg="Metadata update accepted.",
                 command_name="Metadata Update",
@@ -602,7 +601,6 @@ class TestMetadataUpdateOptions:
             pretend.call(
                 settings=test_context["settings"],
                 url=URL.metadata.value,
-                method=Methods.post,
                 payload={"data": "foo"},
                 expected_msg="Metadata update accepted.",
                 command_name="Metadata Update",

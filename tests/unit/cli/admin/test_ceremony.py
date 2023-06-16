@@ -440,7 +440,6 @@ class TestCeremonyOptions:
             pretend.call(
                 settings=test_context["settings"],
                 url=URL.bootstrap.value,
-                method=Methods.post,
                 payload={"k": "v"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
@@ -515,7 +514,6 @@ class TestCeremonyOptions:
             pretend.call(
                 settings=test_context["settings"],
                 url=URL.bootstrap.value,
-                method=Methods.post,
                 payload={"k": "v"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
@@ -561,7 +559,6 @@ class TestCeremonyOptions:
             pretend.call(
                 settings=test_context["settings"],
                 url=URL.bootstrap.value,
-                method=Methods.post,
                 payload={"k": "v"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",

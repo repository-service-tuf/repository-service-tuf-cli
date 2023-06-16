@@ -212,7 +212,6 @@ def publish_targets(settings: LazySettings) -> str:
 def send_payload(
     settings: LazySettings,
     url: str,
-    method: Methods,
     payload: Dict[str, Any],
     expected_msg: str,
     command_name: str,
@@ -223,7 +222,6 @@ def send_payload(
     Args:
         settings: the command context settings object
         url: one of the URLs to a given endpoint as defined in api_client.py
-        method: REST API method to use as defined in api_client.py
         payload: dictionary containing the payload to send
         expected_msg: expected message to receive as a response to the request
         command_name: name of the command sending the payload, used for logging
@@ -235,7 +233,7 @@ def send_payload(
     response = request_server(
         settings.SERVER,
         url,
-        method,
+        Methods.post,
         payload,
         headers=headers,
     )
@@ -252,20 +250,19 @@ def send_payload(
     ):
         raise click.ClickException(response.text)
 
-    else:
-        if data := response_json.get("data"):
-            task_id = data.get("task_id")
-            if task_id is None:
-                raise click.ClickException(
-                    f"Failed to get `task id` {response.text}"
-                )
-            console.print(f"{command_name} status: ACCEPTED ({task_id})")
-
-            return task_id
-        else:
+    if data := response_json.get("data"):
+        task_id = data.get("task_id")
+        if task_id is None:
             raise click.ClickException(
-                f"Failed to get task response data {response.text}"
+                f"Failed to get `task id` {response.text}"
             )
+        console.print(f"{command_name} status: ACCEPTED ({task_id})")
+
+        return task_id
+    else:
+        raise click.ClickException(
+            f"Failed to get task response data {response.text}"
+        )
 
 
 def get_md_file(file_uri: str) -> Metadata:

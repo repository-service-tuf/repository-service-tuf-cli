@@ -616,7 +616,6 @@ class TestAPIClient:
         result = api_client.send_payload(
             settings=test_context["settings"],
             url=api_client.URL.bootstrap.value,
-            method=api_client.Methods.post,
             payload={"payload": "data"},
             expected_msg="Bootstrap accepted.",
             command_name="Bootstrap",
@@ -657,7 +656,6 @@ class TestAPIClient:
             api_client.send_payload(
                 settings=test_context["settings"],
                 url=api_client.URL.bootstrap.value,
-                method=api_client.Methods.post,
                 payload={"payload": "data"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
@@ -698,7 +696,6 @@ class TestAPIClient:
             api_client.send_payload(
                 settings=test_context["settings"],
                 url=api_client.URL.bootstrap.value,
-                method=api_client.Methods.post,
                 payload={"payload": "data"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
@@ -740,7 +737,6 @@ class TestAPIClient:
             api_client.send_payload(
                 settings=test_context["settings"],
                 url=api_client.URL.bootstrap.value,
-                method=api_client.Methods.post,
                 payload={"payload": "data"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
@@ -782,7 +778,6 @@ class TestAPIClient:
             api_client.send_payload(
                 settings=test_context["settings"],
                 url=api_client.URL.bootstrap.value,
-                method=api_client.Methods.post,
                 payload={"payload": "data"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
