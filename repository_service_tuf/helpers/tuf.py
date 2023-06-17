@@ -81,8 +81,7 @@ class BootstrapSetup:
 class RootInfo:
     _root_md: Metadata[Root]
     root_keys: Dict[str, RSTUFKey]  # used to easily get all root keys
-    _current_signing_keys: Dict[str, RSTUFKey]  # required for signing
-    _newly_added_signing_keys: Dict[str, RSTUFKey]  # required for signing
+    signing_keys: Dict[str, RSTUFKey]  # required for signing
     online_key: RSTUFKey
     _initial_root_md_obj: Metadata[Root]  # required to check for changes
 
@@ -107,12 +106,6 @@ class RootInfo:
         return f"{self.expiration.strftime('%Y-%b-%d')}"
 
     @property
-    def signing_keys(self) -> List[RSTUFKey]:
-        return list(self._current_signing_keys.values()) + list(
-            self._newly_added_signing_keys.values()
-        )
-
-    @property
     def keys_list(self) -> List[RSTUFKey]:
         return list(self.root_keys.values())
 
@@ -125,9 +118,8 @@ class RootInfo:
         self._root_md = root_md
         self.root_keys = root_keys
         self.online_key = online_key
-        self._current_signing_keys = {}
+        self.signing_keys = {}
         self._initial_root_md_obj = copy.deepcopy(self._root_md)
-        self._newly_added_signing_keys = {}
 
     @classmethod
     def _get_name(cls, key: Union[Key, RSTUFKey]) -> str:
@@ -178,15 +170,14 @@ class RootInfo:
         tuf_key: Key = self._root_md.signed.keys[key.key["keyid"]]
         key.name = self._get_name(tuf_key)
         self.root_keys[key.name] = key
-        self._current_signing_keys[key.name] = key
+        self.signing_keys[key.name] = key
 
     def remove_key(self, key_name: str) -> bool:
         """Try to remove a root key and return status of the operation"""
         if self.root_keys.get(key_name, None) is not None:
             key = self.root_keys.pop(key_name)
             self._root_md.signed.revoke_key(key.key["keyid"], Root.type)
-            self._current_signing_keys.pop(key_name, None)
-            self._newly_added_signing_keys.pop(key_name, None)
+            self.signing_keys.pop(key_name, None)
             return True
 
         return False
@@ -200,7 +191,7 @@ class RootInfo:
         self._root_md.signed.add_key(tuf_key, Root.type)
 
         self.root_keys[name] = new_key
-        self._newly_added_signing_keys[name] = new_key
+        self.signing_keys[name] = new_key
 
     def change_online_key(self, new_online_key: RSTUFKey) -> None:
         """Replace the current online key with a new one."""
@@ -233,18 +224,8 @@ class RootInfo:
         self._root_md.signed.version += 1
         self._root_md.signatures.clear()
 
-        # As the spec says: sign the new root with threshold amount of current
-        # root keys where "threshold" comes from the current root. See:
-        # https://theupdateframework.github.io/specification/latest/#key-management-and-migration
-        for curr_root_key in self._current_signing_keys.values():
-            self._root_md.sign(SSlibSigner(curr_root_key.key), append=True)
-
-        # If the threshold was increased, then in order to reach the threshold
-        # requirement we need to sign with the newly added and loaded keys.
-        # We cannot sign with any of the non-used current root keys as they are
-        # not loaded by the user. Signing can happen only with loaded keys.
-        for new_key in self._newly_added_signing_keys.values():
-            self._root_md.sign(SSlibSigner(new_key.key), append=True)
+        for key in self.signing_keys.values():
+            self._root_md.sign(SSlibSigner(key.key), append=True)
 
         console.print("\nVerifying the new payload...")
         self._root_md.verify_delegate(Root.type, self._root_md)

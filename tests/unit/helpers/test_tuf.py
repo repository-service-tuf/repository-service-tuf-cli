@@ -157,8 +157,7 @@ class TestRootInfo:
         assert root_info._root_md == root
         assert root_info.root_keys == root_keys
         assert root_info.online_key == online_key
-        assert root_info._current_signing_keys == {}
-        assert root_info._newly_added_signing_keys == {}
+        assert root_info.signing_keys == {}
         # Check that root_info._initial_root_md_obj is a copy of root
         assert root_info._initial_root_md_obj is not root
         assert root_info._initial_root_md_obj == root
@@ -217,8 +216,7 @@ class TestRootInfo:
         assert root_info._root_md == root
         assert root_info.root_keys == expected_root_keys
         assert root_info.online_key == expected_online_key
-        assert root_info._current_signing_keys == {}
-        assert root_info._newly_added_signing_keys == {}
+        assert root_info.signing_keys == {}
         # Check that root_info._initial_root_md_obj is a copy of root
         assert root_info._initial_root_md_obj is not root
         assert root_info._initial_root_md_obj == root
@@ -242,7 +240,7 @@ class TestRootInfo:
         root_info.save_current_root_key(key)
         assert root_info.root_keys[name] == key
         assert root_info.root_keys[name].name == name
-        assert root_info._current_signing_keys == {"custom_name": key}
+        assert root_info.signing_keys == {"custom_name": key}
         assert root_info._get_name.calls == [pretend.call(tuf_key)]
 
     def test_remove_key_existing(self, root_info: RootInfo):
@@ -315,7 +313,7 @@ class TestRootInfo:
         assert root_info.has_changed() is True
 
     def test_generate_payload(self, root_info: RootInfo):
-        root_info._current_signing_keys = root_info.root_keys
+        root_info.signing_keys = root_info.root_keys
         signing_keys = list(root_info.root_keys.values())
         signers_mock = unittest.mock.Mock()
         signers_mock.side_effect = ["signer1", "signer2"]
@@ -347,14 +345,14 @@ class TestRootInfo:
         )
 
     def test_generate_payload_with_new_keys_added(self, root_info: RootInfo):
-        root_info._current_signing_keys = root_info.root_keys
+        root_info.signing_keys = root_info.root_keys
         signing_keys = list(root_info.root_keys.values())
         # Add new key which is not part of current root meaning it's a key
         # added by the user.
         root_key = RSTUFKey(
             {"keyid": "id3", "keyval": {"sha256": "boo"}}, key_path="key3"
         )
-        root_info._newly_added_signing_keys["id3"] = root_key
+        root_info.signing_keys["id3"] = root_key
         signers_mock = unittest.mock.Mock()
         signers_mock.side_effect = ["signer0", "signer1", "signer2"]
         tuf.SSlibSigner = signers_mock

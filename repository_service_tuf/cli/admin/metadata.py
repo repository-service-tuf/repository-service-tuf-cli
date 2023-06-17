@@ -295,7 +295,7 @@ def _keys_additions(current_root: RootInfo):
     )
     while True:
         keys_table = _create_keys_table(
-            current_root.signing_keys,
+            list(current_root.signing_keys.values()),
             is_online_key_table=False,
             is_minimal=False,
         )
