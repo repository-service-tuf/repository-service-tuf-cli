@@ -148,14 +148,9 @@ class TestTUFHelperFunctions:
 
 class TestRootInfo:
     def test__init(self, root: Metadata[Root]):
-        root_keys = {
-            "key1": RSTUFKey({"keyid": "id1", "keyval": {"sha256": "foo"}}),
-            "key2": RSTUFKey({"keyid": "id2", "keyval": {"sha256": "boo"}}),
-        }
         online_key = RSTUFKey({"keyid": "id3", "keyval": {"sha256": "too"}})
-        root_info = RootInfo(root, root_keys, online_key)
+        root_info = RootInfo(root, online_key)
         assert root_info._root_md == root
-        assert root_info.root_keys == root_keys
         assert root_info.online_key == online_key
         assert root_info.signing_keys == {}
         # Check that root_info._initial_root_md_obj is a copy of root
@@ -201,11 +196,7 @@ class TestRootInfo:
             Key("id1", "ed25519", "", {"sha256": "abc"}),
             Key("id2", "ed25519", "", {"sha256": "foo"}),
         ]
-        expected_root_keys: Dict[str, RSTUFKey] = {}
         for key in tuf_keys:
-            expected_root_keys[key.keyid] = RSTUFKey(
-                key.to_securesystemslib_key()
-            )
             root.signed.add_key(key, "root")
 
         online_key = Key("id3", "ed25519", "", {"sha256": "doo"})
@@ -214,7 +205,6 @@ class TestRootInfo:
 
         root_info = RootInfo.from_md(root)
         assert root_info._root_md == root
-        assert root_info.root_keys == expected_root_keys
         assert root_info.online_key == expected_online_key
         assert root_info.signing_keys == {}
         # Check that root_info._initial_root_md_obj is a copy of root
@@ -234,35 +224,33 @@ class TestRootInfo:
 
     def test_save_current_root_key(self, root_info: RootInfo):
         name = "custom_name"
-        key: RSTUFKey = root_info.root_keys["id1"]
         tuf_key: Key = root_info._root_md.signed.keys["id1"]
+        key_dict = tuf_key.to_dict()
+        key_dict["keyid"] = tuf_key.keyid
+        key = RSTUFKey(key_dict)
         root_info._get_name = pretend.call_recorder(lambda *a: name)
         root_info.save_current_root_key(key)
-        assert root_info.root_keys[name] == key
-        assert root_info.root_keys[name].name == name
         assert root_info.signing_keys == {"custom_name": key}
         assert root_info._get_name.calls == [pretend.call(tuf_key)]
 
     def test_remove_key_existing(self, root_info: RootInfo):
         # Assert key with name "id1" exists before the removal
-        assert root_info.root_keys.get("id1") is not None
-        assert len(root_info.root_keys) == 2
+        assert len(root_info.keys) == 2
         assert root_info._root_md.signed.keys.get("id1") is not None
         assert "id1" in root_info._root_md.signed.roles["root"].keyids
 
         assert root_info.remove_key("id1") is True
 
-        assert root_info.root_keys.get("id1") is None
-        assert len(root_info.root_keys) == 1
+        assert len(root_info.keys) == 1
         # Assert key was actually removed from root metadata
         assert root_info._root_md.signed.keys.get("id1") is None
         assert "id1" not in root_info._root_md.signed.roles["root"].keyids
 
     def test_remove_key_non_existing(self, root_info: RootInfo):
-        assert root_info.root_keys.get("BAD_ID") is None
-        assert len(root_info.root_keys) == 2
+        assert "BAD_ID" not in root_info._root_md.signed.roles["root"].keyids
+        assert len(root_info.keys) == 2
         assert root_info.remove_key("BAD_ID") is False
-        assert len(root_info.root_keys) == 2
+        assert len(root_info.keys) == 2
 
     def test_add_key(self, root_info: RootInfo):
         dict = {"keyid": "123", "keyval": {"sha256": "abc"}}
@@ -272,18 +260,12 @@ class TestRootInfo:
             lambda *a: Key("123", "", "", {"sha256": "abc"})
         )
         # Assert that key didn't existed before
-        assert root_info.root_keys.get("custom_name") is None
-        assert len(root_info.root_keys) == 2
-        # Key with id "123" is the same key with name "custom_name" see above.
-        assert root_info._root_md.signed.keys.get("123") is None
+        assert len(root_info.keys) == 2
         assert "123" not in root_info._root_md.signed.roles["root"].keyids
 
         root_info.add_key(key)
 
-        assert root_info.root_keys.get("custom_name") is not None
-        assert len(root_info.root_keys) == 3
-        # Key with id "123" is the same key with name "custom_name" see above.
-        assert root_info._root_md.signed.keys.get("123") is not None
+        assert len(root_info.keys) == 3
         assert "123" in root_info._root_md.signed.roles["root"].keyids
         assert root_info._get_name.calls == [pretend.call(key)]
         assert tuf.Key.from_securesystemslib_key.calls == [pretend.call(dict)]
@@ -313,8 +295,11 @@ class TestRootInfo:
         assert root_info.has_changed() is True
 
     def test_generate_payload(self, root_info: RootInfo):
-        root_info.signing_keys = root_info.root_keys
-        signing_keys = list(root_info.root_keys.values())
+        for key in root_info.keys:
+            name = key["keyid"][:7]
+            root_info.signing_keys[name] = RSTUFKey(key, name=name)
+
+        signing_keys = list(root_info.signing_keys.values())
         signers_mock = unittest.mock.Mock()
         signers_mock.side_effect = ["signer1", "signer2"]
         tuf.SSlibSigner = signers_mock
@@ -345,8 +330,11 @@ class TestRootInfo:
         )
 
     def test_generate_payload_with_new_keys_added(self, root_info: RootInfo):
-        root_info.signing_keys = root_info.root_keys
-        signing_keys = list(root_info.root_keys.values())
+        for key in root_info.keys:
+            name = key["keyid"][:7]
+            root_info.signing_keys[name] = RSTUFKey(key, name=name)
+
+        signing_keys = list(root_info.signing_keys.values())
         # Add new key which is not part of current root meaning it's a key
         # added by the user.
         root_key = RSTUFKey(

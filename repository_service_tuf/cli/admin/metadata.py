@@ -2,19 +2,19 @@
 #
 # SPDX-License-Identifier: MIT
 from datetime import datetime, timedelta
-from typing import Any, List
+from typing import Any, Dict, List
 
 from rich import box, markdown, prompt, table
 from securesystemslib.exceptions import StorageError  # type: ignore
 from tuf.api.metadata import Metadata, Root
 from tuf.api.serialization import DeserializationError
+from securesystemslib.signer import Key
 
 from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.api_client import (
     URL,
-    Methods,
     get_md_file,
     send_payload,
     task_status,
@@ -114,7 +114,7 @@ def metadata(context):
 
 
 def _create_keys_table(
-    keys: List[RSTUFKey], is_online_key_table: bool, is_minimal: bool
+    keys: List[Dict[str, Any]], root_info: RootInfo, is_minimal: bool
 ) -> table.Table:
     """Gets a new keys table."""
     keys_table: table.Table
@@ -127,26 +127,27 @@ def _create_keys_table(
     keys_table.add_column("Name/Tag", justify="center")
     keys_table.add_column("Key Type", justify="center")
     keys_table.add_column("Storage", justify="center")
-    keys_table.add_column("Singing Key", justify="center")
+    keys_table.add_column("Signing Key", justify="center")
     keys_table.add_column("Public Value", justify="center")
 
-    key_location: str
-    if is_online_key_table:
-        key_location = "[green]Online[/]"
-    else:
-        key_location = "[bright_blue]Offline[/]"
-
     for key in keys:
+        id = key["keyid"]
+        if id == root_info.online_key.key["keyid"]:
+            key_location = "[green]Online[/]"
+        else:
+            key_location = "[bright_blue]Offline[/]"
+
         is_signing_key = "False"
-        if key.key_path is not None:
+        if any(id == s.key["keyid"] for s in root_info.signing_keys.values()):
             is_signing_key = "[green]True[/]"
+
         keys_table.add_row(
-            f'[yellow]{key.key["keyid"]}',
-            f"[yellow]{key.name}",
-            key.key["keytype"],
+            f'[yellow]{id}',
+            f'[yellow]{key["name"]}',
+            key["keytype"],
             key_location,
             is_signing_key,
-            f'[yellow]{key.key["keyval"]["public"]}',
+            f'[yellow]{key["keyval"]["public"]}',
         )
 
     return keys_table
@@ -156,11 +157,9 @@ def _print_root_info(root_info: RootInfo):
     root_table = table.Table()
     root_table.add_column("Root", justify="left", vertical="middle")
     root_table.add_column("KEYS", justify="center", vertical="middle")
-    number_of_keys = len(root_info.root_keys)
+    number_of_keys = len(root_info.keys)
 
-    root_keys_table = _create_keys_table(
-        root_info.keys_list, is_online_key_table=False, is_minimal=True
-    )
+    root_keys_table = _create_keys_table(root_info.keys, root_info, True)
 
     root_table.add_row(
         (
@@ -262,9 +261,7 @@ def _current_root_keys_validation(current_root: RootInfo):
 def _keys_removal(current_root: RootInfo):
     """Asking the user if he wants to remove any of the root keys"""
     while True:
-        keys_table = _create_keys_table(
-            current_root.keys_list, is_online_key_table=False, is_minimal=False
-        )
+        keys_table = _create_keys_table(current_root.keys, current_root, False)
         console.print("Here are the current root keys:")
         console.print(keys_table)
         console.print("\n")
@@ -283,7 +280,7 @@ def _keys_removal(current_root: RootInfo):
             continue
         else:
             console.print(f"Key with name/tag [yellow]{name}[/] removed\n")
-            if len(current_root.root_keys) < 1:
+            if len(current_root.keys) < 1:
                 console.print("No keys are left for removal.")
                 break
 
@@ -294,11 +291,10 @@ def _keys_additions(current_root: RootInfo):
         f"You need to have at least [cyan]{root_threshold}[/] signing keys."
     )
     while True:
-        keys_table = _create_keys_table(
-            list(current_root.signing_keys.values()),
-            is_online_key_table=False,
-            is_minimal=False,
-        )
+        signing_list = [
+            key.to_dict() for key in current_root.signing_keys.values()
+        ]
+        keys_table = _create_keys_table(signing_list, current_root, False)
         console.print("\nHere are the current root signing keys:")
         console.print(keys_table)
         response = prompt.Confirm.ask("\nDo you want to add a new key?")
@@ -426,9 +422,7 @@ def _modify_online_key(current_root: RootInfo):
     console.print(markdown.Markdown(ONLINE_KEY_CHANGE), width=100)
     while True:
         online_key_table = _create_keys_table(
-            [current_root.online_key],
-            is_online_key_table=True,
-            is_minimal=False,
+            [current_root.online_key.to_dict()], current_root, is_minimal=False
         )
         console.print("\nHere is the information for the current online key:")
         console.print("\n")

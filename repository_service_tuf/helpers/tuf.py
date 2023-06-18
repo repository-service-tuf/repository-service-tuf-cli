@@ -61,6 +61,13 @@ class RSTUFKey:
 
         return self.key.get("keyid") == other.key.get("keyid")
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            **self.key,
+            "key_path": self.key_path,
+            "name": self.name,
+        }
+
 
 @dataclass
 class BootstrapSetup:
@@ -106,17 +113,26 @@ class RootInfo:
         return f"{self.expiration.strftime('%Y-%b-%d')}"
 
     @property
-    def keys_list(self) -> List[RSTUFKey]:
-        return list(self.root_keys.values())
+    def keys(self) -> List[Dict[str, Any]]:
+        root_keys: List[Dict[str, Any]] = []
+        for keyid in self._root_md.signed.roles["root"].keyids:
+            key_dict = self._root_md.signed.keys[keyid].to_dict()
+            key_dict["keyid"] = keyid
+            root_keys.append(key_dict)
+
+        return root_keys
 
     def __init__(
         self,
         root_md: Metadata[Root],
-        root_keys: Dict[str, RSTUFKey],
         online_key: RSTUFKey,
     ):
         self._root_md = root_md
-        self.root_keys = root_keys
+        # Make sure every root key will have a name
+        for keyid in self._root_md.signed.roles["root"].keyids:
+            key = self._root_md.signed.keys[keyid]
+            key.unrecognized_fields["name"] = self._get_name(key)
+
         self.online_key = online_key
         self.signing_keys = {}
         self._initial_root_md_obj = copy.deepcopy(self._root_md)
@@ -142,21 +158,13 @@ class RootInfo:
 
     @classmethod
     def from_md(cls, root_md: Metadata[Root]) -> "RootInfo":
-        root_keys: Dict[str, RSTUFKey] = {}
-        for keyid in root_md.signed.roles[Root.type].keyids:
-            tuf_key: Key = root_md.signed.keys[keyid]
-            name = cls._get_name(tuf_key)
-            tuf_key.unrecognized_fields["name"] = name
-            key_dict = tuf_key.to_securesystemslib_key()
-            root_keys[name] = RSTUFKey(key_dict, name=name)
-
         online_key_id = root_md.signed.roles["timestamp"].keyids[0]
         tuf_online_key: Key = root_md.signed.keys[online_key_id]
         online_key_dict = tuf_online_key.to_securesystemslib_key()
         name = cls._get_name(tuf_online_key)
         online_key = RSTUFKey(online_key_dict, name=name)
 
-        return cls(root_md, root_keys, online_key)
+        return cls(root_md, online_key)
 
     def is_keyid_used(self, keyid: str) -> bool:
         """Check if keyid is used in root keys"""
@@ -169,16 +177,15 @@ class RootInfo:
         """Update internal information based on 'key' data."""
         tuf_key: Key = self._root_md.signed.keys[key.key["keyid"]]
         key.name = self._get_name(tuf_key)
-        self.root_keys[key.name] = key
         self.signing_keys[key.name] = key
 
     def remove_key(self, key_name: str) -> bool:
         """Try to remove a root key and return status of the operation"""
-        if self.root_keys.get(key_name, None) is not None:
-            key = self.root_keys.pop(key_name)
-            self._root_md.signed.revoke_key(key.key["keyid"], Root.type)
-            self.signing_keys.pop(key_name, None)
-            return True
+        for key in self.keys:
+            if key_name == key["name"]:
+                self._root_md.signed.revoke_key(key["keyid"], Root.type)
+                self.signing_keys.pop(key_name, None)
+                return True
 
         return False
 
@@ -189,8 +196,6 @@ class RootInfo:
         tuf_key = Key.from_securesystemslib_key(new_key.key)
         tuf_key.unrecognized_fields["name"] = name
         self._root_md.signed.add_key(tuf_key, Root.type)
-
-        self.root_keys[name] = new_key
         self.signing_keys[name] = new_key
 
     def change_online_key(self, new_online_key: RSTUFKey) -> None:
