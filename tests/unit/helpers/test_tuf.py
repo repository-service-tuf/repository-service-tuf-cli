@@ -157,38 +157,38 @@ class TestRootInfo:
         assert root_info._initial_root_md_obj is not root
         assert root_info._initial_root_md_obj == root
 
-    def test__get_name_tuf_key_with_custom_name(self):
+    def test__get_key_name_with_custom_name(self):
         key = Key("id", "ed25519", "", {"sha256": "abc"}, {"name": "my_key"})
-        name = RootInfo._get_name(key)
+        name = RootInfo._get_key_name(key)
         assert name == "my_key"
 
-    def test__get_name_tuf_key_without_custom_name(self):
+    def test__get_key_name_without_custom_name(self):
         key = Key("123456789a", "ed25519", "", {"sha256": "abc"})
-        name = RootInfo._get_name(key)
+        name = RootInfo._get_key_name(key)
         assert name == "1234567"
 
-    def test__get_name_tuf_key_with_empty_string_name(self):
+    def test__get_key_name_with_empty_string_name(self):
         key = Key("123456789a", "ed25519", "", {"sha256": "abc"}, {"name": ""})
-        name = RootInfo._get_name(key)
+        name = RootInfo._get_key_name(key)
         assert name == "1234567"
 
-    def test__get_name_rstuf_key_with_custom_name(self):
+    def test__get_rstuf_key_name_with_custom_name(self):
         key = RSTUFKey(
             {"keyid": "123456789a", "keyval": {"sha256": "abc"}}, name="my_key"
         )
-        name = RootInfo._get_name(key)
+        name = RootInfo._get_rstuf_key_name(key)
         assert name == "my_key"
 
-    def test__get_name_rstuf_key_without_custom_name(self):
+    def test__get_rstuf_key_name_without_custom_name(self):
         key = RSTUFKey({"keyid": "123456789a", "keyval": {"sha256": "abc"}})
-        name = RootInfo._get_name(key)
+        name = RootInfo._get_rstuf_key_name(key)
         assert name == "1234567"
 
-    def test__get_name_rstuf_key_with_empty_string_name(self):
+    def test__get_rstuf_key_name_with_empty_string_name(self):
         key = RSTUFKey(
             {"keyid": "123456789a", "keyval": {"sha256": "abc"}}, name=""
         )
-        name = RootInfo._get_name(key)
+        name = RootInfo._get_rstuf_key_name(key)
         assert name == "1234567"
 
     def test_from_md(self, root: Metadata[Root]):
@@ -228,10 +228,10 @@ class TestRootInfo:
         key_dict = tuf_key.to_dict()
         key_dict["keyid"] = tuf_key.keyid
         key = RSTUFKey(key_dict)
-        root_info._get_name = pretend.call_recorder(lambda *a: name)
+        root_info._get_key_name = pretend.call_recorder(lambda *a: name)
         root_info.save_current_root_key(key)
         assert root_info.signing_keys == {"custom_name": key}
-        assert root_info._get_name.calls == [pretend.call(tuf_key)]
+        assert root_info._get_key_name.calls == [pretend.call(tuf_key)]
 
     def test_remove_key_existing(self, root_info: RootInfo):
         # Assert key with name "id1" exists before the removal
@@ -255,7 +255,9 @@ class TestRootInfo:
     def test_add_key(self, root_info: RootInfo):
         dict = {"keyid": "123", "keyval": {"sha256": "abc"}}
         key = RSTUFKey(dict, name="custom_name")
-        root_info._get_name = pretend.call_recorder(lambda *a: "custom_name")
+        root_info._get_rstuf_key_name = pretend.call_recorder(
+            lambda *a: "custom_name"
+        )
         tuf.Key.from_securesystemslib_key = pretend.call_recorder(
             lambda *a: Key("123", "", "", {"sha256": "abc"})
         )
@@ -267,14 +269,16 @@ class TestRootInfo:
 
         assert len(root_info.keys) == 3
         assert "123" in root_info._root_md.signed.roles["root"].keyids
-        assert root_info._get_name.calls == [pretend.call(key)]
+        assert root_info._get_rstuf_key_name.calls == [pretend.call(key)]
         assert tuf.Key.from_securesystemslib_key.calls == [pretend.call(dict)]
 
     def test_change_online_key(self, root_info: RootInfo):
         # The id of the current online key.
         key_id = root_info._root_md.signed.roles["timestamp"].keyids[0]
         new_key_id = "id4"
-        root_info._get_name = pretend.call_recorder(lambda *a: "custom_name")
+        root_info._get_rstuf_key_name = pretend.call_recorder(
+            lambda *a: "custom_name"
+        )
         tuf.Key.from_securesystemslib_key = pretend.call_recorder(
             lambda *a: Key(new_key_id, "", "", {"sha256": "abc"})
         )
@@ -286,7 +290,7 @@ class TestRootInfo:
             assert key_id not in root_info._root_md.signed.roles[role].keyids
 
         assert root_info.online_key == new_key
-        assert root_info._get_name.calls == [pretend.call(new_key)]
+        assert root_info._get_rstuf_key_name.calls == [pretend.call(new_key)]
         assert tuf.Key.from_securesystemslib_key.calls == [pretend.call(dict)]
 
     def test_has_changed(self, root_info: RootInfo):

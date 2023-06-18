@@ -316,7 +316,7 @@ def _configure_role(role: Roles) -> None:
         markdown.Markdown(f"## {role.value} configuration"), width=100
     )
     role_expiration = 0
-    while role_expiration < 1:
+    while True:
         role_expiration = prompt.IntPrompt.ask(
             (
                 "\nWhat is the [green]metadata expiration[/] for "
@@ -327,7 +327,8 @@ def _configure_role(role: Roles) -> None:
         )
         if role_expiration < 1:
             console.print(f"Expiration of {role.value} must be at least 1 day")
-            continue
+        else:
+            break
 
     setup.expiration[role] = role_expiration
 

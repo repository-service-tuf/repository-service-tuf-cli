@@ -267,7 +267,7 @@ def _keys_removal(current_root: RootInfo):
         console.print("\n")
 
         key_removal = prompt.Confirm.ask("Do you want to remove a key")
-        if key_removal is False:
+        if not key_removal:
             break
 
         name = prompt.Prompt.ask(
@@ -298,12 +298,12 @@ def _keys_additions(current_root: RootInfo):
         console.print("\nHere are the current root signing keys:")
         console.print(keys_table)
         response = prompt.Confirm.ask("\nDo you want to add a new key?")
-        if response is False:
+        if not response:
             keys_amount = len(current_root.signing_keys)
             if keys_amount < root_threshold:
                 remaining = root_threshold - keys_amount
                 console.print(
-                    f"You need to add an additional {remaining} signing keys"
+                    f"You need to add {remaining} more signing key(s)"
                 )
                 abort = prompt.Confirm.ask(
                     "Do you want to abort the root metadata update",
@@ -342,11 +342,12 @@ def _keys_additions(current_root: RootInfo):
 
 def _get_positive_int_input(msg: str, input_name: str, default: Any) -> int:
     input: int = 0
-    while input < 1:
+    while True:
         input = prompt.IntPrompt.ask(msg, default=default, show_default=True)
         if input < 1:
             console.print(f"{input_name} must be at least 1")
-            continue
+        else:
+            break
 
     return input
 
@@ -362,7 +363,7 @@ def _modify_expiration(current_root: RootInfo):
         change = prompt.Confirm.ask(
             "Do you want to extend the [cyan]root's expiration[/]?"
         )
-        if change is False:
+        if not change:
             if current_root.expiration < (datetime.now() + timedelta(days=1)):
                 console.print(
                     "You must extend root's expiration - root has expired"
@@ -382,11 +383,9 @@ def _modify_expiration(current_root: RootInfo):
         agree = prompt.Confirm.ask(
             f"New root expiration: [cyan]{new_exp_str}[/]. Do you agree?"
         )
-        if agree is False:
-            continue
-        else:
+        if agree:
             current_root.expiration = new_expiry
-            break
+            return
 
 
 def _modify_root_keys(current_root: RootInfo):
@@ -398,7 +397,7 @@ def _modify_root_keys(current_root: RootInfo):
         change = prompt.Confirm.ask(
             "Do you want to modify [cyan]root[/] keys?"
         )
-        if change is False:
+        if not change:
             console.print("Skipping further root keys changes")
             break
 
@@ -431,7 +430,7 @@ def _modify_online_key(current_root: RootInfo):
         change = prompt.Confirm.ask(
             "Do you want to change the [cyan]online key[/]?"
         )
-        if change is False:
+        if not change:
             console.print("Skipping further online key changes")
             break
 
@@ -528,12 +527,12 @@ def update(
     settings = context.obj["settings"]
     if upload and not run_ceremony:
         # Sever authentication or setup
-        if settings.AUTH is True and upload_server is None:
+        if settings.AUTH and not upload_server:
             raise click.ClickException(
                 "Requires '--upload-server' when using '--auth'. "
                 "Example: --upload-server https://rstuf-api.example.com"
             )
-        elif upload_server:
+        if upload_server:
             settings.SERVER = upload_server
 
         console.print(

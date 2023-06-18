@@ -131,28 +131,25 @@ class RootInfo:
         # Make sure every root key will have a name
         for keyid in self._root_md.signed.roles["root"].keyids:
             key = self._root_md.signed.keys[keyid]
-            key.unrecognized_fields["name"] = self._get_name(key)
+            key.unrecognized_fields["name"] = self._get_key_name(key)
 
         self.online_key = online_key
         self.signing_keys = {}
         self._initial_root_md_obj = copy.deepcopy(self._root_md)
 
-    @classmethod
-    def _get_name(cls, key: Union[Key, RSTUFKey]) -> str:
-        name: str
-        if isinstance(key, Key):
-            name = key.keyid[:7]
-            if (
-                key.unrecognized_fields.get("name") is not None
-                and key.unrecognized_fields.get("name") != ""
-            ):
-                name = key.unrecognized_fields["name"]
+    @staticmethod
+    def _get_key_name(key: Union[Key, RSTUFKey]) -> str:
+        name = key.keyid[:7]
+        if key.unrecognized_fields.get("name"):
+            name = key.unrecognized_fields["name"]
 
-        elif isinstance(key, RSTUFKey):
-            if key.name is None or key.name == "":
-                name = key.key["keyid"][:7]
-            else:
-                name = key.name
+        return name
+
+    @staticmethod
+    def _get_rstuf_key_name(rstuf_key: RSTUFKey) -> str:
+        name = rstuf_key.key["keyid"][:7]
+        if rstuf_key.name:
+            name = rstuf_key.name
 
         return name
 
@@ -161,22 +158,19 @@ class RootInfo:
         online_key_id = root_md.signed.roles["timestamp"].keyids[0]
         tuf_online_key: Key = root_md.signed.keys[online_key_id]
         online_key_dict = tuf_online_key.to_securesystemslib_key()
-        name = cls._get_name(tuf_online_key)
+        name = cls._get_key_name(tuf_online_key)
         online_key = RSTUFKey(online_key_dict, name=name)
 
         return cls(root_md, online_key)
 
     def is_keyid_used(self, keyid: str) -> bool:
         """Check if keyid is used in root keys"""
-        if keyid not in self._root_md.signed.roles[Root.type].keyids:
-            return False
-
-        return True
+        return keyid in self._root_md.signed.roles[Root.type].keyids
 
     def save_current_root_key(self, key: RSTUFKey):
         """Update internal information based on 'key' data."""
         tuf_key: Key = self._root_md.signed.keys[key.key["keyid"]]
-        key.name = self._get_name(tuf_key)
+        key.name = self._get_key_name(tuf_key)
         self.signing_keys[key.name] = key
 
     def remove_key(self, key_name: str) -> bool:
@@ -191,7 +185,7 @@ class RootInfo:
 
     def add_key(self, new_key: RSTUFKey) -> None:
         """Add a new root key."""
-        name = self._get_name(new_key)
+        name = self._get_rstuf_key_name(new_key)
         new_key.name = name
         tuf_key = Key.from_securesystemslib_key(new_key.key)
         tuf_key.unrecognized_fields["name"] = name
@@ -208,7 +202,7 @@ class RootInfo:
             self._root_md.signed.revoke_key(online_key_id, role)
 
         # Add the new online key
-        name = self._get_name(new_online_key)
+        name = self._get_rstuf_key_name(new_online_key)
         new_online_key.name = name
         online_tuf_key = Key.from_securesystemslib_key(new_online_key.key)
         online_tuf_key.unrecognized_fields["name"] = name
@@ -219,10 +213,7 @@ class RootInfo:
 
     def has_changed(self) -> bool:
         """Returns whether the root metadata object has changed"""
-        if self._initial_root_md_obj != self._root_md:
-            return True
-        else:
-            return False
+        return self._initial_root_md_obj != self._root_md
 
     def generate_payload(self) -> Dict[str, Any]:
         """Save the root metadata into 'file'"""

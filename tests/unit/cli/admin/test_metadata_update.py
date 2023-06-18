@@ -335,7 +335,7 @@ class TestMetadataUpdate:
         finish_msg = "Ceremony done. 🔐 🎉. Root metadata update completed."
         assert finish_msg in test_result.output
         assert test_result.exit_code == 0
-        warning = "You need to add an additional 1 signing keys"
+        warning = "You need to add 1 more signing key(s)"
         assert warning in test_result.output
 
     def test_metadata_update_skip_adding_keys_fail_threshold_requirement(
@@ -361,7 +361,7 @@ class TestMetadataUpdate:
         assert test_result.exit_code != 0
         exception_msg = "Not enough keys to fulfill the threshold requirement"
         assert exception_msg in test_result.output
-        warning = "You need to add an additional 9 signing keys"
+        warning = "You need to add 9 more signing key(s)"
         assert warning in test_result.output
 
     def test_metadata_update_add_curr_online_key(
