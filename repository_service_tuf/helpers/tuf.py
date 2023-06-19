@@ -115,8 +115,10 @@ class RootInfo:
     def keys(self) -> List[Dict[str, Any]]:
         root_keys: List[Dict[str, Any]] = []
         for keyid in self._root_md.signed.roles["root"].keyids:
-            key_dict = self._root_md.signed.keys[keyid].to_dict()
+            key = self._root_md.signed.keys[keyid]
+            key_dict = key.to_dict()
             key_dict["keyid"] = keyid
+            key_dict["name"] = self._get_key_name(key)
             root_keys.append(key_dict)
 
         return root_keys
@@ -127,11 +129,6 @@ class RootInfo:
         online_key: RSTUFKey,
     ):
         self._root_md = root_md
-        # Make sure every root key will have a name
-        for keyid in self._root_md.signed.roles["root"].keyids:
-            key = self._root_md.signed.keys[keyid]
-            key.unrecognized_fields["name"] = self._get_key_name(key)
-
         self.online_key = online_key
         self.signing_keys = {}
         self._initial_root_md_obj = copy.deepcopy(self._root_md)
@@ -169,14 +166,19 @@ class RootInfo:
     def save_current_root_key(self, key: RSTUFKey):
         """Update internal information based on 'key' data."""
         tuf_key: Key = self._root_md.signed.keys[key.key["keyid"]]
-        key.name = self._get_key_name(tuf_key)
-        self.signing_keys[key.name] = key
+        name = self._get_key_name(tuf_key)
+        if tuf_key.unrecognized_fields.get("name"):
+            key.name = tuf_key.unrecognized_fields["name"]
+
+        self.signing_keys[name] = key
 
     def remove_key(self, key_name: str) -> bool:
         """Try to remove a root key and return status of the operation"""
-        for key in self.keys:
-            if key_name == key["name"]:
-                self._root_md.signed.revoke_key(key["keyid"], Root.type)
+        for keyid in self._root_md.signed.roles["root"].keyids:
+            key = self._root_md.signed.keys[keyid]
+            name = self._get_key_name(key)
+            if name == key_name:
+                self._root_md.signed.revoke_key(keyid, Root.type)
                 self.signing_keys.pop(key_name, None)
                 return True
 
@@ -184,10 +186,11 @@ class RootInfo:
 
     def add_key(self, new_key: RSTUFKey) -> None:
         """Add a new root key."""
-        name = self._get_rstuf_key_name(new_key)
-        new_key.name = name
         tuf_key = Key.from_securesystemslib_key(new_key.key)
-        tuf_key.unrecognized_fields["name"] = name
+        name = self._get_rstuf_key_name(new_key)
+        if new_key.name:
+            tuf_key.unrecognized_fields["name"] = new_key.name
+
         self._root_md.signed.add_key(tuf_key, Root.type)
         self.signing_keys[name] = new_key
 
@@ -201,10 +204,10 @@ class RootInfo:
             self._root_md.signed.revoke_key(online_key_id, role)
 
         # Add the new online key
-        name = self._get_rstuf_key_name(new_online_key)
-        new_online_key.name = name
         online_tuf_key = Key.from_securesystemslib_key(new_online_key.key)
-        online_tuf_key.unrecognized_fields["name"] = name
+        if new_online_key.name:
+            online_tuf_key.unrecognized_fields["name"] = new_online_key.name
+
         for role in online_roles:
             self._root_md.signed.add_key(online_tuf_key, role)
 

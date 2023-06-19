@@ -63,6 +63,62 @@ class TestMetadataUpdate:
         online_key = root.signed.keys[online_key_id]
         assert online_key.unrecognized_fields["name"] == "New RSA Online Key"
 
+    def test_md_update_no_key_names_given(
+        self, client, test_context, md_update_input
+    ):
+        input_step1, input_step2, _, _ = md_update_input
+
+        input_step3 = [
+            "y",  # Do you want to modify root keys? [y/n]
+            "",  # What should be the root role threshold? (CURRENT_KEY_THRESHOLD)  # noqa
+            "y",  # Do you want to remove a key [y/n]
+            "Martin's Key",  # Name/Tag/ID prefix of the key to remove
+            "n",  # Do you want to remove a key [y/n]
+            "y",  # Do you want to add a new key? [y/n]
+            "",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
+            "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
+            "",  # [Optional] Give a name/tag to the key
+            "n",  # Do you want to add a new key? [y/n]
+            "n",  # Do you want to modify root keys? [y/n]
+        ]
+        input_step4 = [
+            "y",  # Do you want to change the online key? [y/n]
+            "rsa",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
+            "tests/files/key_storage/online-rsa.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
+            "",  # [Optional] Give a name/tag to the key
+            "n",  # Do you want to change the online key? [y/n]
+        ]
+
+        test_result = client.invoke(
+            metadata.update,
+            input="\n".join(
+                input_step1 + input_step2 + input_step3 + input_step4
+            ),
+            obj=test_context,
+        )
+        finish_msg = "Ceremony done. 🔐 🎉. Root metadata update completed."
+        assert finish_msg in test_result.output
+        assert test_result.exit_code == 0
+
+        root: Metadata[Root]
+        with open("metadata-update-payload.json") as f:
+            data = json.loads(f.read())
+            root = Metadata.from_dict(data["metadata"]["root"])
+
+        for root_key_id in root.signed.roles["root"].keyids:
+            root_key = root.signed.keys[root_key_id]
+            # Only "Steven's key" is left which existed from the initial root
+            if root_key.unrecognized_fields.get("name") != "Steven's Key":
+                assert root_key.unrecognized_fields.get("name") is None
+
+        online_roles = ["timestamp", "snapshot", "targets"]
+        for role in online_roles:
+            keyid = root.signed.roles[role].keyids[0]
+            key = root.signed.keys[keyid]
+            assert key.unrecognized_fields.get("name") is None
+
     def test_metadata_update_no_root_changes(
         self, client, test_context, md_update_input
     ):

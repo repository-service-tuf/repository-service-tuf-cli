@@ -276,9 +276,6 @@ class TestRootInfo:
         # The id of the current online key.
         key_id = root_info._root_md.signed.roles["timestamp"].keyids[0]
         new_key_id = "id4"
-        root_info._get_rstuf_key_name = pretend.call_recorder(
-            lambda *a: "custom_name"
-        )
         tuf.Key.from_securesystemslib_key = pretend.call_recorder(
             lambda *a: Key(new_key_id, "", "", {"sha256": "abc"})
         )
@@ -290,7 +287,6 @@ class TestRootInfo:
             assert key_id not in root_info._root_md.signed.roles[role].keyids
 
         assert root_info.online_key == new_key
-        assert root_info._get_rstuf_key_name.calls == [pretend.call(new_key)]
         assert tuf.Key.from_securesystemslib_key.calls == [pretend.call(dict)]
 
     def test_has_changed(self, root_info: RootInfo):
