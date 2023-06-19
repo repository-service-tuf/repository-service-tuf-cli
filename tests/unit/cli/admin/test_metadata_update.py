@@ -160,8 +160,6 @@ class TestMetadataUpdate:
         )
         input_step1, _, input_step3, input_step4 = md_update_input
         input_step2 = [
-            "n",  # Do you want to extend the root's expiration? [y/n]
-            "y",  # Do you want to extend the root's expiration? [y/n]
             "",  # Days to extend root's expiration starting from today (365)
             "y",  # New root expiration: YYYY-M-DD. Do you agree? [y/n]
         ]

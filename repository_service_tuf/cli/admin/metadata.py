@@ -360,18 +360,18 @@ def _modify_expiration(current_root: RootInfo):
             f"Current root expiration: [cyan]{current_root.expiration_str}[/]",
             highlight=False,  # disable built-in rich highlight
         )
+        if current_root.expiration < (datetime.now() + timedelta(days=1)):
+            console.print(
+                "You must extend root's expiration - root has expired"
+            )
+            break
+
         change = prompt.Confirm.ask(
             "Do you want to extend the [cyan]root's expiration[/]?"
         )
         if not change:
-            if current_root.expiration < (datetime.now() + timedelta(days=1)):
-                console.print(
-                    "You must extend root's expiration - root has expired"
-                )
-                continue
-            else:
-                console.print("Skipping root expiration changes")
-                return
+            console.print("Skipping root expiration changes")
+            return
         else:
             break
 
