@@ -801,44 +801,45 @@ class TestAPIClient:
         api_client.Metadata.from_file = pretend.call_recorder(
             lambda *a: bytes("abc", "utf-8")
         )
-        result = api_client.get_md_file("root.json")
+        result = api_client.get_md_file("tests/files/root.json")
         assert result == bytes("abc", "utf-8")
         assert api_client.Metadata.from_file.calls == [
-            pretend.call("root.json")
+            pretend.call("tests/files/root.json")
         ]
 
     def test_get_md_file_url(self, monkeypatch):
         api_client.console.print = pretend.call_recorder(lambda *a: None)
-        json_data = {"metadata": "root"}
-        api_client.request_server = pretend.call_recorder(
+        api_client.requests.get = pretend.call_recorder(
             lambda *a: pretend.stub(
-                status_code=200, text='{"metadata": "root"}'
+                status_code=200, content='{"metadata": "root"}'
             )
         )
-        fake_from_dict = pretend.call_recorder(
+        fake_from_bytes = pretend.call_recorder(
             lambda *a: bytes("abc", "utf-8")
         )
-        monkeypatch.setattr(f"{self.path}.Metadata.from_dict", fake_from_dict)
-        file = "root.json"
+        monkeypatch.setattr(
+            f"{self.path}.Metadata.from_bytes", fake_from_bytes
+        )
+        file = "1.root.json"
         url = f"http://localhost/{file}"
         result = api_client.get_md_file(url)
         assert result == bytes("abc", "utf-8")
         assert api_client.console.print.calls == [
             pretend.call(f"Fetching file {url}"),
         ]
-        assert api_client.request_server.calls == [
-            pretend.call("http://localhost", file, api_client.Methods.get),
+        assert api_client.requests.get.calls == [
+            pretend.call(url),
         ]
-        assert fake_from_dict.calls == [pretend.call(json_data)]
+        assert fake_from_bytes.calls == [pretend.call('{"metadata": "root"}')]
 
     def test_get_md_file_url_response_not_200(self):
         api_client.console.print = pretend.call_recorder(lambda *a: None)
-        api_client.request_server = pretend.call_recorder(
+        api_client.requests.get = pretend.call_recorder(
             lambda *a: pretend.stub(
                 status_code=404,
             )
         )
-        file = "root.json"
+        file = "1.root.json"
         url = f"http://localhost/{file}"
         with pytest.raises(click.ClickException) as err:
             result = api_client.get_md_file(url)
@@ -848,6 +849,6 @@ class TestAPIClient:
         assert api_client.console.print.calls == [
             pretend.call(f"Fetching file {url}"),
         ]
-        assert api_client.request_server.calls == [
-            pretend.call("http://localhost", file, api_client.Methods.get),
+        assert api_client.requests.get.calls == [
+            pretend.call(url),
         ]

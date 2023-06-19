@@ -266,19 +266,13 @@ def send_payload(
 
 
 def get_md_file(file_uri: str) -> Metadata:
-    parsed_url = file_uri.split("://")
-    protocol = parsed_url[0]
     role_md: Metadata
-    if protocol in ["http", "https"]:
+    if file_uri.startswith("http"):
         console.print(f"Fetching file {file_uri}")
-        base_url = f"{parsed_url[1].split('/')[0]}"
-        server = f"{protocol}://{base_url}"
-        url = "".join(parsed_url[1].split("/")[1:])
-        response = request_server(server, url, Methods.get)
+        response = requests.get(file_uri)
         if response.status_code != 200:
             raise click.ClickException(f"Cannot fetch {file_uri}")
-        json_data = json.loads(response.text)
-        role_md = Metadata.from_dict(json_data)
+        return Metadata.from_bytes(response.content)
     else:
         role_md = Metadata.from_file(file_uri)
 
