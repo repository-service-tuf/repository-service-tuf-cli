@@ -15,7 +15,6 @@ from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.api_client import (
     URL,
-    Methods,
     bootstrap_status,
     send_payload,
     task_status,

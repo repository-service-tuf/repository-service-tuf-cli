@@ -5,7 +5,7 @@
 import pretend  # type: ignore
 
 from repository_service_tuf.cli.admin import ceremony
-from repository_service_tuf.helpers.api_client import URL, Methods
+from repository_service_tuf.helpers.api_client import URL
 
 
 class TestCeremonyFunctions:

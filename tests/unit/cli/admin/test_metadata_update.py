@@ -10,7 +10,7 @@ import pretend  # type: ignore
 from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.cli.admin import metadata
-from repository_service_tuf.helpers.api_client import URL, Methods
+from repository_service_tuf.helpers.api_client import URL
 
 
 class TestMetadataUpdate:

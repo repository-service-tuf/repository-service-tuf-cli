@@ -7,7 +7,7 @@ import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional
 
 import click
 from rich.console import Console
@@ -138,7 +138,7 @@ class RootInfo:
         self._initial_root_md_obj = copy.deepcopy(self._root_md)
 
     @staticmethod
-    def _get_key_name(key: Union[Key, RSTUFKey]) -> str:
+    def _get_key_name(key: Key) -> str:
         name = key.keyid[:7]
         if key.unrecognized_fields.get("name"):
             name = key.unrecognized_fields["name"]

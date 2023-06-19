@@ -8,7 +8,6 @@ from rich import box, markdown, prompt, table
 from securesystemslib.exceptions import StorageError  # type: ignore
 from tuf.api.metadata import Metadata, Root
 from tuf.api.serialization import DeserializationError
-from securesystemslib.signer import Key
 
 from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.admin import admin
@@ -142,7 +141,7 @@ def _create_keys_table(
             is_signing_key = "[green]True[/]"
 
         keys_table.add_row(
-            f'[yellow]{id}',
+            f"[yellow]{id}",
             f'[yellow]{key["name"]}',
             key["keytype"],
             key_location,
