@@ -232,15 +232,9 @@ def _current_root_keys_validation(current_root: RootInfo):
         )
         root_key: RSTUFKey = _get_key(Root.type)
         if root_key.error:
+            console.print(f"Failed loading key {key_count} of {threshold}")
             console.print(root_key.error)
-            try_again = prompt.Confirm.ask("Try again?")
-            if try_again:
-                continue
-            else:
-                raise click.ClickException(
-                    f"Failed authorization. Required: {threshold}, loaded "
-                    f"{len(loaded)} keys"
-                )
+            continue
 
         keyid = root_key.key["keyid"]
         if not _is_valid_current_key(keyid, current_root, loaded):
@@ -258,8 +252,12 @@ def _current_root_keys_validation(current_root: RootInfo):
 
 
 def _keys_removal(current_root: RootInfo):
-    """Asking the user if he wants to remove any of the root keys"""
+    """Asking the user if they want to remove any of the root keys"""
     while True:
+        if len(current_root.keys) < 1:
+            console.print("No keys are left for removal.")
+            break
+
         keys_table = _create_keys_table(current_root.keys, current_root, False)
         console.print("Here are the current root keys:")
         console.print(keys_table)
@@ -277,11 +275,8 @@ def _keys_removal(current_root: RootInfo):
                 "\n", f":cross_mark: [red]Failed[/]: key {name} is not in root"
             )
             continue
-        else:
-            console.print(f"Key with name/tag [yellow]{name}[/] removed\n")
-            if len(current_root.keys) < 1:
-                console.print("No keys are left for removal.")
-                break
+
+        console.print(f"Key with name/tag [yellow]{name}[/] removed\n")
 
 
 def _keys_additions(current_root: RootInfo):
@@ -332,48 +327,44 @@ def _get_positive_int_input(msg: str, input_name: str, default: Any) -> int:
     input: int = 0
     while True:
         input = prompt.IntPrompt.ask(msg, default=default, show_default=True)
-        if input < 1:
-            console.print(f"{input_name} must be at least 1")
-        else:
-            break
+        if input >= 1:
+            return input
 
-    return input
+        console.print(f"{input_name} must be at least 1")
 
 
 def _modify_expiration(current_root: RootInfo):
     console.print(markdown.Markdown(EXPIRY_CHANGES_MSG), width=100)
     console.print("\n")
+    change: bool
     while True:
         console.print(
             f"Current root expiration: [cyan]{current_root.expiration_str}[/]",
             highlight=False,  # disable built-in rich highlight
         )
         if current_root.expiration < (datetime.now() + timedelta(days=1)):
-            console.print(
-                "You must extend root's expiration - root has expired"
-            )
-            break
+            console.print("Root root has expired - expiration must be extend")
+            change = True
 
-        change = prompt.Confirm.ask(
-            "Do you want to extend the [cyan]root's expiration[/]?"
-        )
+        else:
+            change = prompt.Confirm.ask(
+                "Do you want to extend the [cyan]root's expiration[/]?"
+            )
+
         if not change:
             console.print("Skipping root expiration changes")
             return
         else:
-            break
-
-    msg = "Days to extend [cyan]root's expiration[/] starting from today"
-    while True:
-        expiry_bump = _get_positive_int_input(msg, "Expiration extension", 365)
-        new_expiry = datetime.now() + timedelta(days=expiry_bump)
-        new_exp_str = new_expiry.strftime("%Y-%b-%d")
-        agree = prompt.Confirm.ask(
-            f"New root expiration: [cyan]{new_exp_str}[/]. Do you agree?"
-        )
-        if agree:
-            current_root.expiration = new_expiry
-            return
+            m = "Days to extend [cyan]root's expiration[/] starting from today"
+            bump = _get_positive_int_input(m, "Expiration extension", 365)
+            new_expiry = datetime.now() + timedelta(days=bump)
+            new_exp_str = new_expiry.strftime("%Y-%b-%d")
+            agree = prompt.Confirm.ask(
+                f"New root expiration: [cyan]{new_exp_str}[/]. Do you agree?"
+            )
+            if agree:
+                current_root.expiration = new_expiry
+                return
 
 
 def _modify_root_keys(current_root: RootInfo):
@@ -422,7 +413,7 @@ def _modify_online_key(current_root: RootInfo):
             console.print("Skipping further online key changes")
             break
 
-        online_key: RSTUFKey = _get_key(Root.type)
+        online_key: RSTUFKey = _get_key("online")
         if online_key.error:
             console.print(f":cross_mark: [red]Failed[/]: {online_key.error}")
             continue

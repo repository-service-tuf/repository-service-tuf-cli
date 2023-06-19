@@ -85,22 +85,33 @@ class TestMetadataUpdate:
         assert finish_msg in test_result.output
         assert test_result.exit_code == 0
 
-    def test_metadata_update_fail_authorization(self, client, test_context):
+    def test_metadata_update_fail_loading_key(self, client, test_context):
         input_step1 = [
             "tests/files/root.json",  # File name or URL to the current root metadata  # noqa
             "",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
             "non_existent",  # Enter the root`s private key path
             "foo",  # Enter the root`s private key password
-            "n",  # Try again?
+            "",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
+            "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
         ]
+        input_step2 = [
+            "n"  # Do you want to extend the root's expiration? [y/n]  # noqa
+        ]
+        input_step3 = ["n"]  # Do you want to modify root keys? [y/n]
+        input_step4 = ["n"]  # Do you want to change the online key? [y/n]
         test_result = client.invoke(
             metadata.update,
-            input="\n".join(input_step1),
+            input="\n".join(
+                input_step1 + input_step2 + input_step3 + input_step4
+            ),
             obj=test_context,
         )
-        expected_msg = "Failed authorization. Required: 1, loaded 0 keys"
+        expected_msg = "Failed loading key 0 of 1"
         assert expected_msg in test_result.output
-        assert test_result.exit_code != 0
+        finish_msg = "No file will be generated as no changes were made"
+        assert finish_msg in test_result.output
+        assert test_result.exit_code == 0
 
     def test_metadata_update_authorize_wrong_key_info_and_retry(
         self, client, test_context, md_update_input
@@ -173,7 +184,7 @@ class TestMetadataUpdate:
         finish_msg = "Ceremony done. 🔐 🎉. Root metadata update completed."
         assert finish_msg in test_result.output
         assert test_result.exit_code == 0
-        warning_msg = "You must extend root's expiration - root has expired"
+        warning_msg = "Root root has expired - expiration must be extend"
         assert warning_msg in test_result.output
 
     def test_metadata_update_no_update_expiration_negative(

@@ -265,14 +265,12 @@ def send_payload(
 
 
 def get_md_file(file_uri: str) -> Metadata:
-    role_md: Metadata
     if file_uri.startswith("http"):
         console.print(f"Fetching file {file_uri}")
         response = requests.get(file_uri)
         if response.status_code != 200:
             raise click.ClickException(f"Cannot fetch {file_uri}")
+
         return Metadata.from_bytes(response.content)
     else:
-        role_md = Metadata.from_file(file_uri)
-
-    return role_md
+        return Metadata.from_file(file_uri)

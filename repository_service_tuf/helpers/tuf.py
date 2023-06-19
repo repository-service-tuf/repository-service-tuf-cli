@@ -87,7 +87,6 @@ class BootstrapSetup:
 
 class RootInfo:
     _root_md: Metadata[Root]
-    root_keys: Dict[str, RSTUFKey]  # used to easily get all root keys
     signing_keys: Dict[str, RSTUFKey]  # required for signing
     online_key: RSTUFKey
     _initial_root_md_obj: Metadata[Root]  # required to check for changes
