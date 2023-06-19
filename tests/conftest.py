@@ -127,7 +127,7 @@ def root_info(root: Metadata[Root]) -> RootInfo:
     for online_role in ["timestamp", "snapshot", "targets"]:
         root.signed.add_key(online_key, online_role)
 
-    return RootInfo.from_md(root)
+    return RootInfo(root)
 
 
 @pytest.fixture

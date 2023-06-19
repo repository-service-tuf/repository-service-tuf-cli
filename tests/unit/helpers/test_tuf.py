@@ -148,10 +148,8 @@ class TestTUFHelperFunctions:
 
 class TestRootInfo:
     def test__init(self, root: Metadata[Root]):
-        online_key = RSTUFKey({"keyid": "id3", "keyval": {"sha256": "too"}})
-        root_info = RootInfo(root, online_key)
+        root_info = RootInfo(root)
         assert root_info._root_md == root
-        assert root_info.online_key == online_key
         assert root_info.signing_keys == {}
         # Check that root_info._initial_root_md_obj is a copy of root
         assert root_info._initial_root_md_obj is not root
@@ -191,35 +189,15 @@ class TestRootInfo:
         name = RootInfo._get_rstuf_key_name(key)
         assert name == "1234567"
 
-    def test_from_md(self, root: Metadata[Root]):
-        tuf_keys = [
-            Key("id1", "ed25519", "", {"sha256": "abc"}),
-            Key("id2", "ed25519", "", {"sha256": "foo"}),
-        ]
-        for key in tuf_keys:
-            root.signed.add_key(key, "root")
-
-        online_key = Key("id3", "ed25519", "", {"sha256": "doo"})
-        expected_online_key = RSTUFKey(online_key.to_securesystemslib_key())
-        root.signed.add_key(online_key, "timestamp")
-
-        root_info = RootInfo.from_md(root)
-        assert root_info._root_md == root
-        assert root_info.online_key == expected_online_key
-        assert root_info.signing_keys == {}
-        # Check that root_info._initial_root_md_obj is a copy of root
-        assert root_info._initial_root_md_obj is not root
-        assert root_info._initial_root_md_obj == root
-
     def test_is_keyid_used_true(self, root: Metadata[Root]):
         root.signed.add_key(Key("id", "ed25519", "", {"sha256": "ab"}), "root")
         root.signed.add_key(Key("id2", "ed25519", "", {}), "timestamp")
-        root_info = RootInfo.from_md(root)
+        root_info = RootInfo(root)
         assert root_info.is_keyid_used("id") is True
 
     def test_is_keyid_used_false(self, root: Metadata[Root]):
         root.signed.add_key(Key("id2", "ed25519", "", {}), "timestamp")
-        root_info = RootInfo.from_md(root)
+        root_info = RootInfo(root)
         assert root_info.is_keyid_used("id") is False
 
     def test_save_current_root_key(self, root_info: RootInfo):
@@ -286,7 +264,7 @@ class TestRootInfo:
             assert new_key_id in root_info._root_md.signed.roles[role].keyids
             assert key_id not in root_info._root_md.signed.roles[role].keyids
 
-        assert root_info.online_key == new_key
+        assert root_info.online_key["name"] == "custom_name"
         assert tuf.Key.from_securesystemslib_key.calls == [pretend.call(dict)]
 
     def test_has_changed(self, root_info: RootInfo):

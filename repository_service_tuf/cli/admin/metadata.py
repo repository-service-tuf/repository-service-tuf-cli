@@ -131,7 +131,7 @@ def _create_keys_table(
 
     for key in keys:
         id = key["keyid"]
-        if id == root_info.online_key.key["keyid"]:
+        if id == root_info.online_key["keyid"]:
             key_location = "[green]Online[/]"
         else:
             key_location = "[bright_blue]Offline[/]"
@@ -305,7 +305,7 @@ def _keys_additions(current_root: RootInfo):
             console.print(f":cross_mark: [red]Failed[/]: {root_key.error}")
             continue
 
-        if root_key == current_root.online_key:
+        if root_key.key["keyid"] == current_root.online_key["keyid"]:
             console.print(
                 ":cross_mark: [red]Failed[/]: This is the current online key. "
                 "Cannot be added"
@@ -400,7 +400,7 @@ def _modify_online_key(current_root: RootInfo):
     console.print(markdown.Markdown(ONLINE_KEY_CHANGE), width=100)
     while True:
         online_key_table = _create_keys_table(
-            [current_root.online_key.to_dict()], current_root, is_minimal=False
+            [current_root.online_key], current_root, is_minimal=False
         )
         console.print("\nHere is the information for the current online key:")
         console.print("\n")
@@ -418,7 +418,7 @@ def _modify_online_key(current_root: RootInfo):
             console.print(f":cross_mark: [red]Failed[/]: {online_key.error}")
             continue
 
-        if online_key == current_root.online_key:
+        if online_key.key["keyid"] == current_root.online_key["keyid"]:
             console.print(
                 ":cross_mark: [red]Failed[/]: New online key and current match"
             )
@@ -549,7 +549,7 @@ def update(
         console.print("\n")
     try:
         root_md: Metadata = get_md_file(current_root_uri)
-        root_info: RootInfo = RootInfo.from_md(root_md)
+        root_info: RootInfo = RootInfo(root_md)
     except StorageError:
         raise click.ClickException(
             f"Cannot fetch/load current root {current_root_uri}"

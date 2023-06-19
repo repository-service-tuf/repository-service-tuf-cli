@@ -88,7 +88,6 @@ class BootstrapSetup:
 class RootInfo:
     _root_md: Metadata[Root]
     signing_keys: Dict[str, RSTUFKey]  # required for signing
-    online_key: RSTUFKey
     _initial_root_md_obj: Metadata[Root]  # required to check for changes
 
     @property
@@ -123,13 +122,17 @@ class RootInfo:
 
         return root_keys
 
-    def __init__(
-        self,
-        root_md: Metadata[Root],
-        online_key: RSTUFKey,
-    ):
+    @property
+    def online_key(self) -> Dict[str, Any]:
+        online_key_id = self._root_md.signed.roles["timestamp"].keyids[0]
+        key_obj = self._root_md.signed.keys[online_key_id]
+        online_key_dict = key_obj.to_dict()
+        online_key_dict["keyid"] = online_key_id
+        online_key_dict["name"] = self._get_key_name(key_obj)
+        return online_key_dict
+
+    def __init__(self, root_md: Metadata[Root]):
         self._root_md = root_md
-        self.online_key = online_key
         self.signing_keys = {}
         self._initial_root_md_obj = copy.deepcopy(self._root_md)
 
@@ -148,16 +151,6 @@ class RootInfo:
             name = rstuf_key.name
 
         return name
-
-    @classmethod
-    def from_md(cls, root_md: Metadata[Root]) -> "RootInfo":
-        online_key_id = root_md.signed.roles["timestamp"].keyids[0]
-        tuf_online_key: Key = root_md.signed.keys[online_key_id]
-        online_key_dict = tuf_online_key.to_securesystemslib_key()
-        name = cls._get_key_name(tuf_online_key)
-        online_key = RSTUFKey(online_key_dict, name=name)
-
-        return cls(root_md, online_key)
 
     def is_keyid_used(self, keyid: str) -> bool:
         """Check if keyid is used in root keys"""
@@ -210,8 +203,6 @@ class RootInfo:
 
         for role in online_roles:
             self._root_md.signed.add_key(online_tuf_key, role)
-
-        self.online_key = new_online_key
 
     def has_changed(self) -> bool:
         """Returns whether the root metadata object has changed"""
