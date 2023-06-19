@@ -297,25 +297,14 @@ def _keys_additions(current_root: RootInfo):
         keys_table = _create_keys_table(signing_list, current_root, False)
         console.print("\nHere are the current root signing keys:")
         console.print(keys_table)
-        response = prompt.Confirm.ask("\nDo you want to add a new key?")
-        if not response:
-            keys_amount = len(current_root.signing_keys)
-            if keys_amount < root_threshold:
-                remaining = root_threshold - keys_amount
-                console.print(
-                    f"You need to add {remaining} more signing key(s)"
-                )
-                abort = prompt.Confirm.ask(
-                    "Do you want to abort the root metadata update",
-                )
-                if abort:
-                    raise click.ClickException(
-                        "Not enough keys to fulfill the threshold requirement"
-                    )
-                else:
-                    continue
-            else:
-                break
+        keys_amount = len(current_root.signing_keys)
+        if root_threshold <= keys_amount:
+            agree = prompt.Confirm.ask("\nDo you want to add a new key?")
+            if not agree:
+                return
+        else:
+            remaining = root_threshold - keys_amount
+            console.print(f"You must add {remaining} more signing key(s)")
 
         root_key: RSTUFKey = _get_key(Root.type)
         if root_key.error:

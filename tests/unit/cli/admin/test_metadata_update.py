@@ -298,7 +298,7 @@ class TestMetadataUpdate:
         assert test_result.exit_code == 0
         assert "No keys are left for removal." in test_result.output
 
-    def test_metadata_update_skip_adding_keys_but_reconsider(
+    def test_metadata_update_add_keys_to_fulfill_threshold_requirement(
         self, client, test_context, md_update_input
     ):
         input_step1, input_step2, _, _ = md_update_input
@@ -308,9 +308,6 @@ class TestMetadataUpdate:
             "y",  # Do you want to modify root keys? [y/n]
             "2",  # What should be the root role threshold? (CURRENT_KEY_THRESHOLD)  # noqa
             "n",  # Do you want to remove a key [y/n]
-            "n",  # Do you want to add a new key? [y/n]
-            "n",  # Do you want to abort the root metadata update
-            "y",  # Do you want to add a new key? [y/n]
             "rsa",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
             "tests/files/key_storage/online-rsa.key",  # Enter the root`s private key path  # noqa
             "strongPass",  # Enter the root`s private key password
@@ -333,33 +330,7 @@ class TestMetadataUpdate:
         finish_msg = "Ceremony done. 🔐 🎉. Root metadata update completed."
         assert finish_msg in test_result.output
         assert test_result.exit_code == 0
-        warning = "You need to add 1 more signing key(s)"
-        assert warning in test_result.output
-
-    def test_metadata_update_skip_adding_keys_fail_threshold_requirement(
-        self, client, test_context, md_update_input
-    ):
-        input_step1, input_step2, _, input_step4 = md_update_input
-        # First set high threshold requirement not met by current keys amount
-        # Second refuse to add any other keys and fail metadata update
-        input_step3 = [
-            "y",  # Do you want to modify root keys? [y/n]
-            "10",  # What should be the root role threshold? (CURRENT_KEY_THRESHOLD)  # noqa
-            "n",  # Do you want to remove a key [y/n]
-            "n",  # Do you want to add a new key? [y/n]
-            "y",  # Do you want to abort the root metadata update
-        ]
-        test_result = client.invoke(
-            metadata.update,
-            input="\n".join(
-                input_step1 + input_step2 + input_step3 + input_step4
-            ),
-            obj=test_context,
-        )
-        assert test_result.exit_code != 0
-        exception_msg = "Not enough keys to fulfill the threshold requirement"
-        assert exception_msg in test_result.output
-        warning = "You need to add 9 more signing key(s)"
+        warning = "You must add 1 more signing key(s)"
         assert warning in test_result.output
 
     def test_metadata_update_add_curr_online_key(
