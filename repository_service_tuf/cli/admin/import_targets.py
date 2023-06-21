@@ -1,20 +1,21 @@
 import json
 import os
 from datetime import datetime
+from math import log
 from typing import Any, Dict, List
 
-from tuf.api.metadata import Delegations, SuccinctRoles, Targets
+from tuf.api.metadata import SuccinctRoles
 
 from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.helpers.api_client import (
+    URL,
     Methods,
     bootstrap_status,
     publish_targets,
     request_server,
     task_status,
 )
-from repository_service_tuf.helpers.tuf import Metadata
 
 
 def _check_csv_files(csv_files: List[str]):
@@ -30,23 +31,33 @@ def _check_csv_files(csv_files: List[str]):
 
 
 def _parse_csv_data(
-    csv_file: str, succinct_roles: SuccinctRoles
+    db: Any,
+    rstuf_target_roles: Any,
+    succinct_roles: SuccinctRoles,
+    csv_file: str,
 ) -> List[Dict[str, Any]]:
     rstuf_db_data: List[Dict[str, Any]] = []
     with open(csv_file, "r") as f:
         for line in f:
+            path = line.split(";")[0]
+            length = int(line.split(";")[1])
+            hash_algorithm = line.split(";")[2]
+            hash_digest = line.split(";")[3]
             rstuf_db_data.append(
                 {
-                    "path": line.split(";")[0],
+                    "path": path,
                     "info": {
-                        "length": int(line.split(";")[1]),
-                        "hashes": {line.split(";")[2]: line.split(";")[3]},
+                        "length": length,
+                        "hashes": {hash_algorithm: hash_digest},
                     },
-                    "rolename": succinct_roles.get_role_for_target(
-                        line.split(";")[0]
-                    ),
                     "published": False,
                     "action": "ADD",
+                    "targets_role": db.execute(
+                        rstuf_target_roles.select().where(
+                            rstuf_target_roles.c.rolename
+                            == succinct_roles.get_role_for_target(path)
+                        )
+                    ).one()[0],
                     "last_update": datetime.now(),
                 }
             )
@@ -56,7 +67,8 @@ def _parse_csv_data(
 
 def _import_csv_to_rstuf(
     db_client: Any,
-    rstuf_table: Any,
+    rstuf_target_files: Any,
+    rstuf_target_roles: Any,
     csv_files: List[str],
     succinct_roles: SuccinctRoles,
 ) -> None:
@@ -65,10 +77,12 @@ def _import_csv_to_rstuf(
 
     for csv_file in csv_files:
         console.print(f"Import status: Loading data from {csv_file}")
-        rstuf_db_data = _parse_csv_data(csv_file, succinct_roles)
+        rstuf_db_data = _parse_csv_data(
+            db_client, rstuf_target_roles, succinct_roles, csv_file
+        )
         console.print(f"Import status: Importing {csv_file} data")
         try:
-            db_client.execute(rstuf_table.insert(), rstuf_db_data)
+            db_client.execute(rstuf_target_files.insert(), rstuf_db_data)
         except IntegrityError:
             raise click.ClickException(
                 "Import status: ABORTED due duplicated targets. "
@@ -78,27 +92,35 @@ def _import_csv_to_rstuf(
         console.print(f"Import status: {csv_file} imported")
 
 
-def _get_succinct_roles(metadata_url: str) -> SuccinctRoles:
-    response = request_server(metadata_url, "1.bin.json", Methods.get)
-    if response.status_code == 404:
-        raise click.ClickException("RSTUF Metadata Targets not found.")
+def _get_succinct_roles(api_url: str) -> SuccinctRoles:
+    response = request_server(api_url, URL.config.value, Methods.get)
+    if response.status_code != 200:
+        raise click.ClickException(
+            f"Failed to retrieve RSTUF config {response.text}"
+        )
 
-    json_data = json.loads(response.text)
-    targets: Metadata[Targets] = Metadata.from_dict(json_data)
-    if targets.signed.delegations is None:
-        raise click.ClickException("Failed to get Targets Delegations")
+    try:
+        data = response.json()["data"]
+        num_bins = data["number_of_delegated_bins"]
 
-    targets_delegations: Delegations = targets.signed.delegations
+    except (json.JSONDecodeError, KeyError):
+        raise click.ClickException(
+            "Failed to parse 'data', 'number_of_delegated_bins' from config "
+            f"{response.text}"
+        )
+    bit_length = int(log(num_bins, 2))
 
-    if targets_delegations.succinct_roles is None:
-        raise click.ClickException("Failed to get Targets succinct roles")
+    # the 'keyids' and the 'threshold' are irrelevant once we need the names
+    succinct_roles = SuccinctRoles(
+        keyids=[], threshold=1, bit_length=bit_length, name_prefix="bins"
+    )
 
-    return targets_delegations.succinct_roles
+    return succinct_roles
 
 
 @admin.command()
 @click.option(
-    "--metadata-url",
+    "--api-url",
     required=True,
     help="RSTUF Metadata URL i.e.: http://127.0.0.1 .",
 )
@@ -124,7 +146,7 @@ def _get_succinct_roles(metadata_url: str) -> SuccinctRoles:
 @click.pass_context
 def import_targets(
     context: Any,
-    metadata_url: str,
+    api_url: str,
     db_uri: str,
     csv: List[str],
     skip_publish_targets: bool,
@@ -144,8 +166,8 @@ def import_targets(
             "SQLAlchemy is required by import-targets. "
             "pip install repository-service-tuf[sqlalchemy,psycopg2]"
         )
-
     settings = context.obj["settings"]
+    settings.SERVER = api_url
 
     bs_status = bootstrap_status(settings)
     if bs_status.get("data", {}).get("bootstrap") is False:
@@ -155,16 +177,23 @@ def import_targets(
         )
 
     # load all required infrastructure
-    succinct_roles = _get_succinct_roles(metadata_url)
+    succinct_roles = _get_succinct_roles(api_url)
     engine = create_engine(f"{db_uri}")
     db_metadata = MetaData()
     db_client: Connection = engine.connect()
-    rstuf_table = Table("rstuf_targets", db_metadata, autoload_with=engine)
+    rstuf_target_files = Table(
+        "rstuf_target_files", db_metadata, autoload_with=engine
+    )
+    rstuf_target_roles = Table(
+        "rstuf_target_roles", db_metadata, autoload_with=engine
+    )
 
     # validate if the CSV files are accessible
     _check_csv_files(csv_files=csv)
     # import all CSV file(s) data to RSTUF DB without commiting
-    _import_csv_to_rstuf(db_client, rstuf_table, csv, succinct_roles)
+    _import_csv_to_rstuf(
+        db_client, rstuf_target_files, rstuf_target_roles, csv, succinct_roles
+    )
 
     # commit data into RSTUF DB
     console.print("Import status: Commiting all data to the RSTUF database")

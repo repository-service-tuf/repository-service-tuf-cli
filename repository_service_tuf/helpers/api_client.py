@@ -16,6 +16,7 @@ from repository_service_tuf.cli import click, console
 class URL(Enum):
     token = "api/v1/token/"  # nosec bandit: not hard coded password.
     bootstrap = "api/v1/bootstrap/"
+    config = "api/v1/config/"
     task = "api/v1/task/?task_id="
     publish_targets = "api/v1/targets/publish/"
 

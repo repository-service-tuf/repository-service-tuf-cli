@@ -42,6 +42,24 @@ class TestImportTargetsFunctions:
             "path/file1;123;blake2b-256;hash1",
             "path/file2;456;blake2b-256;hash2",
         ]
+        db = pretend.stub(
+            execute=pretend.call_recorder(
+                lambda *a: pretend.stub(
+                    one=pretend.call_recorder(lambda: [15])
+                )
+            )
+        )
+        succinct_roles = pretend.stub(
+            get_role_for_target=pretend.call_recorder(lambda *a: "bins-e")
+        )
+        rstuf_target_roles = pretend.stub(
+            c=pretend.stub(rolename="bins-e"),
+            select=pretend.call_recorder(
+                lambda: pretend.stub(
+                    where=pretend.call_recorder(lambda *a: True)
+                )
+            ),
+        )
         fake_file_obj = pretend.stub(
             __enter__=pretend.call_recorder(lambda: fake_data),
             __exit__=pretend.call_recorder(lambda *a: None),
@@ -64,13 +82,15 @@ class TestImportTargetsFunctions:
             get_role_for_target=pretend.call_recorder(lambda *a: "bins-a")
         )
 
-        result = import_targets._parse_csv_data("fake_file", succinct_roles)
+        result = import_targets._parse_csv_data(
+            db, rstuf_target_roles, succinct_roles, "fake_file"
+        )
 
         assert result == [
             {
                 "path": "path/file1",
                 "info": {"length": 123, "hashes": {"blake2b-256": "hash1"}},
-                "rolename": "bins-a",
+                "targets_role": 15,
                 "published": False,
                 "action": "ADD",
                 "last_update": datetime.datetime(2019, 6, 16, 9, 5, 1),
@@ -78,15 +98,20 @@ class TestImportTargetsFunctions:
             {
                 "path": "path/file2",
                 "info": {"length": 456, "hashes": {"blake2b-256": "hash2"}},
-                "rolename": "bins-a",
+                "targets_role": 15,
                 "published": False,
                 "action": "ADD",
                 "last_update": datetime.datetime(2019, 6, 16, 9, 5, 1),
             },
         ]
+        assert db.execute.calls == [pretend.call(True), pretend.call(True)]
+        assert succinct_roles.get_role_for_target.calls == [
+            pretend.call("path/file1"),
+            pretend.call("path/file2"),
+        ]
 
     def test__import_csv_to_rstuf(self):
-        fake_rstuf_table = pretend.stub(
+        fake_rstuf_files = pretend.stub(
             insert=pretend.call_recorder(lambda: None)
         )
         fake_db_client = pretend.stub(
@@ -98,25 +123,36 @@ class TestImportTargetsFunctions:
 
         result = import_targets._import_csv_to_rstuf(
             fake_db_client,
-            fake_rstuf_table,
+            fake_rstuf_files,
+            "fake_rstuf_roles",
             ["csv1", "csv2"],
             "fake_succinct_roles",
         )
 
         assert result is None
         assert import_targets._parse_csv_data.calls == [
-            pretend.call("csv1", "fake_succinct_roles"),
-            pretend.call("csv2", "fake_succinct_roles"),
+            pretend.call(
+                fake_db_client,
+                "fake_rstuf_roles",
+                "fake_succinct_roles",
+                "csv1",
+            ),
+            pretend.call(
+                fake_db_client,
+                "fake_rstuf_roles",
+                "fake_succinct_roles",
+                "csv2",
+            ),
         ]
         assert fake_db_client.execute.calls == [
             pretend.call(
-                fake_rstuf_table.insert(), [{"k1": "v1", "k2": "v2"}]
+                fake_rstuf_files.insert(), [{"k1": "v1", "k2": "v2"}]
             ),
             pretend.call(
-                fake_rstuf_table.insert(), [{"k1": "v1", "k2": "v2"}]
+                fake_rstuf_files.insert(), [{"k1": "v1", "k2": "v2"}]
             ),
         ]
-        assert fake_rstuf_table.insert.calls == [
+        assert fake_rstuf_files.insert.calls == [
             pretend.call(),
             pretend.call(),
             pretend.call(),
@@ -127,7 +163,7 @@ class TestImportTargetsFunctions:
         # Required to raise an exception type from import inside a function
         from sqlalchemy.exc import IntegrityError
 
-        fake_rstuf_table = pretend.stub(
+        fake_rstuf_files = pretend.stub(
             insert=pretend.raiser(IntegrityError("Duplicate", "param", "orig"))
         )
         fake_db_client = pretend.stub(
@@ -140,80 +176,81 @@ class TestImportTargetsFunctions:
         with pytest.raises(import_targets.click.ClickException) as err:
             import_targets._import_csv_to_rstuf(
                 fake_db_client,
-                fake_rstuf_table,
+                fake_rstuf_files,
+                "fake_rstuf_roles",
                 ["csv1", "csv2"],
                 "fake_succinct_roles",
             )
-
         assert "ABORTED due duplicated targets." in str(err)
         assert import_targets._parse_csv_data.calls == [
-            pretend.call("csv1", "fake_succinct_roles"),
+            pretend.call(
+                fake_db_client,
+                "fake_rstuf_roles",
+                "fake_succinct_roles",
+                "csv1",
+            ),
         ]
 
-    def test__get_succinct_roles(self, monkeypatch):
+    def test__get_succinct_roles(self):
+        fake_response = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(
+                lambda: {"data": {"number_of_delegated_bins": 16}}
+            ),
+        )
         import_targets.request_server = pretend.call_recorder(
-            lambda *a: pretend.stub(status_code=200, text=b"data")
+            lambda *a: fake_response
         )
-        monkeypatch.setattr(
-            import_targets.json, "loads", lambda *a: "json_data"
-        )
-        import_targets.Metadata.from_dict = pretend.call_recorder(
-            lambda *a: pretend.stub(
-                signed=pretend.stub(
-                    delegations=pretend.stub(
-                        succinct_roles="fake_succinct_roles"
-                    )
-                )
-            )
+        import_targets.SuccinctRoles = pretend.call_recorder(
+            lambda **kw: "fake_succinct_roles"
         )
 
-        result = import_targets._get_succinct_roles(
-            "http://127.0.0.1/metadata"
-        )
+        result = import_targets._get_succinct_roles("http://127.0.0.1")
         assert result == "fake_succinct_roles"
-
-    def test__get_succinct_roles_not_found_metadata(self, monkeypatch):
-        import_targets.request_server = pretend.call_recorder(
-            lambda *a: pretend.stub(status_code=404, text=b"data")
-        )
-
-        with pytest.raises(import_targets.click.ClickException) as err:
-            import_targets._get_succinct_roles("http://127.0.0.1/metadata")
-        assert "RSTUF Metadata Targets not found." in str(err)
-
-    def test__get_succinct_roles_no_delegations(self, monkeypatch):
-        import_targets.request_server = pretend.call_recorder(
-            lambda *a: pretend.stub(status_code=200, text=b"data")
-        )
-        monkeypatch.setattr(
-            import_targets.json, "loads", lambda *a: "json_data"
-        )
-        import_targets.Metadata.from_dict = pretend.call_recorder(
-            lambda *a: pretend.stub(signed=pretend.stub(delegations=None))
-        )
-
-        with pytest.raises(import_targets.click.ClickException) as err:
-            import_targets._get_succinct_roles("http://127.0.0.1/metadata")
-        assert "Failed to get Targets Delegations" in str(err)
-
-    def test__get_succinct_roles_no_succinct_roles(self, monkeypatch):
-        import_targets.request_server = pretend.call_recorder(
-            lambda *a: pretend.stub(status_code=200, text=b"data")
-        )
-        monkeypatch.setattr(
-            import_targets.json, "loads", lambda *a: "json_data"
-        )
-        import_targets.Metadata.from_dict = pretend.call_recorder(
-            lambda *a: pretend.stub(
-                signed=pretend.stub(
-                    delegations=pretend.stub(succinct_roles=None)
-                )
+        assert import_targets.request_server.calls == [
+            pretend.call(
+                "http://127.0.0.1",
+                import_targets.URL.config.value,
+                import_targets.Methods.get,
             )
+        ]
+        assert import_targets.SuccinctRoles.calls == [
+            pretend.call(
+                keyids=[], threshold=1, bit_length=4, name_prefix="bins"
+            )
+        ]
+        assert fake_response.json.calls == [pretend.call()]
+
+    def test__get_succinct_roles_failed_retrieve_config(self):
+        import_targets.request_server = pretend.call_recorder(
+            lambda *a: pretend.stub(status_code=404, text="Not found")
         )
 
         with pytest.raises(import_targets.click.ClickException) as err:
             import_targets._get_succinct_roles("http://127.0.0.1/metadata")
-        assert "Failed to get Targets succinct roles" in str(err)
+        assert "Failed to retrieve RSTUF config" in str(err)
+
+    def test__get_succinct_roles_failed_parsing(self, monkeypatch):
+        fake_response = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(lambda: {"data": {}}),
+            text="{'data': {}}",
+        )
+        import_targets.request_server = pretend.call_recorder(
+            lambda *a: fake_response
+        )
+
+        with pytest.raises(import_targets.click.ClickException) as err:
+            import_targets._get_succinct_roles("http://127.0.0.1")
+        assert "Failed to parse 'data', 'number_of_delegated_bins'" in str(err)
+        assert import_targets.request_server.calls == [
+            pretend.call(
+                "http://127.0.0.1",
+                import_targets.URL.config.value,
+                import_targets.Methods.get,
+            )
+        ]
+        assert fake_response.json.calls == [pretend.call()]
 
 
 class TestImportTargetsGroupCLI:
@@ -255,8 +292,8 @@ class TestImportTargetsGroupCLI:
         )
 
         options = [
-            "--metadata-url",
-            "http://127.0.0.1/metadata/",
+            "--api-url",
+            "http://127.0.0.1",
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
             "--csv",
@@ -273,7 +310,7 @@ class TestImportTargetsGroupCLI:
             pretend.call(test_context["settings"])
         ]
         assert import_targets._get_succinct_roles.calls == [
-            pretend.call("http://127.0.0.1/metadata/")
+            pretend.call("http://127.0.0.1")
         ]
         assert sqlalchemy.create_engine.calls == [
             pretend.call("postgresql://postgres:secret@127.0.0.1:5433")
@@ -330,8 +367,8 @@ class TestImportTargetsGroupCLI:
         )
 
         options = [
-            "--metadata-url",
-            "http://127.0.0.1/metadata/",
+            "--api-url",
+            "http://127.0.0.1",
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
             "--csv",
@@ -350,7 +387,7 @@ class TestImportTargetsGroupCLI:
             pretend.call(test_context["settings"])
         ]
         assert import_targets._get_succinct_roles.calls == [
-            pretend.call("http://127.0.0.1/metadata/")
+            pretend.call("http://127.0.0.1")
         ]
         assert sqlalchemy.create_engine.calls == [
             pretend.call("postgresql://postgres:secret@127.0.0.1:5433")
@@ -379,7 +416,7 @@ class TestImportTargetsGroupCLI:
         builtins.__import__ = fake_import
 
         test_context["settings"].SERVER = "fake-server"
-        options = ["--metadata-url", "", "--db-uri", "", "--csv", ""]
+        options = ["--api-url", "", "--db-uri", "", "--csv", ""]
         result = client.invoke(
             import_targets.import_targets, options, obj=test_context
         )
@@ -400,8 +437,8 @@ class TestImportTargetsGroupCLI:
         )
 
         options = [
-            "--metadata-url",
-            "http://127.0.0.1/metadata/",
+            "--api-url",
+            "http://127.0.0.1",
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
             "--csv",
@@ -424,8 +461,8 @@ class TestImportTargetsGroupCLI:
         )
 
         options = [
-            "--metadata-url",
-            "http://127.0.0.1/metadata/",
+            "--api-url",
+            "http://127.0.0.1",
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
             "--csv",
