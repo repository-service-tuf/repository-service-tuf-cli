@@ -150,11 +150,11 @@ class TestTUFHelperFunctions:
 class TestRootInfo:
     def test__init(self, root: Metadata[Root]):
         root_info = RootInfo(root)
-        assert root_info._root_md == root
+        assert root_info._new_root == root
         assert root_info.signing_keys == {}
-        # Check that root_info._initial_root_md_obj is a copy of root
-        assert root_info._initial_root_md_obj is not root
-        assert root_info._initial_root_md_obj == root
+        # Check that root_info._trusted_root is a copy of root
+        assert root_info._trusted_root is not root
+        assert root_info._trusted_root == root
 
     def test__get_key_name_with_custom_name(self):
         key = Key("id", "ed25519", "", {"sha256": "abc"}, {"name": "my_key"})
@@ -203,7 +203,7 @@ class TestRootInfo:
 
     def test_save_current_root_key(self, root_info: RootInfo):
         name = "custom_name"
-        tuf_key: Key = root_info._root_md.signed.keys["id1"]
+        tuf_key: Key = root_info._new_root.signed.keys["id1"]
         key_dict = tuf_key.to_dict()
         key_dict["keyid"] = tuf_key.keyid
         key = RSTUFKey(key_dict)
@@ -215,18 +215,18 @@ class TestRootInfo:
     def test_remove_key_existing(self, root_info: RootInfo):
         # Assert key with name "id1" exists before the removal
         assert len(root_info.keys) == 2
-        assert root_info._root_md.signed.keys.get("id1") is not None
-        assert "id1" in root_info._root_md.signed.roles["root"].keyids
+        assert root_info._new_root.signed.keys.get("id1") is not None
+        assert "id1" in root_info._new_root.signed.roles["root"].keyids
 
         assert root_info.remove_key("id1") is True
 
         assert len(root_info.keys) == 1
         # Assert key was actually removed from root metadata
-        assert root_info._root_md.signed.keys.get("id1") is None
-        assert "id1" not in root_info._root_md.signed.roles["root"].keyids
+        assert root_info._new_root.signed.keys.get("id1") is None
+        assert "id1" not in root_info._new_root.signed.roles["root"].keyids
 
     def test_remove_key_non_existing(self, root_info: RootInfo):
-        assert "BAD_ID" not in root_info._root_md.signed.roles["root"].keyids
+        assert "BAD_ID" not in root_info._new_root.signed.roles["root"].keyids
         assert len(root_info.keys) == 2
         assert root_info.remove_key("BAD_ID") is False
         assert len(root_info.keys) == 2
@@ -242,18 +242,18 @@ class TestRootInfo:
         )
         # Assert that key didn't existed before
         assert len(root_info.keys) == 2
-        assert "123" not in root_info._root_md.signed.roles["root"].keyids
+        assert "123" not in root_info._new_root.signed.roles["root"].keyids
 
         root_info.add_key(key)
 
         assert len(root_info.keys) == 3
-        assert "123" in root_info._root_md.signed.roles["root"].keyids
+        assert "123" in root_info._new_root.signed.roles["root"].keyids
         assert root_info._get_rstuf_key_name.calls == [pretend.call(key)]
         assert tuf.Key.from_securesystemslib_key.calls == [pretend.call(dict)]
 
     def test_change_online_key(self, root_info: RootInfo):
         # The id of the current online key.
-        key_id = root_info._root_md.signed.roles["timestamp"].keyids[0]
+        key_id = root_info._new_root.signed.roles["timestamp"].keyids[0]
         new_key_id = "id4"
         tuf.Key.from_securesystemslib_key = pretend.call_recorder(
             lambda *a: Key(new_key_id, "", "", {"sha256": "abc"})
@@ -262,15 +262,15 @@ class TestRootInfo:
         new_key = RSTUFKey(dict, name="custom_name")
         root_info.change_online_key(new_key)
         for role in ["timestamp", "snapshot", "targets"]:
-            assert new_key_id in root_info._root_md.signed.roles[role].keyids
-            assert key_id not in root_info._root_md.signed.roles[role].keyids
+            assert new_key_id in root_info._new_root.signed.roles[role].keyids
+            assert key_id not in root_info._new_root.signed.roles[role].keyids
 
         assert root_info.online_key["name"] == "custom_name"
         assert tuf.Key.from_securesystemslib_key.calls == [pretend.call(dict)]
 
     def test_has_changed(self, root_info: RootInfo):
         assert root_info.has_changed() is False
-        root_info._root_md.signed.version += 1
+        root_info._new_root.signed.version += 1
         assert root_info.has_changed() is True
 
     def test_generate_payload(self, root_info: RootInfo):
@@ -282,26 +282,26 @@ class TestRootInfo:
         signers_mock = unittest.mock.Mock()
         signers_mock.side_effect = ["signer1", "signer2"]
         tuf.SSlibSigner = signers_mock
-        root_info._root_md.sign = pretend.call_recorder(lambda *a, **kw: None)
-        root_info._initial_root_md_obj.verify_delegate = pretend.call_recorder(
+        root_info._new_root.sign = pretend.call_recorder(lambda *a, **kw: None)
+        root_info._trusted_root.verify_delegate = pretend.call_recorder(
             lambda *a: None
         )
-        root_info._root_md.verify_delegate = pretend.call_recorder(
+        root_info._new_root.verify_delegate = pretend.call_recorder(
             lambda *a: None
         )
         tuf.console.print = pretend.call_recorder(lambda *a: None)
 
         result = root_info.generate_payload()
-        assert result == {"metadata": {"root": root_info._root_md.to_dict()}}
-        assert root_info._root_md.sign.calls == [
+        assert result == {"metadata": {"root": root_info._new_root.to_dict()}}
+        assert root_info._new_root.sign.calls == [
             pretend.call("signer1", append=True),
             pretend.call("signer2", append=True),
         ]
-        assert root_info._initial_root_md_obj.verify_delegate.calls == [
-            pretend.call(Root.type, root_info._root_md)
+        assert root_info._trusted_root.verify_delegate.calls == [
+            pretend.call(Root.type, root_info._new_root)
         ]
-        assert root_info._root_md.verify_delegate.calls == [
-            pretend.call(Root.type, root_info._root_md)
+        assert root_info._new_root.verify_delegate.calls == [
+            pretend.call(Root.type, root_info._new_root)
         ]
         assert tuf.console.print.calls == [
             pretend.call("\nVerifying the new payload..."),
@@ -329,27 +329,27 @@ class TestRootInfo:
         signers_mock = unittest.mock.Mock()
         signers_mock.side_effect = ["signer0", "signer1", "signer2"]
         tuf.SSlibSigner = signers_mock
-        root_info._root_md.sign = pretend.call_recorder(lambda *a, **kw: None)
-        root_info._initial_root_md_obj.verify_delegate = pretend.call_recorder(
+        root_info._new_root.sign = pretend.call_recorder(lambda *a, **kw: None)
+        root_info._trusted_root.verify_delegate = pretend.call_recorder(
             lambda *a: None
         )
-        root_info._root_md.verify_delegate = pretend.call_recorder(
+        root_info._new_root.verify_delegate = pretend.call_recorder(
             lambda *a: None
         )
         tuf.console.print = pretend.call_recorder(lambda *a: None)
 
         result = root_info.generate_payload()
-        assert result == {"metadata": {"root": root_info._root_md.to_dict()}}
-        assert root_info._root_md.sign.calls == [
+        assert result == {"metadata": {"root": root_info._new_root.to_dict()}}
+        assert root_info._new_root.sign.calls == [
             pretend.call("signer0", append=True),
             pretend.call("signer1", append=True),
             pretend.call("signer2", append=True),
         ]
-        assert root_info._initial_root_md_obj.verify_delegate.calls == [
-            pretend.call(Root.type, root_info._root_md)
+        assert root_info._trusted_root.verify_delegate.calls == [
+            pretend.call(Root.type, root_info._new_root)
         ]
-        assert root_info._root_md.verify_delegate.calls == [
-            pretend.call(Root.type, root_info._root_md)
+        assert root_info._new_root.verify_delegate.calls == [
+            pretend.call(Root.type, root_info._new_root)
         ]
         assert tuf.console.print.calls == [
             pretend.call("\nVerifying the new payload..."),
@@ -369,14 +369,12 @@ class TestRootInfo:
         root_info.signing_keys.clear()
         # If we don't copy we would see strange behavior as we are iterating
         # over the same list we are removing from
-        keyids = copy.copy(
-            root_info._initial_root_md_obj.signed.roles["root"].keyids
-        )
+        keyids = copy.copy(root_info._trusted_root.signed.roles["root"].keyids)
         for id in keyids:
-            root_info._initial_root_md_obj.signed.revoke_key(id, "root")
+            root_info._trusted_root.signed.revoke_key(id, "root")
 
-        # root_info._initial_root_md_obj.signed.roles["root"]
-        root_info._initial_root_md_obj.verify_delegate = pretend.raiser(
+        # root_info._trusted_root.signed.roles["root"]
+        root_info._trusted_root.verify_delegate = pretend.raiser(
             UnsignedMetadataError
         )
         tuf.console.print = pretend.call_recorder(lambda *a: None)
