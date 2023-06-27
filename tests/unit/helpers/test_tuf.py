@@ -9,6 +9,7 @@ from typing import Dict, List
 
 import pretend
 import pytest
+from tuf.api.exceptions import UnsignedMetadataError
 
 from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers import tuf
@@ -282,6 +283,9 @@ class TestRootInfo:
         signers_mock.side_effect = ["signer1", "signer2"]
         tuf.SSlibSigner = signers_mock
         root_info._root_md.sign = pretend.call_recorder(lambda *a, **kw: None)
+        root_info._initial_root_md_obj.verify_delegate = pretend.call_recorder(
+            lambda *a: None
+        )
         root_info._root_md.verify_delegate = pretend.call_recorder(
             lambda *a: None
         )
@@ -292,6 +296,9 @@ class TestRootInfo:
         assert root_info._root_md.sign.calls == [
             pretend.call("signer1", append=True),
             pretend.call("signer2", append=True),
+        ]
+        assert root_info._initial_root_md_obj.verify_delegate.calls == [
+            pretend.call(Root.type, root_info._root_md)
         ]
         assert root_info._root_md.verify_delegate.calls == [
             pretend.call(Root.type, root_info._root_md)
@@ -323,6 +330,9 @@ class TestRootInfo:
         signers_mock.side_effect = ["signer0", "signer1", "signer2"]
         tuf.SSlibSigner = signers_mock
         root_info._root_md.sign = pretend.call_recorder(lambda *a, **kw: None)
+        root_info._initial_root_md_obj.verify_delegate = pretend.call_recorder(
+            lambda *a: None
+        )
         root_info._root_md.verify_delegate = pretend.call_recorder(
             lambda *a: None
         )
@@ -334,6 +344,9 @@ class TestRootInfo:
             pretend.call("signer0", append=True),
             pretend.call("signer1", append=True),
             pretend.call("signer2", append=True),
+        ]
+        assert root_info._initial_root_md_obj.verify_delegate.calls == [
+            pretend.call(Root.type, root_info._root_md)
         ]
         assert root_info._root_md.verify_delegate.calls == [
             pretend.call(Root.type, root_info._root_md)
@@ -349,6 +362,33 @@ class TestRootInfo:
                 unittest.mock.call(root_key.key),
             ]
         )
+
+    def test_generate_payload_not_enough_current_root_keys(
+        self, root_info: RootInfo
+    ):
+        root_info.signing_keys.clear()
+        # If we don't copy we would see strange behavior as we are iterating
+        # over the same list we are removing from
+        keyids = copy.copy(
+            root_info._initial_root_md_obj.signed.roles["root"].keyids
+        )
+        for id in keyids:
+            root_info._initial_root_md_obj.signed.revoke_key(id, "root")
+
+        # root_info._initial_root_md_obj.signed.roles["root"]
+        root_info._initial_root_md_obj.verify_delegate = pretend.raiser(
+            UnsignedMetadataError
+        )
+        tuf.console.print = pretend.call_recorder(lambda *a: None)
+
+        with pytest.raises(tuf.click.ClickException) as err:
+            root_info.generate_payload()
+
+        e = "Not enough loaded keys left from current root: needed 1, have 0"
+        assert e in str(err)
+        assert tuf.console.print.calls == [
+            pretend.call("\nVerifying the new payload..."),
+        ]
 
 
 class TestTUFHelper:

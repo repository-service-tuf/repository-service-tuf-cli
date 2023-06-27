@@ -21,6 +21,7 @@ from securesystemslib.interface import (  # type: ignore
     import_privatekey_from_file,
 )
 from securesystemslib.signer import Signer, SSlibSigner  # type: ignore
+from tuf.api.exceptions import UnsignedMetadataError
 from tuf.api.metadata import SPECIFICATION_VERSION, Key, Metadata, Role, Root
 from tuf.api.serialization.json import JSONSerializer
 
@@ -217,6 +218,23 @@ class RootInfo:
             self._root_md.sign(SSlibSigner(key.key), append=True)
 
         console.print("\nVerifying the new payload...")
+        try:
+            # Verify that the new root is signed by the trusted current root
+            self._initial_root_md_obj.verify_delegate(Root.type, self._root_md)
+        except UnsignedMetadataError:
+            t = self._initial_root_md_obj.signed.roles["root"].threshold
+            trusted_keys_amount = 0
+            signing_ids = [s.key["keyid"] for s in self.signing_keys.values()]
+            for keyid in self._initial_root_md_obj.signed.roles["root"].keyids:
+                if keyid in signing_ids:
+                    trusted_keys_amount += 1
+
+            raise click.ClickException(
+                "Not enough loaded keys left from current root: "
+                f"needed {t}, have {trusted_keys_amount}"
+            )
+
+        # Verify that the new root is signed by at least threshold of keys
         self._root_md.verify_delegate(Root.type, self._root_md)
         console.print("The new payload is [green]verified[/]")
 
