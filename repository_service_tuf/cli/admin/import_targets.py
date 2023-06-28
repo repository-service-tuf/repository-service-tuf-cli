@@ -122,7 +122,7 @@ def _get_succinct_roles(api_url: str) -> SuccinctRoles:
 @click.option(
     "--api-url",
     required=True,
-    help="RSTUF Metadata URL i.e.: http://127.0.0.1 .",
+    help="RSTUF API URL i.e.: http://127.0.0.1 .",
 )
 @click.option(
     "--db-uri",
