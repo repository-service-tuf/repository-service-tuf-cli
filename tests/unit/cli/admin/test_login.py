@@ -55,7 +55,6 @@ class TestLoginGroupCLI:
     def test_login(self, client, test_context):
         steps = [
             "http://test-rstuf",
-            "admin",
             "pass",
             "1",
         ]
@@ -82,7 +81,6 @@ class TestLoginGroupCLI:
     def test_login_no_auth(self, client, test_context):
         steps = [
             "http://test-rstuf",
-            "admin",
             "pass",
             "1",
         ]
@@ -106,7 +104,6 @@ class TestLoginGroupCLI:
 
         steps = [
             "http://test-rstuf",
-            "admin",
             "pass",
             "1",
         ]
@@ -137,7 +134,6 @@ class TestLoginGroupCLI:
 
         steps = [
             "http://test-rstuf",
-            "admin",
             "pass",
             "1",
         ]
@@ -175,7 +171,6 @@ class TestLoginGroupCLI:
 
         steps = [
             "http://test-rstuf",
-            "admin",
             "pass",
             "1",
         ]
@@ -211,7 +206,6 @@ class TestLoginGroupCLI:
         steps = [
             "test-rstuf",
             "http://test-rstuf",
-            "admin",
             "pass",
             "1",
         ]
@@ -232,7 +226,6 @@ class TestLoginGroupCLI:
 
     def test_login_with_server(self, client, test_context):
         steps = [
-            "admin",
             "pass",
             "1",
         ]
@@ -262,7 +255,6 @@ class TestLoginGroupCLI:
 
     def test_login_with_server_bad_address(self, client, test_context):
         steps = [
-            "admin",
             "pass",
             "1",
         ]
@@ -289,7 +281,6 @@ class TestLoginGroupCLI:
     ):
         steps = [
             "http://test-rstuf",
-            "admin",
             "pass",
             "1",
         ]
@@ -305,35 +296,6 @@ class TestLoginGroupCLI:
         test_result = client.invoke(
             login.login,
             ["-s", "test-rstuf"],
-            input="\n".join(steps),
-            obj=test_context,
-        )
-
-        assert test_result.exit_code == 0
-        assert "Login successful." in test_result.output
-        assert login.loaders.write.calls == [
-            pretend.call(
-                test_context["config"], test_context["settings"].to_dict()
-            )
-        ]
-
-    def test_login_with_server_user(self, client, test_context):
-        steps = [
-            "pass",
-            "1",
-        ]
-        login._login = pretend.call_recorder(
-            lambda *a: {"access_token": "fake-token"}
-        )
-
-        login.loaders = pretend.stub(
-            write=pretend.call_recorder(lambda *a: None)
-        )
-        test_context["settings"].AUTH = True
-
-        test_result = client.invoke(
-            login.login,
-            ["-s", "http://test-rstuf", "-u", "admin"],
             input="\n".join(steps),
             obj=test_context,
         )
@@ -362,7 +324,7 @@ class TestLoginGroupCLI:
 
         test_result = client.invoke(
             login.login,
-            ["-s", "http://test-rstuf", "-u", "admin", "-p", "pass"],
+            ["-s", "http://test-rstuf", "-p", "pass"],
             input="\n".join(steps),
             obj=test_context,
         )
@@ -390,8 +352,6 @@ class TestLoginGroupCLI:
             [
                 "-s",
                 "http://test-rstuf",
-                "-u",
-                "admin",
                 "-p",
                 "pass",
                 "-e",
