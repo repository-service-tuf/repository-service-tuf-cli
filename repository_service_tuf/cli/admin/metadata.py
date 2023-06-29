@@ -193,7 +193,7 @@ def _get_key(role: str) -> RSTUFKey:
 
 
 def _is_valid_current_key(
-    keyid: str, current_root: RootInfo, already_loaded_keyids: List[str]
+    keyid: str, root_info: RootInfo, already_loaded_keyids: List[str]
 ) -> bool:
     """Verify that key with `keyid` have been used to sign the current root"""
     if keyid in already_loaded_keyids:
@@ -203,7 +203,7 @@ def _is_valid_current_key(
         )
         return False
 
-    if not current_root.is_keyid_used(keyid):
+    if not root_info.is_keyid_used(keyid):
         console.print(
             (
                 ":cross_mark: [red]Failed[/]: This key has not been used "
@@ -216,17 +216,17 @@ def _is_valid_current_key(
     return True
 
 
-def _current_root_keys_validation(current_root: RootInfo):
+def _current_root_keys_validation(root_info: RootInfo):
     """
     Authorize user by loading current root threshold number of root keys
     used for signing the current root metadata.
     """
     console.print(markdown.Markdown(AUTHORIZATION), width=100)
-    threshold = current_root.threshold
+    threshold = root_info.threshold
     console.print(f"You will need to load {threshold} key(s).")
     loaded: List[str] = []
     key_count = 0
-    while key_count < current_root.threshold:
+    while key_count < root_info.threshold:
         console.print(
             f"You will enter information for key {key_count} of {threshold}"
         )
@@ -237,12 +237,12 @@ def _current_root_keys_validation(current_root: RootInfo):
             continue
 
         keyid = root_key.key["keyid"]
-        if not _is_valid_current_key(keyid, current_root, loaded):
+        if not _is_valid_current_key(keyid, root_info, loaded):
             continue
 
         key_count += 1
         loaded.append(keyid)
-        current_root.save_current_root_key(root_key)
+        root_info.save_current_root_key(root_key)
         console.print(
             ":white_check_mark: Key "
             f"{key_count}/{threshold} [green]Verified[/]"
@@ -251,14 +251,14 @@ def _current_root_keys_validation(current_root: RootInfo):
     console.print("\n[green]Authorization is successful [/]\n", width=100)
 
 
-def _keys_removal(current_root: RootInfo):
+def _keys_removal(root_info: RootInfo):
     """Asking the user if they want to remove any of the root keys"""
     while True:
-        if len(current_root.keys) < 1:
+        if len(root_info.keys) < 1:
             console.print("No keys are left for removal.")
             break
 
-        keys_table = _create_keys_table(current_root.keys, current_root, False)
+        keys_table = _create_keys_table(root_info.keys, root_info, False)
         console.print("Here are the current root keys:")
         console.print(keys_table)
         console.print("\n")
@@ -270,7 +270,7 @@ def _keys_removal(current_root: RootInfo):
         name = prompt.Prompt.ask(
             "[green]Name/Tag/ID prefix[/] of the key to remove"
         )
-        if not current_root.remove_key(name):
+        if not root_info.remove_key(name):
             console.print(
                 "\n", f":cross_mark: [red]Failed[/]: key {name} is not in root"
             )
@@ -279,19 +279,19 @@ def _keys_removal(current_root: RootInfo):
         console.print(f"Key with name/tag [yellow]{name}[/] removed\n")
 
 
-def _keys_additions(current_root: RootInfo):
-    root_threshold = current_root.threshold
+def _keys_additions(root_info: RootInfo):
+    root_threshold = root_info.threshold
     console.print(
         f"You need to have at least [cyan]{root_threshold}[/] signing keys."
     )
     while True:
         signing_list = [
-            key.to_dict() for key in current_root.signing_keys.values()
+            key.to_dict() for key in root_info.signing_keys.values()
         ]
-        keys_table = _create_keys_table(signing_list, current_root, False)
+        keys_table = _create_keys_table(signing_list, root_info, False)
         console.print("\nHere are the current root signing keys:")
         console.print(keys_table)
-        keys_amount = len(current_root.signing_keys)
+        keys_amount = len(root_info.signing_keys)
         if root_threshold <= keys_amount:
             agree = prompt.Confirm.ask("\nDo you want to add a new key?")
             if not agree:
@@ -305,14 +305,14 @@ def _keys_additions(current_root: RootInfo):
             console.print(f":cross_mark: [red]Failed[/]: {root_key.error}")
             continue
 
-        if root_key.key["keyid"] == current_root.online_key["keyid"]:
+        if root_key.key["keyid"] == root_info.online_key["keyid"]:
             console.print(
                 ":cross_mark: [red]Failed[/]: This is the current online key. "
                 "Cannot be added"
             )
             continue
 
-        if current_root.is_keyid_used(root_key.key["keyid"]):
+        if root_info.is_keyid_used(root_key.key["keyid"]):
             console.print(":cross_mark: [red]Failed[/]: Key is already used")
             continue
 
@@ -320,7 +320,7 @@ def _keys_additions(current_root: RootInfo):
             "[Optional] Give a [green]name/tag[/] to the key"
         )
 
-        current_root.add_key(root_key)
+        root_info.add_key(root_key)
 
 
 def _get_positive_int_input(msg: str, input_name: str, default: Any) -> int:
@@ -333,16 +333,16 @@ def _get_positive_int_input(msg: str, input_name: str, default: Any) -> int:
         console.print(f"{input_name} must be at least 1")
 
 
-def _modify_expiration(current_root: RootInfo):
+def _modify_expiration(root_info: RootInfo):
     console.print(markdown.Markdown(EXPIRY_CHANGES_MSG), width=100)
     console.print("\n")
     change: bool
     while True:
         console.print(
-            f"Current root expiration: [cyan]{current_root.expiration_str}[/]",
+            f"Current root expiration: [cyan]{root_info.expiration_str}[/]",
             highlight=False,  # disable built-in rich highlight
         )
-        if current_root.expiration < (datetime.now() + timedelta(days=1)):
+        if root_info.expiration < (datetime.now() + timedelta(days=1)):
             console.print("Root root has expired - expiration must be extend")
             change = True
 
@@ -363,11 +363,11 @@ def _modify_expiration(current_root: RootInfo):
                 f"New root expiration: [cyan]{new_exp_str}[/]. Do you agree?"
             )
             if agree:
-                current_root.expiration = new_expiry
+                root_info.expiration = new_expiry
                 return
 
 
-def _modify_root_keys(current_root: RootInfo):
+def _modify_root_keys(root_info: RootInfo):
     """Modify root keys"""
     console.print(markdown.Markdown(ROOT_KEYS_CHANGES_MSG), width=100)
     console.print("\n")
@@ -381,26 +381,26 @@ def _modify_root_keys(current_root: RootInfo):
             break
 
         msg = "\nWhat should be the [cyan]root[/] role [green]threshold?[/]"
-        current_root.threshold = _get_positive_int_input(
-            msg, "Threshold", current_root.threshold
+        root_info.threshold = _get_positive_int_input(
+            msg, "Threshold", root_info.threshold
         )
 
         console.print(markdown.Markdown(ROOT_KEYS_REMOVAL_MSG), width=100)
-        _keys_removal(current_root)
+        _keys_removal(root_info)
 
         console.print(markdown.Markdown(ROOT_KEY_ADDITIONS_MSG), width=100)
-        _keys_additions(current_root)
+        _keys_additions(root_info)
 
         console.print("\nHere is the current content of root:")
 
-        _print_root_info(current_root)
+        _print_root_info(root_info)
 
 
-def _modify_online_key(current_root: RootInfo):
+def _modify_online_key(root_info: RootInfo):
     console.print(markdown.Markdown(ONLINE_KEY_CHANGE), width=100)
     while True:
         online_key_table = _create_keys_table(
-            [current_root.online_key], current_root, is_minimal=False
+            [root_info.online_key], root_info, is_minimal=False
         )
         console.print("\nHere is the information for the current online key:")
         console.print("\n")
@@ -418,13 +418,13 @@ def _modify_online_key(current_root: RootInfo):
             console.print(f":cross_mark: [red]Failed[/]: {online_key.error}")
             continue
 
-        if online_key.key["keyid"] == current_root.online_key["keyid"]:
+        if online_key.key["keyid"] == root_info.online_key["keyid"]:
             console.print(
                 ":cross_mark: [red]Failed[/]: New online key and current match"
             )
             continue
 
-        if current_root.is_keyid_used(online_key.key["keyid"]):
+        if root_info.is_keyid_used(online_key.key["keyid"]):
             console.print(
                 ":cross_mark: [red]Failed[/]: Key matches one of the root keys"
             )
@@ -434,7 +434,7 @@ def _modify_online_key(current_root: RootInfo):
             "[Optional] Give a [green]name/tag[/] to the key"
         )
 
-        current_root.change_online_key(online_key)
+        root_info.change_online_key(online_key)
 
 
 @metadata.command()
