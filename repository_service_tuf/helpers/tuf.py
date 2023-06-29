@@ -145,14 +145,6 @@ class RootInfo:
 
         return name
 
-    @staticmethod
-    def _get_rstuf_key_name(rstuf_key: RSTUFKey) -> str:
-        name = rstuf_key.key["keyid"][:7]
-        if rstuf_key.name:
-            name = rstuf_key.name
-
-        return name
-
     def is_keyid_used(self, keyid: str) -> bool:
         """Check if keyid is used in root keys"""
         return keyid in self._new_root.signed.roles[Root.type].keyids
@@ -160,11 +152,10 @@ class RootInfo:
     def save_current_root_key(self, key: RSTUFKey):
         """Update internal information based on 'key' data."""
         tuf_key: Key = self._new_root.signed.keys[key.key["keyid"]]
-        name = self._get_key_name(tuf_key)
         if tuf_key.unrecognized_fields.get("name"):
             key.name = tuf_key.unrecognized_fields["name"]
 
-        self.signing_keys[name] = key
+        self.signing_keys[key.key["keyid"]] = key
 
     def remove_key(self, key_name: str) -> bool:
         """Try to remove a root key and return status of the operation"""
@@ -173,7 +164,6 @@ class RootInfo:
             name = self._get_key_name(key)
             if name == key_name:
                 self._new_root.signed.revoke_key(keyid, Root.type)
-                self.signing_keys.pop(key_name, None)
                 return True
 
         return False
@@ -181,12 +171,11 @@ class RootInfo:
     def add_key(self, new_key: RSTUFKey) -> None:
         """Add a new root key."""
         tuf_key = Key.from_securesystemslib_key(new_key.key)
-        name = self._get_rstuf_key_name(new_key)
         if new_key.name:
             tuf_key.unrecognized_fields["name"] = new_key.name
 
         self._new_root.signed.add_key(tuf_key, Root.type)
-        self.signing_keys[name] = new_key
+        self.signing_keys[new_key.key["keyid"]] = new_key
 
     def change_online_key(self, new_online_key: RSTUFKey) -> None:
         """Replace the current online key with a new one."""
@@ -214,21 +203,24 @@ class RootInfo:
         self._new_root.signed.version += 1
         self._new_root.signatures.clear()
 
-        for key in self.signing_keys.values():
-            self._new_root.sign(SSlibSigner(key.key), append=True)
+        new_root_keyids = self._new_root.signed.roles["root"].keyids
+        trusted_root_keyids = self._trusted_root.signed.roles["root"].keyids
+        # Sign only with keys existing in the current or new root version.
+        for keyid, key in self.signing_keys.items():
+            if keyid in new_root_keyids or keyid in trusted_root_keyids:
+                self._new_root.sign(SSlibSigner(key.key), append=True)
 
         console.print("\nVerifying the new payload...")
         try:
             # Verify that the new root is signed by the trusted current root
             self._trusted_root.verify_delegate(Root.type, self._new_root)
         except UnsignedMetadataError:
-            t = self._trusted_root.signed.roles["root"].threshold
             trusted_keys_amount = 0
-            signing_ids = [s.key["keyid"] for s in self.signing_keys.values()]
             for keyid in self._trusted_root.signed.roles["root"].keyids:
-                if keyid in signing_ids:
+                if keyid in self.signing_keys:
                     trusted_keys_amount += 1
 
+            t = self._trusted_root.signed.roles["root"].threshold
             raise click.ClickException(
                 "Not enough loaded keys left from current root: "
                 f"needed {t}, have {trusted_keys_amount}"

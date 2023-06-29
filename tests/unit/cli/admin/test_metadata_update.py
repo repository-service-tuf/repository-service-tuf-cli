@@ -404,45 +404,6 @@ class TestMetadataUpdate:
         warning = "You must add 1 more signing key(s)"
         assert warning in test_result.output
 
-    def test_metadata_update_generate_payload_fails_not_enough_trusted_keys(
-        self, client, test_context, md_update_input
-    ):
-        # We would remove all keys, but then add one key that is NOT used by
-        # the current trusted root to make sure the threshold requirement is
-        # met while adding the keys. We expect that there will be a failure
-        # when generating the payload.
-        input_step1, input_step2, _, _ = md_update_input
-        input_step3 = [
-            "y",  # Do you want to modify root keys? [y/n]
-            "",  # What should be the root role threshold? (CURRENT_KEY_THRESHOLD)  # noqa
-            "y",  # Do you want to remove a key [y/n]
-            "Martin's Key",  # Name/Tag/ID prefix of the key to remove
-            "y",  # Do you want to remove a key [y/n]
-            "Steven's Key",  # Name/Tag/ID prefix of the key to remove
-            "y",  # Do you want to add a new key? [y/n]
-            "rsa",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
-            "tests/files/key_storage/online-rsa.key",  # Enter the root`s private key path  # noqa
-            "strongPass",  # Enter the root`s private key password
-            "New Key",  # [Optional] Give a name/tag to the key
-            "n",  # Do you want to add a new key? [y/n]
-            "n",  # Do you want to modify root keys? [y/n]
-        ]
-        # Don't change the online key as otherwise it will try to add a key
-        # used in root.
-        input_step4 = [
-            "n",  # Do you want to change the online key? [y/n]
-        ]
-        test_result = client.invoke(
-            metadata.update,
-            input="\n".join(
-                input_step1 + input_step2 + input_step3 + input_step4
-            ),
-            obj=test_context,
-        )
-        e = "Not enough loaded keys left from current root: needed 1, have 0"
-        assert e in test_result.output
-        assert test_result.exit_code != 0
-
     def test_metadata_update_add_curr_online_key(
         self, client, test_context, md_update_input
     ):

@@ -171,25 +171,6 @@ class TestRootInfo:
         name = RootInfo._get_key_name(key)
         assert name == "1234567"
 
-    def test__get_rstuf_key_name_with_custom_name(self):
-        key = RSTUFKey(
-            {"keyid": "123456789a", "keyval": {"sha256": "abc"}}, name="my_key"
-        )
-        name = RootInfo._get_rstuf_key_name(key)
-        assert name == "my_key"
-
-    def test__get_rstuf_key_name_without_custom_name(self):
-        key = RSTUFKey({"keyid": "123456789a", "keyval": {"sha256": "abc"}})
-        name = RootInfo._get_rstuf_key_name(key)
-        assert name == "1234567"
-
-    def test__get_rstuf_key_name_with_empty_string_name(self):
-        key = RSTUFKey(
-            {"keyid": "123456789a", "keyval": {"sha256": "abc"}}, name=""
-        )
-        name = RootInfo._get_rstuf_key_name(key)
-        assert name == "1234567"
-
     def test_is_keyid_used_true(self, root: Metadata[Root]):
         root.signed.add_key(Key("id", "ed25519", "", {"sha256": "ab"}), "root")
         root.signed.add_key(Key("id2", "ed25519", "", {}), "timestamp")
@@ -202,15 +183,11 @@ class TestRootInfo:
         assert root_info.is_keyid_used("id") is False
 
     def test_save_current_root_key(self, root_info: RootInfo):
-        name = "custom_name"
         tuf_key: Key = root_info._new_root.signed.keys["id1"]
-        key_dict = tuf_key.to_dict()
-        key_dict["keyid"] = tuf_key.keyid
+        key_dict = {**tuf_key.to_dict(), "keyid": tuf_key.keyid}
         key = RSTUFKey(key_dict)
-        root_info._get_key_name = pretend.call_recorder(lambda *a: name)
         root_info.save_current_root_key(key)
-        assert root_info.signing_keys == {"custom_name": key}
-        assert root_info._get_key_name.calls == [pretend.call(tuf_key)]
+        assert root_info.signing_keys == {"id1": key}
 
     def test_remove_key_existing(self, root_info: RootInfo):
         # Assert key with name "id1" exists before the removal
@@ -234,9 +211,6 @@ class TestRootInfo:
     def test_add_key(self, root_info: RootInfo):
         dict = {"keyid": "123", "keyval": {"sha256": "abc"}}
         key = RSTUFKey(dict, name="custom_name")
-        root_info._get_rstuf_key_name = pretend.call_recorder(
-            lambda *a: "custom_name"
-        )
         tuf.Key.from_securesystemslib_key = pretend.call_recorder(
             lambda *a: Key("123", "", "", {"sha256": "abc"})
         )
@@ -248,7 +222,25 @@ class TestRootInfo:
 
         assert len(root_info.keys) == 3
         assert "123" in root_info._new_root.signed.roles["root"].keyids
-        assert root_info._get_rstuf_key_name.calls == [pretend.call(key)]
+        assert tuf.Key.from_securesystemslib_key.calls == [pretend.call(dict)]
+
+    def test_add_key_without_name(self, root_info: RootInfo):
+        dict = {"keyid": "123", "keyval": {"sha256": "abc"}}
+        key = RSTUFKey(dict)
+        tuf.Key.from_securesystemslib_key = pretend.call_recorder(
+            lambda *a: Key("123", "", "", {"sha256": "abc"})
+        )
+        # Assert that key didn't existed before
+        assert len(root_info.keys) == 2
+        assert "123" not in root_info._new_root.signed.roles["root"].keyids
+
+        root_info.add_key(key)
+
+        assert len(root_info.keys) == 3
+        assert "123" in root_info._new_root.signed.roles["root"].keyids
+        new_key = root_info._new_root.signed.keys["123"]
+        # Assert no "name" was added
+        assert new_key.unrecognized_fields.get("name") is None
         assert tuf.Key.from_securesystemslib_key.calls == [pretend.call(dict)]
 
     def test_change_online_key(self, root_info: RootInfo):
@@ -275,8 +267,7 @@ class TestRootInfo:
 
     def test_generate_payload(self, root_info: RootInfo):
         for key in root_info.keys:
-            name = key["keyid"][:7]
-            root_info.signing_keys[name] = RSTUFKey(key, name=name)
+            root_info.signing_keys[key["keyid"]] = RSTUFKey(key)
 
         signing_keys = list(root_info.signing_keys.values())
         signers_mock = unittest.mock.Mock()
@@ -316,16 +307,16 @@ class TestRootInfo:
 
     def test_generate_payload_with_new_keys_added(self, root_info: RootInfo):
         for key in root_info.keys:
-            name = key["keyid"][:7]
-            root_info.signing_keys[name] = RSTUFKey(key, name=name)
+            root_info.signing_keys[key["keyid"]] = RSTUFKey(key)
 
         signing_keys = list(root_info.signing_keys.values())
         # Add new key which is not part of current root meaning it's a key
         # added by the user.
-        root_key = RSTUFKey(
-            {"keyid": "id3", "keyval": {"sha256": "boo"}}, key_path="key3"
-        )
-        root_info.signing_keys["id3"] = root_key
+        new_key = Key("id3", "ed25519", "ed25519", {"sha256": "boo"})
+        root_info._new_root.signed.add_key(new_key, "root")
+        new_rstuf_key = RSTUFKey(new_key.to_securesystemslib_key())
+        root_info.signing_keys["id3"] = new_rstuf_key
+
         signers_mock = unittest.mock.Mock()
         signers_mock.side_effect = ["signer0", "signer1", "signer2"]
         tuf.SSlibSigner = signers_mock
@@ -359,7 +350,7 @@ class TestRootInfo:
             [
                 unittest.mock.call(signing_keys[0].key),
                 unittest.mock.call(signing_keys[1].key),
-                unittest.mock.call(root_key.key),
+                unittest.mock.call(new_rstuf_key.key),
             ]
         )
 

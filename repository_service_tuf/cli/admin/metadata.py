@@ -130,18 +130,17 @@ def _create_keys_table(
     keys_table.add_column("Public Value", justify="center")
 
     for key in keys:
-        id = key["keyid"]
-        if id == root_info.online_key["keyid"]:
+        if key["keyid"] == root_info.online_key["keyid"]:
             key_location = "[green]Online[/]"
         else:
             key_location = "[bright_blue]Offline[/]"
 
         is_signing_key = "False"
-        if any(id == s.key["keyid"] for s in root_info.signing_keys.values()):
+        if key["keyid"] in root_info.signing_keys.keys():
             is_signing_key = "[green]True[/]"
 
         keys_table.add_row(
-            f"[yellow]{id}",
+            f"[yellow]{key['keyid']}",
             f'[yellow]{key["name"]}',
             key["keytype"],
             key_location,
