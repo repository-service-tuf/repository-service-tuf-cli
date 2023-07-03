@@ -208,6 +208,20 @@ class TestRootInfo:
         assert root_info.remove_key("BAD_ID") is False
         assert len(root_info.keys) == 2
 
+    def test_new_signing_keys_required_threshold_fulfilled(
+        self, root_info: RootInfo
+    ):
+        root_info._new_root.signed.roles["root"].threshold = 1
+        root_info.signing_keys = {"a": "b", "c": "d"}
+        assert root_info.new_signing_keys_required() == 0
+
+    def test_new_signing_keys_required_threshold_not_fulfilled(
+        self, root_info: RootInfo
+    ):
+        root_info._new_root.signed.roles["root"].threshold = 10
+        root_info.signing_keys = {"a": "b", "c": "d"}
+        assert root_info.new_signing_keys_required() == 8
+
     def test_add_key(self, root_info: RootInfo):
         dict = {"keyid": "123", "keyval": {"sha256": "abc"}}
         key = RSTUFKey(dict, name="custom_name")

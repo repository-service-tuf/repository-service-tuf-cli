@@ -401,7 +401,7 @@ class TestMetadataUpdate:
         finish_msg = "Ceremony done. 🔐 🎉. Root metadata update completed."
         assert finish_msg in test_result.output
         assert test_result.exit_code == 0
-        warning = "You must add 1 more signing key(s)"
+        warning = "You must add 1 more key(s)"
         assert warning in test_result.output
 
     def test_metadata_update_add_curr_online_key(

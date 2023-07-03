@@ -113,7 +113,7 @@ def metadata(context):
 
 
 def _create_keys_table(
-    keys: List[Dict[str, Any]], root_info: RootInfo, is_minimal: bool
+    keys: List[Dict[str, Any]], offline_keys: bool, is_minimal: bool
 ) -> table.Table:
     """Gets a new keys table."""
     keys_table: table.Table
@@ -126,25 +126,20 @@ def _create_keys_table(
     keys_table.add_column("Name/Tag", justify="center")
     keys_table.add_column("Key Type", justify="center")
     keys_table.add_column("Storage", justify="center")
-    keys_table.add_column("Signing Key", justify="center")
     keys_table.add_column("Public Value", justify="center")
 
+    keys_location: str
+    if offline_keys:
+        keys_location = "[bright_blue]Offline[/]"
+    else:
+        keys_location = "[green]Online[/]"
+
     for key in keys:
-        if key["keyid"] == root_info.online_key["keyid"]:
-            key_location = "[green]Online[/]"
-        else:
-            key_location = "[bright_blue]Offline[/]"
-
-        is_signing_key = "False"
-        if key["keyid"] in root_info.signing_keys.keys():
-            is_signing_key = "[green]True[/]"
-
         keys_table.add_row(
             f"[yellow]{key['keyid']}",
             f'[yellow]{key["name"]}',
             key["keytype"],
-            key_location,
-            is_signing_key,
+            keys_location,
             f'[yellow]{key["keyval"]["public"]}',
         )
 
@@ -157,7 +152,7 @@ def _print_root_info(root_info: RootInfo):
     root_table.add_column("KEYS", justify="center", vertical="middle")
     number_of_keys = len(root_info.keys)
 
-    root_keys_table = _create_keys_table(root_info.keys, root_info, True)
+    root_keys_table = _create_keys_table(root_info.keys, True, True)
 
     root_table.add_row(
         (
@@ -257,7 +252,7 @@ def _keys_removal(root_info: RootInfo):
             console.print("No keys are left for removal.")
             break
 
-        keys_table = _create_keys_table(root_info.keys, root_info, False)
+        keys_table = _create_keys_table(root_info.keys, True, False)
         console.print("Here are the current root keys:")
         console.print(keys_table)
         console.print("\n")
@@ -279,25 +274,23 @@ def _keys_removal(root_info: RootInfo):
 
 
 def _keys_additions(root_info: RootInfo):
-    root_threshold = root_info.threshold
-    console.print(
-        f"You need to have at least [cyan]{root_threshold}[/] signing keys."
-    )
     while True:
-        signing_list = [
-            key.to_dict() for key in root_info.signing_keys.values()
+        # Get all signing keys that are not deleted by the user.
+        keys: List[Dict[str, Any]] = [
+            s.to_dict()
+            for s in root_info.signing_keys.values()
+            if not s.deleted
         ]
-        keys_table = _create_keys_table(signing_list, root_info, False)
-        console.print("\nHere are the current root signing keys:")
+        keys_table = _create_keys_table(keys, True, False)
+        console.print("\nHere are the keys that will be used for signing:")
         console.print(keys_table)
-        keys_amount = len(root_info.signing_keys)
-        if root_threshold <= keys_amount:
+        signing_keys_needed = root_info.new_signing_keys_required()
+        if signing_keys_needed < 1:
             agree = prompt.Confirm.ask("\nDo you want to add a new key?")
             if not agree:
                 return
         else:
-            remaining = root_threshold - keys_amount
-            console.print(f"You must add {remaining} more signing key(s)")
+            console.print(f"You must add {signing_keys_needed} more key(s)")
 
         root_key: RSTUFKey = _get_key(Root.type)
         if root_key.error:
@@ -399,7 +392,7 @@ def _modify_online_key(root_info: RootInfo):
     console.print(markdown.Markdown(ONLINE_KEY_CHANGE), width=100)
     while True:
         online_key_table = _create_keys_table(
-            [root_info.online_key], root_info, is_minimal=False
+            [root_info.online_key], False, False
         )
         console.print("\nHere is the information for the current online key:")
         console.print("\n")

@@ -54,6 +54,7 @@ class RSTUFKey:
     key: dict = field(default_factory=dict)
     key_path: Optional[str] = None
     name: Optional[str] = None
+    deleted: Optional[bool] = False
     error: Optional[str] = None
 
     def __eq__(self, other: Any) -> bool:
@@ -67,6 +68,7 @@ class RSTUFKey:
             **self.key,
             "key_path": self.key_path,
             "name": self.name,
+            "deleted": self.deleted,
         }
 
 
@@ -115,6 +117,9 @@ class RootInfo:
     def keys(self) -> List[Dict[str, Any]]:
         root_keys: List[Dict[str, Any]] = []
         for keyid in self._new_root.signed.roles["root"].keyids:
+            if keyid in self.signing_keys and self.signing_keys[keyid].deleted:
+                continue
+
             key = self._new_root.signed.keys[keyid]
             key_dict = key.to_dict()
             key_dict["keyid"] = keyid
@@ -164,9 +169,22 @@ class RootInfo:
             name = self._get_key_name(key)
             if name == key_name:
                 self._new_root.signed.revoke_key(keyid, Root.type)
+                if self.signing_keys.get(keyid):
+                    self.signing_keys[keyid].deleted = True
+
                 return True
 
         return False
+
+    def new_signing_keys_required(self):
+        """
+        Get the number of additional signing keys needed when taking into
+        account the keys from the trusted root.
+        """
+        if self.threshold <= len(self.signing_keys):
+            return 0
+
+        return self.threshold - len(self.signing_keys)
 
     def add_key(self, new_key: RSTUFKey) -> None:
         """Add a new root key."""
@@ -204,10 +222,9 @@ class RootInfo:
         self._new_root.signatures.clear()
 
         new_root_keyids = self._new_root.signed.roles["root"].keyids
-        trusted_root_keyids = self._trusted_root.signed.roles["root"].keyids
-        # Sign only with keys existing in the current or new root version.
+        # Sign only with keys existing in the new root version.
         for keyid, key in self.signing_keys.items():
-            if keyid in new_root_keyids or keyid in trusted_root_keyids:
+            if keyid in new_root_keyids:
                 self._new_root.sign(SSlibSigner(key.key), append=True)
 
         console.print("\nVerifying the new payload...")
