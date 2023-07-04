@@ -275,12 +275,13 @@ def _keys_removal(root_info: RootInfo):
 
 def _keys_additions(root_info: RootInfo):
     while True:
-        # Get all signing keys that are not deleted by the user.
-        keys: List[Dict[str, Any]] = [
-            s.to_dict()
-            for s in root_info.signing_keys.values()
-            if not s.deleted
-        ]
+        # Get all signing keys that are still inside the new root.
+        keys: List[Dict[str, Any]] = []
+        all_keys = root_info.keys
+        for signing_keyid, signing_key in root_info.signing_keys.items():
+            if any(signing_keyid == key["keyid"] for key in all_keys):
+                keys.append(signing_key.to_dict())
+
         keys_table = _create_keys_table(keys, True, False)
         console.print("\nHere are the keys that will be used for signing:")
         console.print(keys_table)

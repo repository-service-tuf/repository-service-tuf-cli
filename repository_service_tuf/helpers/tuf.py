@@ -54,7 +54,6 @@ class RSTUFKey:
     key: dict = field(default_factory=dict)
     key_path: Optional[str] = None
     name: Optional[str] = None
-    deleted: Optional[bool] = False
     error: Optional[str] = None
 
     def __eq__(self, other: Any) -> bool:
@@ -68,7 +67,6 @@ class RSTUFKey:
             **self.key,
             "key_path": self.key_path,
             "name": self.name,
-            "deleted": self.deleted,
         }
 
 
@@ -117,9 +115,6 @@ class RootInfo:
     def keys(self) -> List[Dict[str, Any]]:
         root_keys: List[Dict[str, Any]] = []
         for keyid in self._new_root.signed.roles["root"].keyids:
-            if keyid in self.signing_keys and self.signing_keys[keyid].deleted:
-                continue
-
             key = self._new_root.signed.keys[keyid]
             key_dict = key.to_dict()
             key_dict["keyid"] = keyid
@@ -169,9 +164,6 @@ class RootInfo:
             name = self._get_key_name(key)
             if name == key_name:
                 self._new_root.signed.revoke_key(keyid, Root.type)
-                if self.signing_keys.get(keyid):
-                    self.signing_keys[keyid].deleted = True
-
                 return True
 
         return False
