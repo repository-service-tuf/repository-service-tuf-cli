@@ -145,16 +145,10 @@ class TestImportTargetsFunctions:
             ),
         ]
         assert fake_db_client.execute.calls == [
-            pretend.call(
-                fake_rstuf_files.insert(), [{"k1": "v1", "k2": "v2"}]
-            ),
-            pretend.call(
-                fake_rstuf_files.insert(), [{"k1": "v1", "k2": "v2"}]
-            ),
+            pretend.call(None, [{"k1": "v1", "k2": "v2"}]),
+            pretend.call(None, [{"k1": "v1", "k2": "v2"}]),
         ]
         assert fake_rstuf_files.insert.calls == [
-            pretend.call(),
-            pretend.call(),
             pretend.call(),
             pretend.call(),
         ]
