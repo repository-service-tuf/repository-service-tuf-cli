@@ -295,7 +295,7 @@ def _keys_additions(root_info: RootInfo):
 
         root_key: RSTUFKey = _get_key(Root.type)
         if root_key.error:
-            console.print(f":cross_mark: [red]Failed[/]: {root_key.error}")
+            console.print(root_key.error)
             continue
 
         if root_key.key["keyid"] == root_info.online_key["keyid"]:
@@ -408,7 +408,7 @@ def _modify_online_key(root_info: RootInfo):
 
         online_key: RSTUFKey = _get_key("online")
         if online_key.error:
-            console.print(f":cross_mark: [red]Failed[/]: {online_key.error}")
+            console.print(online_key.error)
             continue
 
         if online_key.key["keyid"] == root_info.online_key["keyid"]:
