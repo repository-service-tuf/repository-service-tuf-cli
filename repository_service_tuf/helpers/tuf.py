@@ -173,10 +173,16 @@ class RootInfo:
         Get the number of additional signing keys needed when taking into
         account the keys from the trusted root.
         """
-        if self.threshold <= len(self.signing_keys):
+        # Count only the signing keys still left in new_root
+        signing_keys_amount = 0
+        for keyid in self.signing_keys:
+            if keyid in self._new_root.signed.roles["root"].keyids:
+                signing_keys_amount += 1
+
+        if self.threshold <= signing_keys_amount:
             return 0
 
-        return self.threshold - len(self.signing_keys)
+        return self.threshold - signing_keys_amount
 
     def add_key(self, new_key: RSTUFKey) -> None:
         """Add a new root key."""
@@ -214,9 +220,13 @@ class RootInfo:
         self._new_root.signatures.clear()
 
         new_root_keyids = self._new_root.signed.roles["root"].keyids
-        # Sign only with keys existing in the new root version.
+        trusted_root_keyids = self._trusted_root.signed.roles["root"].keyids
+        # Sign only with keys existing in the new root version or part from
+        # previous trusted root. Threshold (threshold comes from trusted root)
+        # number of keys from previous threshold must sign new root to achieve
+        # chain of trust between root versions.
         for keyid, key in self.signing_keys.items():
-            if keyid in new_root_keyids:
+            if keyid in new_root_keyids or keyid in trusted_root_keyids:
                 self._new_root.sign(SSlibSigner(key.key), append=True)
 
         console.print("\nVerifying the new payload...")

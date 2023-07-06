@@ -212,14 +212,18 @@ class TestRootInfo:
         self, root_info: RootInfo
     ):
         root_info._new_root.signed.roles["root"].threshold = 1
-        root_info.signing_keys = {"a": "b", "c": "d"}
+        for keyid in root_info._new_root.signed.roles["root"].keyids:
+            root_info.signing_keys[keyid] = "b"
+
         assert root_info.new_signing_keys_required() == 0
 
     def test_new_signing_keys_required_threshold_not_fulfilled(
         self, root_info: RootInfo
     ):
         root_info._new_root.signed.roles["root"].threshold = 10
-        root_info.signing_keys = {"a": "b", "c": "d"}
+        for keyid in root_info._new_root.signed.roles["root"].keyids:
+            root_info.signing_keys[keyid] = "b"
+
         assert root_info.new_signing_keys_required() == 8
 
     def test_add_key(self, root_info: RootInfo):
