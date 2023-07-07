@@ -34,7 +34,9 @@ except FileNotFoundError:
     pass
 
 
-@click.group(context_settings={"help_option_names": ["-h", "--help"]})
+@click.group(  # type: ignore
+    context_settings={"help_option_names": ["-h", "--help"]}
+)
 @click.option(
     "-c",
     "--config",

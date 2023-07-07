@@ -23,7 +23,7 @@ def token(context):
         raise click.Abort()
 
 
-@token.command()
+@token.command()  # type: ignore
 @click.option(
     "-e",
     "--expires",
@@ -77,7 +77,7 @@ def generate(context, scope, expires):
     console.print_json(response.text)
 
 
-@token.command()
+@token.command()  # type: ignore
 @click.argument("token")
 @click.pass_context
 def inspect(context, token):

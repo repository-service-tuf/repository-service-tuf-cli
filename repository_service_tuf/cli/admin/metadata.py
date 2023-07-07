@@ -430,7 +430,7 @@ def _modify_online_key(root_info: RootInfo):
         root_info.change_online_key(online_key)
 
 
-@metadata.command()
+@metadata.command()  # type: ignore
 @click.option(
     "--current-root-uri",
     help="URL or local path to the current root.json file.",

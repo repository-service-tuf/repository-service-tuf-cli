@@ -118,7 +118,7 @@ def _get_succinct_roles(api_url: str) -> SuccinctRoles:
     return succinct_roles
 
 
-@admin.command()
+@admin.command()  # type: ignore
 @click.option(
     "--api-url",
     required=True,

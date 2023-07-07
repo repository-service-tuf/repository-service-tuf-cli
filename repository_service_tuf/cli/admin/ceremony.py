@@ -583,7 +583,7 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     return json_payload
 
 
-@admin.command()
+@admin.command()  # type: ignore
 @click.option(
     "-b",
     "--bootstrap",
