@@ -2,24 +2,400 @@
 #
 # SPDX-License-Identifier: MIT
 
-# from unittest.mock import Mock
-
+import copy
 import unittest.mock
 from datetime import datetime, timedelta
 from typing import Dict, List
 
 import pretend
 import pytest
+from tuf.api.exceptions import UnsignedMetadataError
 
+from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers import tuf
 from repository_service_tuf.helpers.tuf import (
     Key,
     Metadata,
     Roles,
     Root,
+    RootInfo,
     RSTUFKey,
     TUFManagement,
+    load_key,
 )
+
+
+class TestRSTUFKey:
+    def test__eq__(self):
+        key = RSTUFKey({"keyid": "123456789a", "keyval": {"sha256": "abc"}})
+        copy_key = copy.deepcopy(key)
+        assert key == copy_key
+        # Change copy_key keyid and verify they are not equal
+        copy_key.key["keyid"] = "foo"
+        assert key != copy_key
+        assert key != ""
+
+
+class TestTUFHelperFunctions:
+    def test_load_key(self, monkeypatch):
+        monkeypatch.setattr(
+            tuf,
+            "import_privatekey_from_file",
+            pretend.call_recorder(lambda *a: {"keyid": "ema"}),
+        )
+
+        result = load_key(
+            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd", None
+        )
+        assert result == RSTUFKey({"keyid": "ema"}, "/p/key", None)
+        assert tuf.import_privatekey_from_file.calls == [
+            pretend.call("/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd")
+        ]
+
+    def test_load_key_CryptoError(self, monkeypatch):
+        monkeypatch.setattr(
+            tuf,
+            "import_privatekey_from_file",
+            pretend.raiser(tuf.CryptoError("wrong password")),
+        )
+
+        result = load_key(
+            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd", None
+        )
+        assert result == tuf.RSTUFKey(
+            {},
+            None,
+            error=(
+                ":cross_mark: [red]Failed[/]: wrong password Check the "
+                "password, type, etc"
+            ),
+        )
+
+    def test_load_key_OSError(self, monkeypatch):
+        monkeypatch.setattr(
+            tuf,
+            "import_privatekey_from_file",
+            pretend.raiser(OSError("permission denied")),
+        )
+        result = load_key(
+            "/p/key", KeyType.KEY_TYPE_ED25519.value, "pwd", None
+        )
+        assert result == RSTUFKey(
+            {}, None, error=":cross_mark: [red]Failed[/]: permission denied"
+        )
+
+    def test_load_payload(self, monkeypatch):
+        fake_data = [
+            pretend.stub(read=pretend.call_recorder(lambda: b"{'k': 'v'}"))
+        ]
+        fake_file_obj = pretend.stub(
+            __enter__=pretend.call_recorder(lambda: fake_data),
+            __exit__=pretend.call_recorder(lambda *a: None),
+            close=pretend.call_recorder(lambda: None),
+            read=pretend.call_recorder(lambda: fake_data),
+        )
+        monkeypatch.setitem(tuf.__builtins__, "open", lambda *a: fake_file_obj)
+        tuf.json.load = pretend.call_recorder(lambda *a: {"k": "v"})
+
+        result = tuf.load_payload("new_file")
+        assert result == {"k": "v"}
+        assert tuf.json.load.calls == [pretend.call(fake_data)]
+
+    def test_load_payload_OSError(self, monkeypatch):
+        monkeypatch.setitem(
+            tuf.__builtins__,
+            "open",
+            pretend.raiser(FileNotFoundError("payload.json not found")),
+        )
+        with pytest.raises(tuf.click.ClickException) as err:
+            tuf.load_payload("payload.json")
+
+        assert "Error to load payload.json" in str(err)
+        assert "payload.json not found" in str(err)
+
+    def test_save_payload(self, monkeypatch):
+        fake_data = pretend.stub(
+            write=pretend.call_recorder(lambda *a: "{'k': 'v'}")
+        )
+        fake_file_obj = pretend.stub(
+            __enter__=pretend.call_recorder(lambda: fake_data),
+            __exit__=pretend.call_recorder(lambda *a: None),
+            close=pretend.call_recorder(lambda: None),
+            write=pretend.call_recorder(lambda: fake_data),
+        )
+        monkeypatch.setitem(tuf.__builtins__, "open", lambda *a: fake_file_obj)
+        monkeypatch.setattr(
+            tuf.json,
+            "dumps",
+            pretend.call_recorder(lambda *a, **kw: "{'k': 'v'}"),
+        )
+
+        result = tuf.save_payload("new_file", {"k": "v"})
+        assert result is None
+        assert tuf.json.dumps.calls == [pretend.call({"k": "v"}, indent=2)]
+
+    def test_save_payload_OSError(self, monkeypatch):
+        monkeypatch.setitem(
+            tuf.__builtins__,
+            "open",
+            pretend.raiser(PermissionError("permission denied")),
+        )
+        with pytest.raises(tuf.click.ClickException) as err:
+            tuf.save_payload("payload.json", {"k": "v"})
+
+        assert "Failed to save payload.json" in str(err)
+        assert "permission denied" in str(err)
+
+
+class TestRootInfo:
+    def test__init(self, root: Metadata[Root]):
+        root_info = RootInfo(root)
+        assert root_info._new_root == root
+        assert root_info.signing_keys == {}
+        # Check that root_info._trusted_root is a copy of root
+        assert root_info._trusted_root is not root
+        assert root_info._trusted_root == root
+
+    def test__get_key_name_with_custom_name(self):
+        key = Key("id", "ed25519", "", {"sha256": "abc"}, {"name": "my_key"})
+        name = RootInfo._get_key_name(key)
+        assert name == "my_key"
+
+    def test__get_key_name_without_custom_name(self):
+        key = Key("123456789a", "ed25519", "", {"sha256": "abc"})
+        name = RootInfo._get_key_name(key)
+        assert name == "1234567"
+
+    def test__get_key_name_with_empty_string_name(self):
+        key = Key("123456789a", "ed25519", "", {"sha256": "abc"}, {"name": ""})
+        name = RootInfo._get_key_name(key)
+        assert name == "1234567"
+
+    def test_is_keyid_used_true(self, root: Metadata[Root]):
+        root.signed.add_key(Key("id", "ed25519", "", {"sha256": "ab"}), "root")
+        root.signed.add_key(Key("id2", "ed25519", "", {}), "timestamp")
+        root_info = RootInfo(root)
+        assert root_info.is_keyid_used("id") is True
+
+    def test_is_keyid_used_false(self, root: Metadata[Root]):
+        root.signed.add_key(Key("id2", "ed25519", "", {}), "timestamp")
+        root_info = RootInfo(root)
+        assert root_info.is_keyid_used("id") is False
+
+    def test_save_current_root_key(self, root_info: RootInfo):
+        tuf_key: Key = root_info._new_root.signed.keys["id1"]
+        key_dict = {**tuf_key.to_dict(), "keyid": tuf_key.keyid}
+        key = RSTUFKey(key_dict)
+        root_info.save_current_root_key(key)
+        assert root_info.signing_keys == {"id1": key}
+
+    def test_remove_key_existing(self, root_info: RootInfo):
+        # Assert key with name "id1" exists before the removal
+        assert len(root_info.keys) == 2
+        assert root_info._new_root.signed.keys.get("id1") is not None
+        assert "id1" in root_info._new_root.signed.roles["root"].keyids
+
+        assert root_info.remove_key("id1") is True
+
+        assert len(root_info.keys) == 1
+        # Assert key was actually removed from root metadata
+        assert root_info._new_root.signed.keys.get("id1") is None
+        assert "id1" not in root_info._new_root.signed.roles["root"].keyids
+
+    def test_remove_key_non_existing(self, root_info: RootInfo):
+        assert "BAD_ID" not in root_info._new_root.signed.roles["root"].keyids
+        assert len(root_info.keys) == 2
+        assert root_info.remove_key("BAD_ID") is False
+        assert len(root_info.keys) == 2
+
+    def test_new_signing_keys_required_threshold_fulfilled(
+        self, root_info: RootInfo
+    ):
+        root_info._new_root.signed.roles["root"].threshold = 1
+        for keyid in root_info._new_root.signed.roles["root"].keyids:
+            root_info.signing_keys[keyid] = "b"
+
+        assert root_info.new_signing_keys_required() == 0
+
+    def test_new_signing_keys_required_threshold_not_fulfilled(
+        self, root_info: RootInfo
+    ):
+        root_info._new_root.signed.roles["root"].threshold = 10
+        for keyid in root_info._new_root.signed.roles["root"].keyids:
+            root_info.signing_keys[keyid] = "b"
+
+        assert root_info.new_signing_keys_required() == 8
+
+    def test_add_key(self, root_info: RootInfo):
+        dict = {"keyid": "123", "keyval": {"sha256": "abc"}}
+        key = RSTUFKey(dict, name="custom_name")
+        tuf.Key.from_securesystemslib_key = pretend.call_recorder(
+            lambda *a: Key("123", "", "", {"sha256": "abc"})
+        )
+        # Assert that key didn't existed before
+        assert len(root_info.keys) == 2
+        assert "123" not in root_info._new_root.signed.roles["root"].keyids
+
+        root_info.add_key(key)
+
+        assert len(root_info.keys) == 3
+        assert "123" in root_info._new_root.signed.roles["root"].keyids
+        assert tuf.Key.from_securesystemslib_key.calls == [pretend.call(dict)]
+
+    def test_add_key_without_name(self, root_info: RootInfo):
+        dict = {"keyid": "123", "keyval": {"sha256": "abc"}}
+        key = RSTUFKey(dict)
+        tuf.Key.from_securesystemslib_key = pretend.call_recorder(
+            lambda *a: Key("123", "", "", {"sha256": "abc"})
+        )
+        # Assert that key didn't existed before
+        assert len(root_info.keys) == 2
+        assert "123" not in root_info._new_root.signed.roles["root"].keyids
+
+        root_info.add_key(key)
+
+        assert len(root_info.keys) == 3
+        assert "123" in root_info._new_root.signed.roles["root"].keyids
+        new_key = root_info._new_root.signed.keys["123"]
+        # Assert no "name" was added
+        assert new_key.unrecognized_fields.get("name") is None
+        assert tuf.Key.from_securesystemslib_key.calls == [pretend.call(dict)]
+
+    def test_change_online_key(self, root_info: RootInfo):
+        # The id of the current online key.
+        key_id = root_info._new_root.signed.roles["timestamp"].keyids[0]
+        new_key_id = "id4"
+        tuf.Key.from_securesystemslib_key = pretend.call_recorder(
+            lambda *a: Key(new_key_id, "", "", {"sha256": "abc"})
+        )
+        dict = {"keyid": new_key_id, "keyval": {"sha256": "abc"}}
+        new_key = RSTUFKey(dict, name="custom_name")
+        root_info.change_online_key(new_key)
+        for role in ["timestamp", "snapshot", "targets"]:
+            assert new_key_id in root_info._new_root.signed.roles[role].keyids
+            assert key_id not in root_info._new_root.signed.roles[role].keyids
+
+        assert root_info.online_key["name"] == "custom_name"
+        assert tuf.Key.from_securesystemslib_key.calls == [pretend.call(dict)]
+
+    def test_has_changed(self, root_info: RootInfo):
+        assert root_info.has_changed() is False
+        root_info._new_root.signed.version += 1
+        assert root_info.has_changed() is True
+
+    def test_generate_payload(self, root_info: RootInfo):
+        for key in root_info.keys:
+            root_info.signing_keys[key["keyid"]] = RSTUFKey(key)
+
+        signing_keys = list(root_info.signing_keys.values())
+        signers_mock = unittest.mock.Mock()
+        signers_mock.side_effect = ["signer1", "signer2"]
+        tuf.SSlibSigner = signers_mock
+        root_info._new_root.sign = pretend.call_recorder(lambda *a, **kw: None)
+        root_info._trusted_root.verify_delegate = pretend.call_recorder(
+            lambda *a: None
+        )
+        root_info._new_root.verify_delegate = pretend.call_recorder(
+            lambda *a: None
+        )
+        tuf.console.print = pretend.call_recorder(lambda *a: None)
+
+        result = root_info.generate_payload()
+        assert result == {"metadata": {"root": root_info._new_root.to_dict()}}
+        assert root_info._new_root.sign.calls == [
+            pretend.call("signer1", append=True),
+            pretend.call("signer2", append=True),
+        ]
+        assert root_info._trusted_root.verify_delegate.calls == [
+            pretend.call(Root.type, root_info._new_root)
+        ]
+        assert root_info._new_root.verify_delegate.calls == [
+            pretend.call(Root.type, root_info._new_root)
+        ]
+        assert tuf.console.print.calls == [
+            pretend.call("\nVerifying the new payload..."),
+            pretend.call("The new payload is [green]verified[/]"),
+        ]
+        signers_mock.assert_has_calls(
+            [
+                unittest.mock.call(signing_keys[0].key),
+                unittest.mock.call(signing_keys[1].key),
+            ]
+        )
+
+    def test_generate_payload_with_new_keys_added(self, root_info: RootInfo):
+        for key in root_info.keys:
+            root_info.signing_keys[key["keyid"]] = RSTUFKey(key)
+
+        signing_keys = list(root_info.signing_keys.values())
+        # Add new key which is not part of current root meaning it's a key
+        # added by the user.
+        new_key = Key("id3", "ed25519", "ed25519", {"sha256": "boo"})
+        root_info._new_root.signed.add_key(new_key, "root")
+        new_rstuf_key = RSTUFKey(new_key.to_securesystemslib_key())
+        root_info.signing_keys["id3"] = new_rstuf_key
+
+        signers_mock = unittest.mock.Mock()
+        signers_mock.side_effect = ["signer0", "signer1", "signer2"]
+        tuf.SSlibSigner = signers_mock
+        root_info._new_root.sign = pretend.call_recorder(lambda *a, **kw: None)
+        root_info._trusted_root.verify_delegate = pretend.call_recorder(
+            lambda *a: None
+        )
+        root_info._new_root.verify_delegate = pretend.call_recorder(
+            lambda *a: None
+        )
+        tuf.console.print = pretend.call_recorder(lambda *a: None)
+
+        result = root_info.generate_payload()
+        assert result == {"metadata": {"root": root_info._new_root.to_dict()}}
+        assert root_info._new_root.sign.calls == [
+            pretend.call("signer0", append=True),
+            pretend.call("signer1", append=True),
+            pretend.call("signer2", append=True),
+        ]
+        assert root_info._trusted_root.verify_delegate.calls == [
+            pretend.call(Root.type, root_info._new_root)
+        ]
+        assert root_info._new_root.verify_delegate.calls == [
+            pretend.call(Root.type, root_info._new_root)
+        ]
+        assert tuf.console.print.calls == [
+            pretend.call("\nVerifying the new payload..."),
+            pretend.call("The new payload is [green]verified[/]"),
+        ]
+        signers_mock.assert_has_calls(
+            [
+                unittest.mock.call(signing_keys[0].key),
+                unittest.mock.call(signing_keys[1].key),
+                unittest.mock.call(new_rstuf_key.key),
+            ]
+        )
+
+    def test_generate_payload_not_enough_current_root_keys(
+        self, root_info: RootInfo
+    ):
+        root_info.signing_keys.clear()
+        # If we don't copy we would see strange behavior as we are iterating
+        # over the same list we are removing from
+        keyids = copy.copy(root_info._trusted_root.signed.roles["root"].keyids)
+        for id in keyids:
+            root_info._trusted_root.signed.revoke_key(id, "root")
+
+        # root_info._trusted_root.signed.roles["root"]
+        root_info._trusted_root.verify_delegate = pretend.raiser(
+            UnsignedMetadataError
+        )
+        tuf.console.print = pretend.call_recorder(lambda *a: None)
+
+        with pytest.raises(tuf.click.ClickException) as err:
+            root_info.generate_payload()
+
+        e = "Not enough loaded keys left from current root: needed 1, have 0"
+        assert e in str(err)
+        assert tuf.console.print.calls == [
+            pretend.call("\nVerifying the new payload..."),
+        ]
 
 
 class TestTUFHelper:

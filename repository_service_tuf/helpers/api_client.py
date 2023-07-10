@@ -7,16 +7,20 @@ from enum import Enum
 from typing import Any, Dict, Optional
 
 import requests
+import rich_click as click
 from dynaconf import LazySettings
 from requests.exceptions import ConnectionError
+from rich.console import Console
+from tuf.api.metadata import Metadata
 
-from repository_service_tuf.cli import click, console
+console = Console()
 
 
 class URL(Enum):
     token = "api/v1/token/"  # nosec bandit: not hard coded password.
     bootstrap = "api/v1/bootstrap/"
     config = "api/v1/config/"
+    metadata = "api/v1/metadata/"
     task = "api/v1/task/?task_id="
     publish_targets = "api/v1/targets/publish/"
 
@@ -202,3 +206,71 @@ def publish_targets(settings: LazySettings) -> str:
     task_id = publish_targets.json()["data"]["task_id"]
 
     return task_id
+
+
+def send_payload(
+    settings: LazySettings,
+    url: str,
+    payload: Dict[str, Any],
+    expected_msg: str,
+    command_name: str,
+) -> str:
+    """
+    Send 'payload' to a given 'settings.SERVER'.
+
+    Args:
+        settings: the command context settings object
+        url: one of the URLs to a given endpoint as defined in api_client.py
+        payload: dictionary containing the payload to send
+        expected_msg: expected message to receive as a response to the request
+        command_name: name of the command sending the payload, used for logging
+
+    Returns:
+        Task id of the job sending the payload.
+    """
+    headers = get_headers(settings)
+    response = request_server(
+        settings.SERVER,
+        url,
+        Methods.post,
+        payload,
+        headers=headers,
+    )
+
+    if response.status_code != 202:
+        raise click.ClickException(
+            f"Error {response.status_code} {response.text}"
+        )
+
+    response_json = response.json()
+    if (
+        response_json.get("message") is None
+        or response_json.get("message") != expected_msg
+    ):
+        raise click.ClickException(response.text)
+
+    if data := response_json.get("data"):
+        task_id = data.get("task_id")
+        if task_id is None:
+            raise click.ClickException(
+                f"Failed to get `task id` {response.text}"
+            )
+        console.print(f"{command_name} status: ACCEPTED ({task_id})")
+
+        return task_id
+    else:
+        raise click.ClickException(
+            f"Failed to get task response data {response.text}"
+        )
+
+
+def get_md_file(file_uri: str) -> Metadata:
+    if file_uri.startswith("http"):
+        console.print(f"Fetching file {file_uri}")
+        response = requests.get(file_uri)
+        if response.status_code != 200:
+            raise click.ClickException(f"Cannot fetch {file_uri}")
+
+        return Metadata.from_bytes(response.content)
+    else:
+        return Metadata.from_file(file_uri)

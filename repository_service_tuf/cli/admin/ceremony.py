@@ -5,31 +5,18 @@
 #
 # Ceremony
 #
-import json
 import os
 from typing import Any, Dict, Generator, Optional
 
 from rich import box, markdown, prompt, table  # type: ignore
-from securesystemslib.exceptions import (  # type: ignore
-    CryptoError,
-    Error,
-    FormatError,
-    StorageError,
-)
-from securesystemslib.interface import (  # type: ignore
-    import_privatekey_from_file,
-)
 
 from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.api_client import (
     URL,
-    LazySettings,
-    Methods,
     bootstrap_status,
-    get_headers,
-    request_server,
+    send_payload,
     task_status,
 )
 from repository_service_tuf.helpers.tuf import (
@@ -38,6 +25,9 @@ from repository_service_tuf.helpers.tuf import (
     RSTUFKey,
     ServiceSettings,
     TUFManagement,
+    load_key,
+    load_payload,
+    save_payload,
 )
 
 CEREMONY_INTRO = """
@@ -138,7 +128,7 @@ timelines of available updates. Timelines information is made available by
 frequently signing a new timestamp.json file with a short expiration time.
 This file indicates the latest version of `snapshot.json`.
 
-Uses one single online key,
+Uses one single online key.
 """
 
 STEP_1 = """
@@ -268,85 +258,6 @@ def _key_already_in_use(key: Dict[str, Any]) -> bool:
     return False
 
 
-def _load_key(
-    filepath: str, keytype: str, password: Optional[str], name: str
-) -> RSTUFKey:
-    try:
-        key = import_privatekey_from_file(filepath, keytype, password)
-        # Make sure name cannot be an empty string.
-        # If no name is given use first 7 letters of the keyid.
-        name = name if name != "" else key["keyid"][:7]
-        return RSTUFKey(key=key, key_path=filepath, name=name)
-    except CryptoError as err:
-        return RSTUFKey(
-            error=(
-                f":cross_mark: [red]Failed[/]: {str(err)} Check the"
-                " password, type, etc"
-            )
-        )
-
-    except (StorageError, FormatError, Error, OSError) as err:
-        return RSTUFKey(error=f":cross_mark: [red]Failed[/]: {str(err)}")
-
-
-def _send_bootstrap(
-    settings: LazySettings, bootstrap_payload: Dict[str, Any]
-) -> str:
-    headers = get_headers(settings)
-    response = request_server(
-        settings.SERVER,
-        URL.bootstrap.value,
-        Methods.post,
-        bootstrap_payload,
-        headers=headers,
-    )
-
-    if response.status_code != 202:
-        raise click.ClickException(
-            f"Error {response.status_code} {response.text}"
-        )
-
-    response_json = response.json()
-    if (
-        response_json.get("message") is None
-        or response_json.get("message") != "Bootstrap accepted."
-    ):
-        raise click.ClickException(response.text)
-
-    else:
-        if data := response_json.get("data"):
-            task_id = data.get("task_id")
-            if task_id is None:
-                raise click.ClickException(
-                    f"Failed to get `task id` {response.text}"
-                )
-            console.print(f"Bootstrap status: ACCEPTED ({task_id})")
-
-            return task_id
-        else:
-            raise click.ClickException(
-                f"Failed to get task response data {response.text}"
-            )
-
-
-def _load_bootstrap_payload(path: str) -> Dict[str, Any]:
-    try:
-        with open(path) as payload_data:
-            bootstrap_payload = json.load(payload_data)
-    except OSError as err:
-        raise click.ClickException(f"Error to load {path}. {str(err)}")
-
-    return bootstrap_payload
-
-
-def _save_bootstrap_payload(file: str, bootstrap_payload: Dict[str, Any]):
-    try:
-        with open(file, "w") as f:
-            f.write(json.dumps(bootstrap_payload, indent=2))
-    except OSError as err:
-        raise click.ClickException(f"Failed to save {file}. {str(err)}")
-
-
 def _configure_role_target():
     console.print("\n")
     console.print(markdown.Markdown(BINS_DELEGATION_MESSAGE), width=100)
@@ -403,14 +314,22 @@ def _configure_role(role: Roles) -> None:
     console.print(
         markdown.Markdown(f"## {role.value} configuration"), width=100
     )
-    setup.expiration[role] = prompt.IntPrompt.ask(
-        (
-            "\nWhat is the [green]metadata expiration[/] for "
-            f"the [cyan]{role.value}[/] role?(Days)"
-        ),
-        default=setup.expiration[role],
-        show_default=True,
-    )
+    role_expiration = 0
+    while True:
+        role_expiration = prompt.IntPrompt.ask(
+            (
+                "\nWhat is the [green]metadata expiration[/] for "
+                f"the [cyan]{role.value}[/] role?(Days)"
+            ),
+            default=setup.expiration[role],
+            show_default=True,
+        )
+        if role_expiration < 1:
+            console.print(f"Expiration of {role.value} must be at least 1 day")
+        else:
+            break
+
+    setup.expiration[role] = role_expiration
 
     if role == Roles.ROOT:
         _configure_role_root()
@@ -434,17 +353,19 @@ def _configure_keys(
             f"[cyan]{role}[/]`s private key [green]path[/]"
         )
 
+        colored_role = click.style(role, fg="cyan")
+        colored_pass = click.style("password", fg="green")
         password = click.prompt(
             f"Enter {key_count}/{number_of_keys} the "
-            f"{role}`s private key password",
+            f"{colored_role}`s private key {colored_pass}",
             hide_input=True,
         )
         name = prompt.Prompt.ask(
-            "[Optional] Give a name/tag to the key",
+            "[Optional] Give a [green]name/tag[/] to the key",
             default="",
             show_default=False,
         )
-        role_key: RSTUFKey = _load_key(filepath, key_type, password, name)
+        role_key: RSTUFKey = load_key(filepath, key_type, password, name)
 
         if role_key.error:
             console.print(role_key.error)
@@ -488,10 +409,10 @@ def _run_user_validation():
             keys_table.add_column(
                 "path", justify="right", style="cyan", no_wrap=True
             )
-        keys_table.add_column("type", justify="center")
-        keys_table.add_column("verified", justify="center")
-        keys_table.add_column("name/tag", justify="center")
-        keys_table.add_column("id", justify="center")
+        keys_table.add_column("Storage", justify="center")
+        keys_table.add_column("Verified", justify="center")
+        keys_table.add_column("Name/Tag", justify="center")
+        keys_table.add_column("Id", justify="center")
 
         return keys_table
 
@@ -662,7 +583,7 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     return json_payload
 
 
-@admin.command()
+@admin.command()  # type: ignore
 @click.option(
     "-b",
     "--bootstrap",
@@ -691,14 +612,14 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     "--upload",
     help=(
         "Upload existent payload 'file'. Requires '-b/--bootstrap'. "
-        "Optional '-f/--file' to use non default file."
+        "Optional '-f/--file' to use non default file name."
     ),
     required=False,
     is_flag=True,
 )
 @click.option(
     "--upload-server",
-    help="[when using '--no-auth'] Upload RSTUF API Server address. ",
+    help="[when using '--auth'] Upload to RSTUF API Server address. ",
     required=False,
     hidden=True,
 )
@@ -753,21 +674,33 @@ def ceremony(
 
     # option bootstrap + upload: bootstrap payload is available, skips ceremony
     if bootstrap is True and upload is True:
-        bootstrap_payload = _load_bootstrap_payload(file)
+        bootstrap_payload = load_payload(file)
         console.print("Starting online bootstrap")
-        task_id = _send_bootstrap(settings, bootstrap_payload)
+        task_id = send_payload(
+            settings=settings,
+            url=URL.bootstrap.value,
+            payload=bootstrap_payload,
+            expected_msg="Bootstrap accepted.",
+            command_name="Bootstrap",
+        )
         task_status(task_id, settings, "Bootstrap status: ")
         console.print(f"Bootstrap completed using `{file}`. 🔐 🎉")
 
     # option ceremony: runs the ceremony, save the payload
     else:
         bootstrap_payload = _run_ceremony_steps(save)
-        _save_bootstrap_payload(file, bootstrap_payload)
+        save_payload(file, bootstrap_payload)
         console.print(
             f"\nCeremony done. 🔐 🎉. Bootstrap payload ({file}) saved."
         )
 
         if bootstrap is True:
-            task_id = _send_bootstrap(settings, bootstrap_payload)
+            task_id = send_payload(
+                settings=settings,
+                url=URL.bootstrap.value,
+                payload=bootstrap_payload,
+                expected_msg="Bootstrap accepted.",
+                command_name="Bootstrap",
+            )
             task_status(task_id, settings, "Bootstrap status: ")
             console.print("\nCeremony done. 🔐 🎉. Bootstrap completed.")

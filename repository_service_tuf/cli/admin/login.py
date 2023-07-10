@@ -80,6 +80,7 @@ def _run_login(context, server_, password_, expires_):
             "read:token "
             "read:tasks "
             "write:token "
+            "write:metadata "
         ),
         "expires": expires,
     }
@@ -93,7 +94,7 @@ def _run_login(context, server_, password_, expires_):
     console.print("Login successful.")
 
 
-@admin.command()
+@admin.command()  # type: ignore
 @click.option(
     "-f", "--force", "force", help="Force login/Renew token", is_flag=True
 )

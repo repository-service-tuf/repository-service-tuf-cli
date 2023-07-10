@@ -3,16 +3,19 @@
 # SPDX-License-Identifier: MIT
 
 import os
+from datetime import datetime
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, List, Tuple
 
 import pytest  # type: ignore
 from click.testing import CliRunner  # type: ignore
 from dynaconf import Dynaconf
+from tuf.api.metadata import Key, Metadata, Root
 
 from repository_service_tuf.helpers.tuf import (
     BootstrapSetup,
     Roles,
+    RootInfo,
     RSTUFKey,
     ServiceSettings,
     TUFManagement,
@@ -103,4 +106,64 @@ def test_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
         "y",  # Is the bins configuration correct? [y/n]
     ]
 
+    return input_step1, input_step2, input_step3, input_step4
+
+
+@pytest.fixture
+def root() -> Metadata[Root]:
+    return Metadata(Root(expires=datetime.now()))
+
+
+@pytest.fixture
+def root_info(root: Metadata[Root]) -> RootInfo:
+    root_keys = [
+        Key("id1", "ed25519", "", {"sha256": "abc"}),
+        Key("id2", "ed25519", "", {"sha256": "foo"}),
+    ]
+    for key in root_keys:
+        root.signed.add_key(key, "root")
+
+    online_key = Key("id3", "ed25519", "", {"sha256": "doo"})
+    for online_role in ["timestamp", "snapshot", "targets"]:
+        root.signed.add_key(online_key, online_role)
+
+    return RootInfo(root)
+
+
+@pytest.fixture
+def md_update_input() -> Tuple[List[str], List[str], List[str], List[str]]:
+    # Step1 will combine current root file name and authorization.
+    input_step1 = [
+        "tests/files/root.json",  # File name or URL to the current root metadata  # noqa
+        "",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
+        "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+        "strongPass",  # Enter the root`s private key password
+    ]
+    input_step2 = [
+        "y",  # Do you want to extend the root's expiration? [y/n]
+        "",  # Days to extend root's expiration starting from today (365)
+        "y",  # New root expiration: YYYY-M-DD. Do you agree? [y/n]
+    ]
+    input_step3 = [
+        "y",  # Do you want to modify root keys? [y/n]
+        "",  # What should be the root role threshold? (CURRENT_KEY_THRESHOLD)
+        "y",  # Do you want to remove a key [y/n]
+        "Martin's Key",  # Name/Tag/ID prefix of the key to remove
+        "n",  # Do you want to remove a key [y/n]
+        "y",  # Do you want to add a new key? [y/n]
+        "",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
+        "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+        "strongPass",  # Enter the root`s private key password
+        "Kairo's Key",  # [Optional] Give a name/tag to the key
+        "n",  # Do you want to add a new key? [y/n]
+        "n",  # Do you want to modify root keys? [y/n]
+    ]
+    input_step4 = [
+        "y",  # Do you want to change the online key? [y/n]
+        "rsa",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
+        "tests/files/key_storage/online-rsa.key",  # Enter the root`s private key path  # noqa
+        "strongPass",  # Enter the root`s private key password
+        "New RSA Online Key",  # [Optional] Give a name/tag to the key
+        "n",  # Do you want to change the online key? [y/n]
+    ]
     return input_step1, input_step2, input_step3, input_step4

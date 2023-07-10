@@ -2,14 +2,30 @@
 #
 # SPDX-License-Identifier: MIT
 
+import copy
+import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
+import click
+from rich.console import Console
+from securesystemslib.exceptions import (  # type: ignore
+    CryptoError,
+    Error,
+    FormatError,
+    StorageError,
+)
+from securesystemslib.interface import (  # type: ignore
+    import_privatekey_from_file,
+)
 from securesystemslib.signer import Signer, SSlibSigner  # type: ignore
+from tuf.api.exceptions import UnsignedMetadataError
 from tuf.api.metadata import SPECIFICATION_VERSION, Key, Metadata, Role, Root
 from tuf.api.serialization.json import JSONSerializer
+
+console = Console()
 
 SPEC_VERSION: str = ".".join(SPECIFICATION_VERSION)
 BINS: str = "bins"
@@ -40,6 +56,19 @@ class RSTUFKey:
     name: Optional[str] = None
     error: Optional[str] = None
 
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, RSTUFKey):
+            return False
+
+        return self.key.get("keyid") == other.key.get("keyid")
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            **self.key,
+            "key_path": self.key_path,
+            "name": self.name,
+        }
+
 
 @dataclass
 class BootstrapSetup:
@@ -55,6 +84,172 @@ class BootstrapSetup:
             "expiration": {k.value: v for k, v in self.expiration.items()},
             "services": self.services.to_dict(),
         }
+
+
+class RootInfo:
+    _new_root: Metadata[Root]
+    signing_keys: Dict[str, RSTUFKey]  # required for signing
+    _trusted_root: Metadata[Root]  # required to check for changes
+
+    @property
+    def threshold(self) -> int:
+        return self._new_root.signed.roles[Root.type].threshold
+
+    @threshold.setter
+    def threshold(self, value: int) -> None:
+        self._new_root.signed.roles[Root.type].threshold = value
+
+    @property
+    def expiration(self) -> datetime:
+        return self._new_root.signed.expires
+
+    @expiration.setter
+    def expiration(self, value: datetime) -> None:
+        self._new_root.signed.expires = value
+
+    @property
+    def expiration_str(self) -> str:
+        return f"{self.expiration.strftime('%Y-%b-%d')}"
+
+    @property
+    def keys(self) -> List[Dict[str, Any]]:
+        root_keys: List[Dict[str, Any]] = []
+        for keyid in self._new_root.signed.roles["root"].keyids:
+            key = self._new_root.signed.keys[keyid]
+            key_dict = key.to_dict()
+            key_dict["keyid"] = keyid
+            key_dict["name"] = self._get_key_name(key)
+            root_keys.append(key_dict)
+
+        return root_keys
+
+    @property
+    def online_key(self) -> Dict[str, Any]:
+        online_key_id = self._new_root.signed.roles["timestamp"].keyids[0]
+        key_obj = self._new_root.signed.keys[online_key_id]
+        online_key_dict = key_obj.to_dict()
+        online_key_dict["keyid"] = online_key_id
+        online_key_dict["name"] = self._get_key_name(key_obj)
+        return online_key_dict
+
+    def __init__(self, root_md: Metadata[Root]):
+        self._new_root = root_md
+        self.signing_keys = {}
+        self._trusted_root = copy.deepcopy(self._new_root)
+
+    @staticmethod
+    def _get_key_name(key: Key) -> str:
+        name = key.keyid[:7]
+        if key.unrecognized_fields.get("name"):
+            name = key.unrecognized_fields["name"]
+
+        return name
+
+    def is_keyid_used(self, keyid: str) -> bool:
+        """Check if keyid is used in root keys"""
+        return keyid in self._new_root.signed.roles[Root.type].keyids
+
+    def save_current_root_key(self, key: RSTUFKey):
+        """Update internal information based on 'key' data."""
+        tuf_key: Key = self._new_root.signed.keys[key.key["keyid"]]
+        if tuf_key.unrecognized_fields.get("name"):
+            key.name = tuf_key.unrecognized_fields["name"]
+
+        self.signing_keys[key.key["keyid"]] = key
+
+    def remove_key(self, key_name: str) -> bool:
+        """Try to remove a root key and return status of the operation"""
+        for keyid in self._new_root.signed.roles["root"].keyids:
+            key = self._new_root.signed.keys[keyid]
+            name = self._get_key_name(key)
+            if name == key_name:
+                self._new_root.signed.revoke_key(keyid, Root.type)
+                return True
+
+        return False
+
+    def new_signing_keys_required(self):
+        """
+        Get the number of additional signing keys needed when taking into
+        account the keys from the trusted root.
+        """
+        # Count only the signing keys still left in new_root
+        signing_keys_amount = 0
+        for keyid in self.signing_keys:
+            if keyid in self._new_root.signed.roles["root"].keyids:
+                signing_keys_amount += 1
+
+        if self.threshold <= signing_keys_amount:
+            return 0
+
+        return self.threshold - signing_keys_amount
+
+    def add_key(self, new_key: RSTUFKey) -> None:
+        """Add a new root key."""
+        tuf_key = Key.from_securesystemslib_key(new_key.key)
+        if new_key.name:
+            tuf_key.unrecognized_fields["name"] = new_key.name
+
+        self._new_root.signed.add_key(tuf_key, Root.type)
+        self.signing_keys[new_key.key["keyid"]] = new_key
+
+    def change_online_key(self, new_online_key: RSTUFKey) -> None:
+        """Replace the current online key with a new one."""
+        # Remove the current online key
+        online_key_id = self._new_root.signed.roles["timestamp"].keyids[0]
+        # Top level roles that use the online key
+        online_roles = ["timestamp", "snapshot", "targets"]
+        for role in online_roles:
+            self._new_root.signed.revoke_key(online_key_id, role)
+
+        # Add the new online key
+        online_tuf_key = Key.from_securesystemslib_key(new_online_key.key)
+        if new_online_key.name:
+            online_tuf_key.unrecognized_fields["name"] = new_online_key.name
+
+        for role in online_roles:
+            self._new_root.signed.add_key(online_tuf_key, role)
+
+    def has_changed(self) -> bool:
+        """Returns whether the root metadata object has changed"""
+        return self._trusted_root != self._new_root
+
+    def generate_payload(self) -> Dict[str, Any]:
+        """Save the root metadata into 'file'"""
+        self._new_root.signed.version += 1
+        self._new_root.signatures.clear()
+
+        new_root_keyids = self._new_root.signed.roles["root"].keyids
+        trusted_root_keyids = self._trusted_root.signed.roles["root"].keyids
+        # Sign only with keys existing in the new root version or part from
+        # previous trusted root. Threshold (threshold comes from trusted root)
+        # number of keys from previous threshold must sign new root to achieve
+        # chain of trust between root versions.
+        for keyid, key in self.signing_keys.items():
+            if keyid in new_root_keyids or keyid in trusted_root_keyids:
+                self._new_root.sign(SSlibSigner(key.key), append=True)
+
+        console.print("\nVerifying the new payload...")
+        try:
+            # Verify that the new root is signed by the trusted current root
+            self._trusted_root.verify_delegate(Root.type, self._new_root)
+        except UnsignedMetadataError:
+            trusted_keys_amount = 0
+            for keyid in self._trusted_root.signed.roles["root"].keyids:
+                if keyid in self.signing_keys:
+                    trusted_keys_amount += 1
+
+            t = self._trusted_root.signed.roles["root"].threshold
+            raise click.ClickException(
+                "Not enough loaded keys left from current root: "
+                f"needed {t}, have {trusted_keys_amount}"
+            )
+
+        # Verify that the new root is signed by at least threshold of keys
+        self._new_root.verify_delegate(Root.type, self._new_root)
+        console.print("The new payload is [green]verified[/]")
+
+        return {"metadata": {"root": self._new_root.to_dict()}}
 
 
 class TUFManagement:
@@ -210,3 +405,45 @@ class TUFManagement:
         self._validate_root_payload_exist()
 
         return self.repository_metadata
+
+
+def load_key(
+    filepath: str, keytype: str, password: Optional[str], name: str
+) -> RSTUFKey:
+    """Load a securesystemslib private key file into an RSTUFKey object"""
+    try:
+        key = import_privatekey_from_file(filepath, keytype, password)
+        # Make sure name cannot be an empty string.
+        # If no name is given use first 7 letters of the keyid.
+        name = name if name != "" else key["keyid"][:7]
+        return RSTUFKey(key=key, key_path=filepath, name=name)
+    except CryptoError as err:
+        return RSTUFKey(
+            error=(
+                f":cross_mark: [red]Failed[/]: {str(err)} Check the"
+                " password, type, etc"
+            )
+        )
+
+    except (StorageError, FormatError, Error, OSError) as err:
+        return RSTUFKey(error=f":cross_mark: [red]Failed[/]: {str(err)}")
+
+
+def load_payload(path: str) -> Dict[str, Any]:
+    """Load existing payload file."""
+    try:
+        with open(path) as payload_data:
+            payload = json.load(payload_data)
+    except OSError as err:
+        raise click.ClickException(f"Error to load {path}. {str(err)}")
+
+    return payload
+
+
+def save_payload(file_path: str, payload: Dict[str, Any]):
+    """Save the 'payload' into a file with path 'file_path'"""
+    try:
+        with open(file_path, "w") as f:
+            f.write(json.dumps(payload, indent=2))
+    except OSError as err:
+        raise click.ClickException(f"Failed to save {file_path}. {str(err)}")
