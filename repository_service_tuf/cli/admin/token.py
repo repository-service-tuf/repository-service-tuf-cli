@@ -54,7 +54,9 @@ def generate(context, scope, expires):
     logged_token = settings.get("TOKEN")
     login = is_logged(settings)
     if login.state is False:
-        raise click.ClickException("Not logged. Use 'rstuf admin login'")
+        raise click.ClickException(
+            "Not logged. Use 'rstuf --auth admin login'"
+        )
 
     headers = {"Authorization": f"Bearer {logged_token}"}
     payload = {"scopes": list(scope), "expires": expires}
@@ -88,7 +90,9 @@ def inspect(context, token):
     logged_token = settings.get("TOKEN")
     login = is_logged(settings)
     if login.state is False:
-        raise click.ClickException("Not logged. Use 'rstuf admin login'")
+        raise click.ClickException(
+            "Not logged. Use 'rstuf --auth admin login'"
+        )
 
     headers = {"Authorization": f"Bearer {logged_token}"}
     response = request_server(
