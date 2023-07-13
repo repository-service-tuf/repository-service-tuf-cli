@@ -132,6 +132,7 @@ dmypy.json
 .pyre/
 
 payload.json
+metadata-update-payload.json
 
 # VScode settings folder
 .vscode
