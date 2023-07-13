@@ -190,7 +190,7 @@ class TestAPIClient:
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.get_headers({})
 
-        assert "Login first. Run 'rstuf admin login'" in str(err)
+        assert "Login first. Run 'rstuf --auth admin login'" in str(err)
 
     def test_get_headers_is_logged_state_false(self, test_context):
         api_client.is_logged = pretend.call_recorder(

@@ -423,7 +423,7 @@ class TestCeremonyOptions:
 
         test_result = client.invoke(
             ceremony.ceremony,
-            "--bootstrap",
+            ["--bootstrap", "--upload-server", "http://fake-api"],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -470,7 +470,7 @@ class TestCeremonyOptions:
 
         test_result = client.invoke(
             ceremony.ceremony,
-            "--bootstrap",
+            ["--bootstrap", "--upload-server", "http://fake-api"],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -493,10 +493,9 @@ class TestCeremonyOptions:
         )
         ceremony.task_status = pretend.call_recorder(lambda *a: None)
 
-        test_context["settings"].SERVER = "http://server"
         test_result = client.invoke(
             ceremony.ceremony,
-            ["--bootstrap", "--upload"],
+            ["--bootstrap", "--upload", "--upload-server", "http://fake-api"],
             input=None,
             obj=test_context,
         )
@@ -527,6 +526,19 @@ class TestCeremonyOptions:
         # test regression https://github.com/repository-service-tuf/repository-service-tuf-cli/pull/259  # noqa
         assert test_context["settings"].SERVER is not None
 
+    def test_ceremony_option_bootstrap_upload_missing_upload_server(
+        self, client, test_context
+    ):
+        test_result = client.invoke(
+            ceremony.ceremony,
+            ["--bootstrap", "--upload"],
+            input=None,
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 1, test_result.output
+        assert "Requires '--upload-server'" in test_result.output
+
     def test_ceremony_option_bootstrap_upload_auth(self, client, test_context):
         ceremony.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": False}}
@@ -538,10 +550,11 @@ class TestCeremonyOptions:
         ceremony.task_status = pretend.call_recorder(lambda *a: None)
 
         test_context["settings"].AUTH = True
+        test_context["settings"].SERVER = "http://fake-api"
 
         test_result = client.invoke(
             ceremony.ceremony,
-            ["--bootstrap", "--upload", "--upload-server", "http://rstuf"],
+            ["--bootstrap", "--upload"],
             input=None,
             obj=test_context,
         )
@@ -569,24 +582,6 @@ class TestCeremonyOptions:
                 "fake_task_id", test_context["settings"], "Bootstrap status: "
             )
         ]
-
-    def test_ceremony_option_bootstrap_upload_auth_missing_upload_server(
-        self, client, test_context
-    ):
-        test_context["settings"].AUTH = True
-
-        test_result = client.invoke(
-            ceremony.ceremony,
-            ["--bootstrap", "--upload"],
-            input=None,
-            obj=test_context,
-        )
-
-        assert test_result.exit_code == 1, test_result.output
-        assert (
-            "Requires '--upload-server' when using '--auth'"
-            in test_result.output
-        )
 
     def test_ceremony_option_upload_missing_bootstrap(
         self, client, test_context, test_inputs, test_setup

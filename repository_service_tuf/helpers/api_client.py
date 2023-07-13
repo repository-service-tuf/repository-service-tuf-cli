@@ -99,13 +99,13 @@ def get_headers(settings: LazySettings) -> Dict[str, str]:
         if token_access_check.state is False:
             raise click.ClickException(
                 f"{str(token_access_check.data)}"
-                "\n\nTry re-login: 'rstuf admin login'"
+                "\n\nTry re-login: 'rstuf --auth admin login'"
             )
 
         expired_admin = token_access_check.data.get("expired")
         if expired_admin is True:
             raise click.ClickException(
-                "The token has expired. Run 'rstuf admin login'"
+                "The token has expired. Run 'rstuf --auth admin login'"
             )
         else:
             headers = {"Authorization": f"Bearer {token}"}
@@ -117,7 +117,9 @@ def get_headers(settings: LazySettings) -> Dict[str, str]:
                     f"Unexpected error: {response.text}"
                 )
     else:
-        raise click.ClickException("Login first. Run 'rstuf admin login'")
+        raise click.ClickException(
+            "Login first. Run 'rstuf --auth admin login'"
+        )
 
     return headers
 
