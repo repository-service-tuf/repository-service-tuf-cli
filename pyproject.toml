@@ -24,6 +24,7 @@ classifiers = [
 ]
 dependencies = [
   "click",
+  "auto-click-auto",
   "dynaconf[ini]==3.1.9",
   "PyNaCl",
   "requests",
