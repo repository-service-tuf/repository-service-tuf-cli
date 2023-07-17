@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 import rich_click as click  # type: ignore
+from auto_click_auto import enable_click_shell_completion_option
 from rich.console import Console
 from rich.panel import Panel
 
@@ -55,6 +56,7 @@ except FileNotFoundError:
 )
 # adds the --version parameter
 @click.version_option(prog_name=prog_name, version=version)
+@enable_click_shell_completion_option(program_name=prog_name)
 @click.pass_context
 def rstuf(context, config, auth):
     """
