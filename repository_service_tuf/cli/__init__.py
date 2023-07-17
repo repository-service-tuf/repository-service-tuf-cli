@@ -10,6 +10,8 @@ import sys
 from pathlib import Path
 
 import rich_click as click  # type: ignore
+from auto_click_auto import enable_click_shell_completion
+from auto_click_auto.constants import ShellType
 from rich.console import Console
 from rich.panel import Panel
 
@@ -90,3 +92,11 @@ for _, name, _ in pkgutil.walk_packages(  # type: ignore
         continue
     else:
         importlib.import_module(name)
+
+# Enable tab completion for all available supported shells
+supported_shell_types = {
+    ShellType(shell) for shell in ShellType.get_all_values()
+}
+enable_click_shell_completion(
+    program_name=prog_name, shells=supported_shell_types
+)
