@@ -20,9 +20,11 @@ from securesystemslib.exceptions import (  # type: ignore
 from securesystemslib.interface import (  # type: ignore
     import_privatekey_from_file,
 )
-from securesystemslib.signer import Signer, SSlibSigner  # type: ignore
+from securesystemslib.signer import Signer  # type: ignore
+from securesystemslib.signer import SSlibSigner  # type: ignore
+from securesystemslib.signer import SSlibKey as Key  # type: ignore
 from tuf.api.exceptions import UnsignedMetadataError
-from tuf.api.metadata import SPECIFICATION_VERSION, Key, Metadata, Role, Root
+from tuf.api.metadata import SPECIFICATION_VERSION, Metadata, Role, Root
 from tuf.api.serialization.json import JSONSerializer
 
 console = Console()
