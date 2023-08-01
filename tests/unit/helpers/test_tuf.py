@@ -9,12 +9,12 @@ from typing import Dict, List
 
 import pretend
 import pytest
+from securesystemslib.signer import SSlibKey as Key  # type: ignore
 from tuf.api.exceptions import UnsignedMetadataError
 
 from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers import tuf
 from repository_service_tuf.helpers.tuf import (
-    Key,
     Metadata,
     Roles,
     Root,

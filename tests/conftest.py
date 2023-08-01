@@ -10,7 +10,8 @@ from typing import Any, Dict, List, Tuple
 import pytest  # type: ignore
 from click.testing import CliRunner  # type: ignore
 from dynaconf import Dynaconf
-from tuf.api.metadata import Key, Metadata, Root
+from securesystemslib.signer import SSlibKey as Key
+from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.helpers.tuf import (
     BootstrapSetup,

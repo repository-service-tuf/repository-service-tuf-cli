@@ -10,7 +10,7 @@ click = "*"
 rich = "*"
 PyNaCl = "==1.5.0"
 requests = "*"
-tuf = "==2.0.0"
+tuf = "==3.0.0"
 dynaconf = {extras = ["ini"], version = "*"}
 isort = "*"
 sqlalchemy = "*"
