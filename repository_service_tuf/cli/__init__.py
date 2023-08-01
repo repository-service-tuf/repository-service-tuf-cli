@@ -53,6 +53,14 @@ except FileNotFoundError:
     default=False,
     required=False,
 )
+@click.option(
+    "--timeout",
+    "timeout",
+    type=int,
+    default=300,
+    help="Custom timeout for the bootstrap request.",
+    required=False,
+)
 # adds the --version parameter
 @click.version_option(prog_name=prog_name, version=version)
 @click.pass_context
