@@ -32,14 +32,9 @@ def info(show_private: bool) -> None:
         default=KeyType.KEY_TYPE_ED25519.value,
     )
 
-    filepath: str = prompt.Prompt.ask(
-        "Enter the key's [green]filename[/]",
-    )
+    filepath: str = prompt.Prompt.ask("Enter the key's [green]filename[/]")
 
-    password = click.prompt(
-        "Enter the private key password",
-        hide_input=True,
-    )
+    password = click.prompt("Enter the private key password", hide_input=True)
 
     key = load_key(filepath, keytype, password, "")
     if key.error:
@@ -50,23 +45,14 @@ def info(show_private: bool) -> None:
     key_table.add_column("Key ID", justify="center")
     key_table.add_column("Key Type", justify="center")
     key_table.add_column("Public Key", justify="center")
-    if show_private is True:
+    row_items = [key.key["keyid"], key.key["keytype"], key.key["keyval"]["public"]]
+    if show_private:
         key_table.add_column(
             "Private Key", justify="center", style="red", no_wrap=True
         )
+        row_items.append(key.key["keyval"]["private"])
 
-    if show_private:
-        key_table.add_row(
-            key.key["keyid"],
-            key.key["keytype"],
-            key.key["keyval"]["public"],
-            key.key["keyval"]["private"],
-        )
-    else:
-        key_table.add_row(
-            key.key["keyid"],
-            key.key["keytype"],
-            key.key["keyval"]["public"],
-        )
+    key_table.add_row(*row_items)
+
 
     console.print(key_table)
