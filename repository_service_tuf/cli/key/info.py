@@ -18,7 +18,9 @@ def _get_key() -> RSTUFKey:
         choices=KeyType.get_all_members(),
         default=KeyType.KEY_TYPE_ED25519.value,
     )
-    filepath: str = prompt.Prompt.ask("Enter the key's [green]filename[/]")
+    filepath: str = prompt.Prompt.ask(
+        "Enter the private key's [green]file name[/]"
+    )
     password: str = click.prompt(
         "Enter the private key password", hide_input=True
     )
