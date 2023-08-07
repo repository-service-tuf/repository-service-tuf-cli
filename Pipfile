@@ -8,6 +8,7 @@ rich-click = "*"
 securesystemslib = {extras = ["crypto"], version = "*"}
 click = "*"
 rich = "*"
+auto-click-auto = "*"
 PyNaCl = "==1.5.0"
 requests = "*"
 tuf = "==3.0.0"
