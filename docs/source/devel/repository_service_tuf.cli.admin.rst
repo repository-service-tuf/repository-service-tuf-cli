@@ -12,10 +12,26 @@ repository\_service\_tuf.cli.admin.ceremony module
    :undoc-members:
    :show-inheritance:
 
+repository\_service\_tuf.cli.admin.import\_targets module
+---------------------------------------------------------
+
+.. automodule:: repository_service_tuf.cli.admin.import_targets
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 repository\_service\_tuf.cli.admin.login module
 -----------------------------------------------
 
 .. automodule:: repository_service_tuf.cli.admin.login
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+repository\_service\_tuf.cli.admin.metadata module
+--------------------------------------------------
+
+.. automodule:: repository_service_tuf.cli.admin.metadata
    :members:
    :undoc-members:
    :show-inheritance:

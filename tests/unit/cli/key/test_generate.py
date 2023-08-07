@@ -9,8 +9,8 @@ import pretend
 import pytest
 from securesystemslib.exceptions import FormatError  # type: ignore
 
-from repository_service_tuf.cli.key import generate_key
-from repository_service_tuf.cli.key.generate_key import _verify_password
+from repository_service_tuf.cli.key import generate
+from repository_service_tuf.cli.key.generate import _verify_password
 from repository_service_tuf.constants import KeyType
 
 
@@ -26,7 +26,7 @@ class TestGenerateInteraction:
         """
 
         test_result = client.invoke(
-            generate_key.generate,
+            generate.generate,
             input=key_type,  # Choose key type [ed25519/ecdsa/rsa] (ed25519)
         )
 
@@ -42,9 +42,7 @@ class TestGenerateInteraction:
         assert test_result.exit_code == 1
 
     @pytest.mark.parametrize("key_type", KeyType.get_all_members() + ["test"])
-    def test_generate_key_types_generation(
-        self, key_type, client, monkeypatch
-    ) -> None:
+    def test_generate_types_generation(self, key_type, client) -> None:
         """
         Test that all `KeyType` enum members input choices call the appropriate
         keypair generate function
@@ -58,11 +56,9 @@ class TestGenerateInteraction:
             "n",  # Do you want to overwrite the existing 'test-filename' file?
         ]
 
-        generate_key._verify_password = pretend.call_recorder(
-            lambda a: password
-        )
+        generate._verify_password = pretend.call_recorder(lambda a: password)
 
-        mock_file_path = "repository_service_tuf.cli.key.generate_key."
+        mock_file_path = "repository_service_tuf.cli.key.generate."
         mocked_functions = {
             "ed25519": "_generate_and_write_ed25519_keypair",
             "ecdsa": "_generate_and_write_ecdsa_keypair",
@@ -75,7 +71,7 @@ class TestGenerateInteraction:
                 return_value=None,
             ) as mock_keypair:
                 test_result = client.invoke(
-                    generate_key.generate,
+                    generate.generate,
                     input="\n".join(inputs),
                 )
 
@@ -84,14 +80,14 @@ class TestGenerateInteraction:
 
         else:
             test_result = client.invoke(
-                generate_key.generate,
+                generate.generate,
                 input="\n".join(inputs),
             )
 
             assert test_result.exit_code == 1
 
     @pytest.mark.parametrize("filename", ["\n", "test-filename"])
-    def test_generate(self, filename: str, client, monkeypatch) -> None:
+    def test_generate(self, filename: str, client) -> None:
         """
         Test all the steps in the `generate` sub-command work as expected
 
@@ -106,12 +102,12 @@ class TestGenerateInteraction:
                 filename,  # Enter the keys' filename ...
             ]
 
-            generate_key._verify_password = pretend.call_recorder(
+            generate._verify_password = pretend.call_recorder(
                 lambda a: password
             )
 
             test_result = client.invoke(
-                generate_key.generate,
+                generate.generate,
                 input="\n".join(inputs),
             )
 
@@ -121,7 +117,7 @@ class TestGenerateInteraction:
             else:
                 filepath = filename
 
-            assert generate_key._verify_password.calls == [  # type: ignore
+            assert generate._verify_password.calls == [  # type: ignore
                 pretend.call(filepath)
             ]
 
@@ -135,7 +131,7 @@ class TestGenerateInteraction:
             Path(filepath).unlink(missing_ok=True)
             Path(filepath + ".pub").unlink(missing_ok=True)
 
-    def test_generate_file_overwrite(self, client, monkeypatch) -> None:
+    def test_generate_file_overwrite(self, client) -> None:
         """Test the 'overwrite file' prompt"""
 
         key_type = "rsa"
@@ -147,23 +143,19 @@ class TestGenerateInteraction:
             "n",  # Do you want to overwrite the existing 'test-filename' file?
         ]
 
-        generate_key.os.path.isfile = pretend.call_recorder(
-            lambda *a, **kw: True
-        )
+        generate.os.path.isfile = pretend.call_recorder(lambda *a, **kw: True)
 
-        generate_key._verify_password = pretend.call_recorder(
-            lambda a: password
-        )
+        generate._verify_password = pretend.call_recorder(lambda a: password)
 
         test_result = client.invoke(
-            generate_key.generate,
+            generate.generate,
             input="\n".join(inputs),
         )
 
-        assert generate_key.os.path.isfile.calls == [pretend.call(filename)]  # type: ignore # noqa: E501
+        assert generate.os.path.isfile.calls == [pretend.call(filename)]  # type: ignore # noqa: E501
 
         # verify `_verify_password` is never called
-        assert generate_key._verify_password.calls == []  # type: ignore
+        assert generate._verify_password.calls == []  # type: ignore
 
         assert (
             f"Do you want to overwrite the existing '{filename}' file?"
@@ -181,7 +173,7 @@ class TestGenerateInteraction:
 class TestGenerateFunctions:
     """Test the Key Generate Functions"""
 
-    @mock.patch("repository_service_tuf.cli.key.generate_key.get_password")
+    @mock.patch("repository_service_tuf.cli.key.generate.get_password")
     def test__verify_password(self, mock_password, capsys) -> None:
         """
         Test that the password is verified correctly
@@ -189,7 +181,7 @@ class TestGenerateFunctions:
 
         mock_password.return_value = "test-password"
 
-        _verify_password("test-filename")
+        generate._verify_password("test-filename")
 
         captured = capsys.readouterr()
 
@@ -198,7 +190,7 @@ class TestGenerateFunctions:
             not in captured.out
         )
 
-    @mock.patch("repository_service_tuf.cli.key.generate_key.get_password")
+    @mock.patch("repository_service_tuf.cli.key.generate.get_password")
     def test__verify_password_empty_password(
         self, mock_password, capsys
     ) -> None:
@@ -217,10 +209,8 @@ class TestGenerateFunctions:
             "encryption password must be 1 or more characters long\n"
         )
 
-    @mock.patch("repository_service_tuf.cli.key.generate_key.get_password")
-    def test__verify_password_not_string_password(
-        self, mock_password, capsys
-    ) -> None:
+    @mock.patch("repository_service_tuf.cli.key.generate.get_password")
+    def test__verify_password_not_string_password(self, mock_password) -> None:
         """
         Test that the password is verified correctly if it is a number at the
         first attempt
