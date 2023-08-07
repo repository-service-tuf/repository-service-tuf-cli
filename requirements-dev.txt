@@ -45,7 +45,7 @@ pre-commit==3.3.3
 pretend==1.0.9
 pycodestyle==2.11.0; python_version >= '3.8'
 pyflakes==3.1.0; python_version >= '3.8'
-pygments==2.15.1; python_version >= '3.7'
+pygments==2.16.1; python_version >= '3.7'
 pyproject-api==1.5.3; python_version >= '3.7'
 pyproject-hooks==1.0.0; python_version >= '3.7'
 pytest==7.4.0
@@ -79,7 +79,7 @@ configobj==5.0.8
 cryptography==41.0.3
 dynaconf[ini]==3.2.0
 greenlet==2.0.2; platform_machine == 'aarch64' or (platform_machine == 'ppc64le' or (platform_machine == 'x86_64' or (platform_machine == 'amd64' or (platform_machine == 'AMD64' or (platform_machine == 'win32' or platform_machine == 'WIN32')))))
-psycopg2==2.9.6
+psycopg2==2.9.7
 pycparser==2.21
 pynacl==1.5.0
 rich-click==1.6.1
