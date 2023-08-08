@@ -15,8 +15,8 @@ from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.helpers.tuf import (
     BootstrapSetup,
+    MetadataInfo,
     Roles,
-    RootInfo,
     RSTUFKey,
     ServiceSettings,
     TUFManagement,
@@ -116,7 +116,7 @@ def root() -> Metadata[Root]:
 
 
 @pytest.fixture
-def root_info(root: Metadata[Root]) -> RootInfo:
+def root_info(root: Metadata[Root]) -> MetadataInfo:
     root_keys = [
         Key("id1", "ed25519", "", {"sha256": "abc"}),
         Key("id2", "ed25519", "", {"sha256": "foo"}),
@@ -128,7 +128,7 @@ def root_info(root: Metadata[Root]) -> RootInfo:
     for online_role in ["timestamp", "snapshot", "targets"]:
         root.signed.add_key(online_key, online_role)
 
-    return RootInfo(root)
+    return MetadataInfo(root)
 
 
 @pytest.fixture

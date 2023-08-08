@@ -88,26 +88,26 @@ class BootstrapSetup:
         }
 
 
-class RootInfo:
-    _new_root: Metadata[Root]
+class MetadataInfo:
+    _new_md: Metadata
     signing_keys: Dict[str, RSTUFKey]  # required for signing
-    _trusted_root: Metadata[Root]  # required to check for changes
+    _trusted_md: Metadata  # required to check for changes
 
     @property
     def threshold(self) -> int:
-        return self._new_root.signed.roles[Root.type].threshold
+        return self._new_md.signed.roles[Root.type].threshold
 
     @threshold.setter
     def threshold(self, value: int) -> None:
-        self._new_root.signed.roles[Root.type].threshold = value
+        self._new_md.signed.roles[Root.type].threshold = value
 
     @property
     def expiration(self) -> datetime:
-        return self._new_root.signed.expires
+        return self._new_md.signed.expires
 
     @expiration.setter
     def expiration(self, value: datetime) -> None:
-        self._new_root.signed.expires = value
+        self._new_md.signed.expires = value
 
     @property
     def expiration_str(self) -> str:
@@ -116,8 +116,8 @@ class RootInfo:
     @property
     def keys(self) -> List[Dict[str, Any]]:
         root_keys: List[Dict[str, Any]] = []
-        for keyid in self._new_root.signed.roles["root"].keyids:
-            key = self._new_root.signed.keys[keyid]
+        for keyid in self._new_md.signed.roles["root"].keyids:
+            key = self._new_md.signed.keys[keyid]
             key_dict = key.to_dict()
             key_dict["keyid"] = keyid
             key_dict["name"] = self._get_key_name(key)
@@ -127,17 +127,17 @@ class RootInfo:
 
     @property
     def online_key(self) -> Dict[str, Any]:
-        online_key_id = self._new_root.signed.roles["timestamp"].keyids[0]
-        key_obj = self._new_root.signed.keys[online_key_id]
+        online_key_id = self._new_md.signed.roles["timestamp"].keyids[0]
+        key_obj = self._new_md.signed.keys[online_key_id]
         online_key_dict = key_obj.to_dict()
         online_key_dict["keyid"] = online_key_id
         online_key_dict["name"] = self._get_key_name(key_obj)
         return online_key_dict
 
     def __init__(self, root_md: Metadata[Root]):
-        self._new_root = root_md
+        self._new_md = root_md
         self.signing_keys = {}
-        self._trusted_root = copy.deepcopy(self._new_root)
+        self._trusted_md = copy.deepcopy(self._new_md)
 
     @staticmethod
     def _get_key_name(key: Key) -> str:
@@ -149,11 +149,11 @@ class RootInfo:
 
     def is_keyid_used(self, keyid: str) -> bool:
         """Check if keyid is used in root keys"""
-        return keyid in self._new_root.signed.roles[Root.type].keyids
+        return keyid in self._new_md.signed.roles[Root.type].keyids
 
-    def save_current_root_key(self, key: RSTUFKey):
+    def save_current_md_key(self, key: RSTUFKey):
         """Update internal information based on 'key' data."""
-        tuf_key: Key = self._new_root.signed.keys[key.key["keyid"]]
+        tuf_key: Key = self._new_md.signed.keys[key.key["keyid"]]
         if tuf_key.unrecognized_fields.get("name"):
             key.name = tuf_key.unrecognized_fields["name"]
 
@@ -161,11 +161,11 @@ class RootInfo:
 
     def remove_key(self, key_name: str) -> bool:
         """Try to remove a root key and return status of the operation"""
-        for keyid in self._new_root.signed.roles["root"].keyids:
-            key = self._new_root.signed.keys[keyid]
+        for keyid in self._new_md.signed.roles["root"].keyids:
+            key = self._new_md.signed.keys[keyid]
             name = self._get_key_name(key)
             if name == key_name:
-                self._new_root.signed.revoke_key(keyid, Root.type)
+                self._new_md.signed.revoke_key(keyid, Root.type)
                 return True
 
         return False
@@ -178,7 +178,7 @@ class RootInfo:
         # Count only the signing keys still left in new_root
         signing_keys_amount = 0
         for keyid in self.signing_keys:
-            if keyid in self._new_root.signed.roles["root"].keyids:
+            if keyid in self._new_md.signed.roles["root"].keyids:
                 signing_keys_amount += 1
 
         if self.threshold <= signing_keys_amount:
@@ -192,17 +192,17 @@ class RootInfo:
         if new_key.name:
             tuf_key.unrecognized_fields["name"] = new_key.name
 
-        self._new_root.signed.add_key(tuf_key, Root.type)
+        self._new_md.signed.add_key(tuf_key, Root.type)
         self.signing_keys[new_key.key["keyid"]] = new_key
 
     def change_online_key(self, new_online_key: RSTUFKey) -> None:
         """Replace the current online key with a new one."""
         # Remove the current online key
-        online_key_id = self._new_root.signed.roles["timestamp"].keyids[0]
+        online_key_id = self._new_md.signed.roles["timestamp"].keyids[0]
         # Top level roles that use the online key
         online_roles = ["timestamp", "snapshot", "targets"]
         for role in online_roles:
-            self._new_root.signed.revoke_key(online_key_id, role)
+            self._new_md.signed.revoke_key(online_key_id, role)
 
         # Add the new online key
         online_tuf_key = Key.from_securesystemslib_key(new_online_key.key)
@@ -210,48 +210,48 @@ class RootInfo:
             online_tuf_key.unrecognized_fields["name"] = new_online_key.name
 
         for role in online_roles:
-            self._new_root.signed.add_key(online_tuf_key, role)
+            self._new_md.signed.add_key(online_tuf_key, role)
 
     def has_changed(self) -> bool:
         """Returns whether the root metadata object has changed"""
-        return self._trusted_root != self._new_root
+        return self._trusted_md != self._new_md
 
     def generate_payload(self) -> Dict[str, Any]:
         """Save the root metadata into 'file'"""
-        self._new_root.signed.version += 1
-        self._new_root.signatures.clear()
+        self._new_md.signed.version += 1
+        self._new_md.signatures.clear()
 
-        new_root_keyids = self._new_root.signed.roles["root"].keyids
-        trusted_root_keyids = self._trusted_root.signed.roles["root"].keyids
+        new_root_keyids = self._new_md.signed.roles["root"].keyids
+        trusted_root_keyids = self._trusted_md.signed.roles["root"].keyids
         # Sign only with keys existing in the new root version or part from
         # previous trusted root. Threshold (threshold comes from trusted root)
         # number of keys from previous threshold must sign new root to achieve
         # chain of trust between root versions.
         for keyid, key in self.signing_keys.items():
             if keyid in new_root_keyids or keyid in trusted_root_keyids:
-                self._new_root.sign(SSlibSigner(key.key), append=True)
+                self._new_md.sign(SSlibSigner(key.key), append=True)
 
         console.print("\nVerifying the new payload...")
         try:
             # Verify that the new root is signed by the trusted current root
-            self._trusted_root.verify_delegate(Root.type, self._new_root)
+            self._trusted_md.verify_delegate(Root.type, self._new_md)
         except UnsignedMetadataError:
             trusted_keys_amount = 0
-            for keyid in self._trusted_root.signed.roles["root"].keyids:
+            for keyid in self._trusted_md.signed.roles["root"].keyids:
                 if keyid in self.signing_keys:
                     trusted_keys_amount += 1
 
-            t = self._trusted_root.signed.roles["root"].threshold
+            t = self._trusted_md.signed.roles["root"].threshold
             raise click.ClickException(
                 "Not enough loaded keys left from current root: "
                 f"needed {t}, have {trusted_keys_amount}"
             )
 
         # Verify that the new root is signed by at least threshold of keys
-        self._new_root.verify_delegate(Root.type, self._new_root)
+        self._new_md.verify_delegate(Root.type, self._new_md)
         console.print("The new payload is [green]verified[/]")
 
-        return {"metadata": {"root": self._new_root.to_dict()}}
+        return {"metadata": {"root": self._new_md.to_dict()}}
 
 
 class TUFManagement:

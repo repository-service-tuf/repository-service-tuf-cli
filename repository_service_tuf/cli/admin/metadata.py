@@ -19,7 +19,7 @@ from repository_service_tuf.helpers.api_client import (
     task_status,
 )
 from repository_service_tuf.helpers.tuf import (
-    RootInfo,
+    MetadataInfo,
     RSTUFKey,
     load_key,
     load_payload,
@@ -146,7 +146,7 @@ def _create_keys_table(
     return keys_table
 
 
-def _print_root_info(root_info: RootInfo):
+def _print_root_info(root_info: MetadataInfo):
     root_table = table.Table()
     root_table.add_column("Root", justify="left", vertical="middle")
     root_table.add_column("KEYS", justify="center", vertical="middle")
@@ -187,7 +187,7 @@ def _get_key(role: str) -> RSTUFKey:
 
 
 def _is_valid_current_key(
-    keyid: str, root_info: RootInfo, already_loaded_keyids: List[str]
+    keyid: str, root_info: MetadataInfo, already_loaded_keyids: List[str]
 ) -> bool:
     """Verify that key with `keyid` have been used to sign the current root"""
     if keyid in already_loaded_keyids:
@@ -210,7 +210,7 @@ def _is_valid_current_key(
     return True
 
 
-def _current_root_keys_validation(root_info: RootInfo):
+def _current_md_keys_validation(root_info: MetadataInfo):
     """
     Authorize user by loading current root threshold number of root keys
     used for signing the current root metadata.
@@ -236,7 +236,7 @@ def _current_root_keys_validation(root_info: RootInfo):
 
         key_count += 1
         loaded.append(keyid)
-        root_info.save_current_root_key(root_key)
+        root_info.save_current_md_key(root_key)
         console.print(
             ":white_check_mark: Key "
             f"{key_count}/{threshold} [green]Verified[/]"
@@ -245,7 +245,7 @@ def _current_root_keys_validation(root_info: RootInfo):
     console.print("\n[green]Authorization is successful [/]\n", width=100)
 
 
-def _keys_removal(root_info: RootInfo):
+def _keys_removal(root_info: MetadataInfo):
     """Asking the user if they want to remove any of the root keys"""
     while True:
         if len(root_info.keys) < 1:
@@ -273,7 +273,7 @@ def _keys_removal(root_info: RootInfo):
         console.print(f"Key with name/tag [yellow]{name}[/] removed\n")
 
 
-def _keys_additions(root_info: RootInfo):
+def _keys_additions(root_info: MetadataInfo):
     while True:
         # Get all signing keys that are still inside the new root.
         keys: List[Dict[str, Any]] = []
@@ -326,7 +326,7 @@ def _get_positive_int_input(msg: str, input_name: str, default: Any) -> int:
         console.print(f"{input_name} must be at least 1")
 
 
-def _modify_expiration(root_info: RootInfo):
+def _modify_expiration(root_info: MetadataInfo):
     console.print(markdown.Markdown(EXPIRY_CHANGES_MSG), width=100)
     console.print("\n")
     change: bool
@@ -360,7 +360,7 @@ def _modify_expiration(root_info: RootInfo):
                 return
 
 
-def _modify_root_keys(root_info: RootInfo):
+def _modify_root_keys(root_info: MetadataInfo):
     """Modify root keys"""
     console.print(markdown.Markdown(ROOT_KEYS_CHANGES_MSG), width=100)
     console.print("\n")
@@ -389,7 +389,7 @@ def _modify_root_keys(root_info: RootInfo):
         _print_root_info(root_info)
 
 
-def _modify_online_key(root_info: RootInfo):
+def _modify_online_key(root_info: MetadataInfo):
     console.print(markdown.Markdown(ONLINE_KEY_CHANGE), width=100)
     while True:
         online_key_table = _create_keys_table(
@@ -542,7 +542,7 @@ def update(
         console.print("\n")
     try:
         root_md: Metadata = get_md_file(current_root_uri)
-        root_info: RootInfo = RootInfo(root_md)
+        root_info: MetadataInfo = MetadataInfo(root_md)
     except StorageError:
         raise click.ClickException(
             f"Cannot fetch/load current root {current_root_uri}"
@@ -554,7 +554,7 @@ def update(
 
     _print_root_info(root_info)
 
-    _current_root_keys_validation(root_info)
+    _current_md_keys_validation(root_info)
 
     _modify_expiration(root_info)
 

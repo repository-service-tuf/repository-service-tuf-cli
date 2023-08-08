@@ -652,12 +652,12 @@ class TestMetadataUpdateOptions:
     ):
         input_step1, input_step2, input_step3, input_step4 = md_update_input
         # We won't be able to check generate_payload calls as the function
-        # will be called from a RootInfo object we don't have access to.
+        # will be called from a MetadataInfo object we don't have access to.
         fake_generate_payload = pretend.call_recorder(
             lambda *a: {"data": "foo"}
         )
         monkeypatch.setattr(
-            f"{self.path}.RootInfo.generate_payload", fake_generate_payload
+            f"{self.path}.MetadataInfo.generate_payload", fake_generate_payload
         )
         metadata.send_payload = pretend.call_recorder(lambda **kw: "task_id")
         metadata.task_status = pretend.call_recorder(lambda *a: None)
