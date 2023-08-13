@@ -24,6 +24,7 @@ class URL(Enum):
     task = "api/v1/task/?task_id="
     publish_targets = "api/v1/targets/publish/"
     metadata_sign = "api/v1/metadata/sign/"
+    artifacts = "api/v1/artifacts/"
 
 
 class Methods(Enum):
