@@ -608,11 +608,11 @@ def update(
 
 
 def _get_pending_signatures(
-    settings: Any, rstuf_api_url: Optional[str]
+    settings: Any, api_url: Optional[str]
 ) -> Dict[str, Any]:
-    if settings.AUTH is False and rstuf_api_url is None:
-        rstuf_api_url = prompt.Prompt.ask("\n[cyan]API[/] URL address")
-        settings.SERVER = rstuf_api_url
+    if settings.AUTH is False and api_url is None:
+        api_url = prompt.Prompt.ask("\n[cyan]API[/] URL address")
+        settings.SERVER = api_url
 
     headers = get_headers(settings)
     response = request_server(
@@ -682,12 +682,12 @@ def _sign_metadata(role_info: MetadataInfo, rstuf_key: RSTUFKey) -> Signature:
 
 @metadata.command()
 @click.option(
-    "--rstuf-api-url",
+    "--api-url",
     help="URL or local path to the current root.json file.",
     required=False,
 )
 @click.pass_context
-def sign(context, rstuf_api_url: Optional[str]) -> None:
+def sign(context, api_url: Optional[str]) -> None:
     """
     Start metadata signature.
     """
@@ -695,7 +695,7 @@ def sign(context, rstuf_api_url: Optional[str]) -> None:
 
     settings = context.obj["settings"]
 
-    signing_roles = _get_pending_signatures(settings, rstuf_api_url)
+    signing_roles = _get_pending_signatures(settings, api_url)
     rolename = prompt.Prompt.ask(
         "\nChoose a metadata to sign", choices=[role for role in signing_roles]
     )
