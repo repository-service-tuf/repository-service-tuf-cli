@@ -682,6 +682,7 @@ def ceremony(
             payload=bootstrap_payload,
             expected_msg="Bootstrap accepted.",
             command_name="Bootstrap",
+            token=context.obj.get("token"),
         )
         task_status(task_id, settings, "Bootstrap status: ")
         console.print(f"Bootstrap completed using `{file}`. 🔐 🎉")
@@ -701,6 +702,7 @@ def ceremony(
                 payload=bootstrap_payload,
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
+                token=context.obj.get("token"),
             )
             task_status(task_id, settings, "Bootstrap status: ")
             console.print("\nCeremony done. 🔐 🎉. Bootstrap completed.")

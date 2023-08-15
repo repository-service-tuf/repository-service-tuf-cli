@@ -443,6 +443,7 @@ class TestCeremonyOptions:
                 payload={"k": "v"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
+                token=test_context.get("token"),
             )
         ]
         assert ceremony._run_ceremony_steps.calls == [pretend.call(False)]
@@ -516,6 +517,7 @@ class TestCeremonyOptions:
                 payload={"k": "v"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
+                token=test_context.get("token"),
             )
         ]
         assert ceremony.task_status.calls == [
@@ -575,6 +577,7 @@ class TestCeremonyOptions:
                 payload={"k": "v"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
+                token=test_context.get("token"),
             )
         ]
         assert ceremony.task_status.calls == [
