@@ -519,6 +519,7 @@ def update(
             payload=payload,
             expected_msg="Metadata update accepted.",
             command_name="Metadata Update",
+            token=context.obj.get("token"),
         )
         task_status(task_id, settings, "Metadata Update status: ")
         console.print(f"Existing payload {file} sent")
@@ -579,6 +580,7 @@ def update(
                 payload=payload,
                 expected_msg="Metadata update accepted.",
                 command_name="Metadata Update",
+                token=context.obj.get("token"),
             )
             task_status(task_id, settings, "Metadata Update status: ")
 

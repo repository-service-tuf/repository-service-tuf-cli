@@ -593,6 +593,7 @@ class TestMetadataUpdateOptions:
                 payload={"data": "а"},
                 expected_msg="Metadata update accepted.",
                 command_name="Metadata Update",
+                token=test_context.get("token"),
             )
         ]
         assert metadata.task_status.calls == [
@@ -681,6 +682,7 @@ class TestMetadataUpdateOptions:
                 payload={"data": "foo"},
                 expected_msg="Metadata update accepted.",
                 command_name="Metadata Update",
+                token=test_context.get("token"),
             )
         ]
         assert metadata.task_status.calls == [
