@@ -170,7 +170,9 @@ class TestAPIClient:
 
         assert result == {"Authorization": "Bearer fake_token"}
         assert api_client.is_logged.calls == [
-            pretend.call(test_context["settings"])
+            pretend.call(
+                test_context["settings"], test_context["settings"].TOKEN
+            )
         ]
         assert api_client.request_server.calls == [
             pretend.call(
@@ -206,7 +208,9 @@ class TestAPIClient:
 
         assert "re-login" in str(err)
         assert api_client.is_logged.calls == [
-            pretend.call(test_context["settings"])
+            pretend.call(
+                test_context["settings"], test_context["settings"].TOKEN
+            )
         ]
 
     def test_get_headers_is_logged_state_true_expired_token(
@@ -225,7 +229,9 @@ class TestAPIClient:
 
         assert "The token has expired" in str(err)
         assert api_client.is_logged.calls == [
-            pretend.call(test_context["settings"])
+            pretend.call(
+                test_context["settings"], test_context["settings"].TOKEN
+            )
         ]
 
     def test_get_headers_unexpected_error(self, test_context):
@@ -245,7 +251,9 @@ class TestAPIClient:
 
         assert "Unexpected error" in str(err)
         assert api_client.is_logged.calls == [
-            pretend.call(test_context["settings"])
+            pretend.call(
+                test_context["settings"], test_context["settings"].TOKEN
+            )
         ]
 
     def test_bootstrap_status(self, test_context):
@@ -622,7 +630,9 @@ class TestAPIClient:
         )
         assert result == "task_id_123"
         assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
+            pretend.call(
+                test_context["settings"], test_context["settings"].get("TOKEN")
+            )
         ]
         assert api_client.request_server.calls == [
             pretend.call(
@@ -663,7 +673,9 @@ class TestAPIClient:
 
         assert "Error 200" in str(err)
         assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
+            pretend.call(
+                test_context["settings"], test_context["settings"].get("TOKEN")
+            )
         ]
         assert api_client.request_server.calls == [
             pretend.call(
@@ -703,7 +715,9 @@ class TestAPIClient:
 
         assert "No message available." in str(err)
         assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
+            pretend.call(
+                test_context["settings"], test_context["settings"].get("TOKEN")
+            )
         ]
         assert api_client.request_server.calls == [
             pretend.call(
@@ -744,7 +758,9 @@ class TestAPIClient:
 
         assert "Failed to get `task id`" in str(err)
         assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
+            pretend.call(
+                test_context["settings"], test_context["settings"].get("TOKEN")
+            )
         ]
         assert api_client.request_server.calls == [
             pretend.call(
@@ -785,7 +801,9 @@ class TestAPIClient:
 
         assert "Failed to get task response data" in str(err)
         assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
+            pretend.call(
+                test_context["settings"], test_context["settings"].get("TOKEN")
+            )
         ]
         assert api_client.request_server.calls == [
             pretend.call(

@@ -23,6 +23,7 @@ class URL(Enum):
     metadata = "api/v1/metadata/"
     task = "api/v1/task/?task_id="
     publish_targets = "api/v1/targets/publish/"
+    artifacts = "api/v1/artifacts/"
 
 
 class Methods(Enum):
@@ -64,11 +65,11 @@ def request_server(
     return response
 
 
-def is_logged(settings: LazySettings):
-    if settings.get("AUTH") is False:
+def is_logged(settings: LazySettings, token: Optional[str] = None):
+    if settings.get("AUTH") is False and token is None:
         return None
 
-    token = settings.get("TOKEN")
+    token = settings.get("TOKEN") or token
     server = settings.get("SERVER")
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -88,24 +89,38 @@ def is_logged(settings: LazySettings):
         )
 
 
-def get_headers(settings: LazySettings) -> Dict[str, str]:
-    if settings.get("AUTH") is False:
+def get_headers(
+    settings: LazySettings, token: Optional[str] = None
+) -> Dict[str, str]:
+
+    built_in_auth: bool = settings.get("AUTH")
+
+    if built_in_auth is False and token is None:
         return {}
 
     server = settings.get("SERVER")
-    token = settings.get("TOKEN")
+    token = settings.get("TOKEN") or token
     if server and token:
-        token_access_check = is_logged(settings)
+        additional_error_message: str = ""
+
+        token_access_check = is_logged(settings, token)
         if token_access_check.state is False:
+            if built_in_auth is True:
+                additional_error_message = (
+                    "\n\nTry re-login: 'rstuf --auth admin login'"
+                )
+
             raise click.ClickException(
-                f"{str(token_access_check.data)}"
-                "\n\nTry re-login: 'rstuf --auth admin login'"
+                f"{str(token_access_check.data)}{additional_error_message}"
             )
 
         expired_admin = token_access_check.data.get("expired")
         if expired_admin is True:
+            if built_in_auth is True:
+                additional_error_message = "Run 'rstuf --auth admin login'"
+
             raise click.ClickException(
-                "The token has expired. Run 'rstuf --auth admin login'"
+                f"The token has expired. {additional_error_message}"
             )
         else:
             headers = {"Authorization": f"Bearer {token}"}
@@ -216,6 +231,7 @@ def send_payload(
     payload: Dict[str, Any],
     expected_msg: str,
     command_name: str,
+    token: Optional[str] = None,
 ) -> str:
     """
     Send 'payload' to a given 'settings.SERVER'.
@@ -230,7 +246,7 @@ def send_payload(
     Returns:
         Task id of the job sending the payload.
     """
-    headers = get_headers(settings)
+    headers = get_headers(settings, token)
     response = request_server(
         settings.SERVER,
         url,
