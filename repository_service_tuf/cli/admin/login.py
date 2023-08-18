@@ -12,8 +12,8 @@ from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,
-    is_logged,
     request_server,
+    token_state,
 )
 
 
@@ -123,7 +123,7 @@ def login(context, force, server_, password_, expires_):
         and settings.get("SERVER") is not None
         and settings.get("TOKEN") is not None
     ):
-        response = is_logged(settings)
+        response = token_state(settings)
         if response.state is False:
             _run_login(context, server_, password_, expires_)
 

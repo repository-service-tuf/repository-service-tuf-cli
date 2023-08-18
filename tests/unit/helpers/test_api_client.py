@@ -72,7 +72,7 @@ class TestAPIClient:
 
         assert "Failed to connect to http://server" in str(err.value)
 
-    def test_is_logged(self, test_context):
+    def test_token_state(self, test_context):
         fake_response = pretend.stub(
             status_code=200,
             json=pretend.call_recorder(lambda: {"data": {"expired": False}}),
@@ -85,7 +85,7 @@ class TestAPIClient:
         test_context["settings"].TOKEN = "fake_token"
         test_context["settings"].AUTH = True
 
-        result = api_client.is_logged(test_context["settings"])
+        result = api_client.token_state(test_context["settings"])
         assert result == api_client.Login(state=True, data={"expired": False})
         assert api_client.request_server.calls == [
             pretend.call(
@@ -96,14 +96,13 @@ class TestAPIClient:
             )
         ]
 
-    def test_is_logged_no_auth(self, test_context):
-        test_context["settings"].SERVER = "http://server"
-        test_context["settings"].TOKEN = "fake_token"
+    def test_token_state_no_auth(self, test_context):
+        test_context["settings"].AUTH = False
 
-        result = api_client.is_logged(test_context["settings"])
+        result = api_client.token_state(test_context["settings"])
         assert result is None
 
-    def test_is_logged_401(self, test_context):
+    def test_token_state_401(self, test_context):
         fake_response = pretend.stub(
             status_code=401,
         )
@@ -115,7 +114,7 @@ class TestAPIClient:
         test_context["settings"].TOKEN = "fake_token"
         test_context["settings"].AUTH = True
 
-        result = api_client.is_logged(test_context["settings"])
+        result = api_client.token_state(test_context["settings"])
         assert result == api_client.Login(state=False, data=None)
         assert api_client.request_server.calls == [
             pretend.call(
@@ -126,7 +125,7 @@ class TestAPIClient:
             )
         ]
 
-    def test_is_logged_500(self, test_context):
+    def test_token_state_500(self, test_context):
         fake_response = pretend.stub(
             status_code=500,
             text="body",
@@ -140,7 +139,7 @@ class TestAPIClient:
         test_context["settings"].AUTH = True
 
         with pytest.raises(api_client.click.ClickException) as err:
-            api_client.is_logged(test_context["settings"])
+            api_client.token_state(test_context["settings"])
 
         assert "Error 500 body" in str(err)
         assert api_client.request_server.calls == [
@@ -152,8 +151,13 @@ class TestAPIClient:
             )
         ]
 
-    def test_get_headers(self, test_context):
-        api_client.is_logged = pretend.call_recorder(
+    def test_get_headers_no_auth_no_token(self, test_context):
+        result = api_client.get_headers(test_context["settings"])
+
+        assert result == {}
+
+    def test_get_headers_auth(self, test_context):
+        api_client.token_state = pretend.call_recorder(
             lambda *a: api_client.Login(
                 state=True, data={"data": {"expired": False}}
             )
@@ -169,82 +173,117 @@ class TestAPIClient:
         result = api_client.get_headers(test_context["settings"])
 
         assert result == {"Authorization": "Bearer fake_token"}
-        assert api_client.is_logged.calls == [
+        assert api_client.token_state.calls == [
             pretend.call(test_context["settings"])
         ]
-        assert api_client.request_server.calls == [
-            pretend.call(
-                "http://server",
-                api_client.URL.bootstrap.value,
-                api_client.Methods.get,
-                headers={"Authorization": "Bearer fake_token"},
+
+    def test_get_headers_auth_token_expired(self, test_context):
+        api_client.token_state = pretend.call_recorder(
+            lambda *a: api_client.Login(
+                state=False, data={"data": {"expired": False}}
             )
+        )
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(status_code=200)
+        )
+
+        test_context["settings"].SERVER = "http://server"
+        test_context["settings"].TOKEN = "fake_token"
+        test_context["settings"].AUTH = True
+
+        with pytest.raises(api_client.click.ClickException) as err:
+            api_client.get_headers(test_context["settings"])
+
+        assert "Try re-login: 'rstuf --auth admin login'" in str(err)
+        assert api_client.token_state.calls == [
+            pretend.call(test_context["settings"])
         ]
 
-    def test_get_headers_no_auth(self, test_context):
+    def test_get_headers_auth_missing_server(self, test_context):
+        api_client.token_state = pretend.call_recorder(
+            lambda *a: api_client.Login(
+                state=True, data={"data": {"expired": False}}
+            )
+        )
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(status_code=200)
+        )
+
+        test_context["settings"].SERVER = None
+        test_context["settings"].TOKEN = "fake_token"
+        test_context["settings"].AUTH = True
+
+        with pytest.raises(api_client.click.ClickException) as err:
+            api_client.get_headers(test_context["settings"])
+
+        assert "Login first. Run 'rstuf --auth admin login'" in str(err)
+        assert api_client.token_state.calls == []
+
+    def test_get_headers_auth_missing_token(self, test_context):
+        """Get headers --auth with server and token"""
+        api_client.token_state = pretend.call_recorder(
+            lambda *a: api_client.Login(
+                state=True, data={"data": {"expired": False}}
+            )
+        )
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(status_code=200)
+        )
+
+        test_context["settings"].SERVER = "fake_server"
+        test_context["settings"].TOKEN = None
+        test_context["settings"].AUTH = True
+
+        with pytest.raises(api_client.click.ClickException) as err:
+            api_client.get_headers(test_context["settings"])
+
+        assert "Login first. Run 'rstuf --auth admin login'" in str(err)
+        assert api_client.token_state.calls == []
+
+    def test_get_headers_token(self, test_context):
+        api_client.token_state = pretend.call_recorder(
+            lambda *a: api_client.Login(
+                state=True, data={"data": {"expired": False}}
+            )
+        )
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(status_code=200)
+        )
+
+        test_context["settings"].SERVER = "http://server"
+        test_context["settings"].TOKEN = "fake_token"
+        test_context["settings"].AUTH = False
+
+        result = api_client.get_headers(test_context["settings"])
+
+        assert result == {"Authorization": "Bearer fake_token"}
+        assert api_client.token_state.calls == [
+            pretend.call(test_context["settings"])
+        ]
+
+    def test_get_headers_token_missing_server(self, test_context):
+        test_context["settings"].SERVER = None
+        test_context["settings"].TOKEN = "fake_token"
+        test_context["settings"].AUTH = False
+
         result = api_client.get_headers(test_context["settings"])
 
         assert result == {}
 
-    def test_get_headers_never_logged(self):
-        with pytest.raises(api_client.click.ClickException) as err:
-            api_client.get_headers({})
-
-        assert "Login first. Run 'rstuf --auth admin login'" in str(err)
-
-    def test_get_headers_is_logged_state_false(self, test_context):
-        api_client.is_logged = pretend.call_recorder(
+    def test_get_headers_token_expired_false(self, test_context):
+        api_client.token_state = pretend.call_recorder(
             lambda *a: api_client.Login(state=False, data={"expired": False})
         )
 
         test_context["settings"].SERVER = "http://server"
         test_context["settings"].TOKEN = "fake_token"
-        test_context["settings"].AUTH = True
+        test_context["settings"].AUTH = False
 
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.get_headers(test_context["settings"])
 
-        assert "re-login" in str(err)
-        assert api_client.is_logged.calls == [
-            pretend.call(test_context["settings"])
-        ]
-
-    def test_get_headers_is_logged_state_true_expired_token(
-        self, test_context
-    ):
-        api_client.is_logged = pretend.call_recorder(
-            lambda *a: api_client.Login(state=True, data={"expired": True})
-        )
-
-        test_context["settings"].SERVER = "http://server"
-        test_context["settings"].TOKEN = "fake_token"
-        test_context["settings"].AUTH = True
-
-        with pytest.raises(api_client.click.ClickException) as err:
-            api_client.get_headers(test_context["settings"])
-
-        assert "The token has expired" in str(err)
-        assert api_client.is_logged.calls == [
-            pretend.call(test_context["settings"])
-        ]
-
-    def test_get_headers_unexpected_error(self, test_context):
-        api_client.is_logged = pretend.call_recorder(
-            lambda *a: api_client.Login(state=True, data={"expired": False})
-        )
-        api_client.request_server = pretend.call_recorder(
-            lambda *a, **kw: pretend.stub(status_code=500, text="error body")
-        )
-
-        test_context["settings"].SERVER = "http://server"
-        test_context["settings"].TOKEN = "fake_token"
-        test_context["settings"].AUTH = True
-
-        with pytest.raises(api_client.click.ClickException) as err:
-            api_client.get_headers(test_context["settings"])
-
-        assert "Unexpected error" in str(err)
-        assert api_client.is_logged.calls == [
+        assert "Token is expired" in str(err)
+        assert api_client.token_state.calls == [
             pretend.call(test_context["settings"])
         ]
 

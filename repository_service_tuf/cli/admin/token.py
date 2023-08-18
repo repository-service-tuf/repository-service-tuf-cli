@@ -6,8 +6,8 @@ from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,
-    is_logged,
     request_server,
+    token_state,
 )
 
 
@@ -52,7 +52,7 @@ def generate(context, scope, expires):
     settings = context.obj.get("settings")
     server = settings.get("SERVER")
     logged_token = settings.get("TOKEN")
-    login = is_logged(settings)
+    login = token_state(settings)
     if login.state is False:
         raise click.ClickException(
             "Not logged. Use 'rstuf --auth admin login'"
@@ -88,7 +88,7 @@ def inspect(context, token):
     settings = context.obj.get("settings")
     server = settings.get("SERVER")
     logged_token = settings.get("TOKEN")
-    login = is_logged(settings)
+    login = token_state(settings)
     if login.state is False:
         raise click.ClickException(
             "Not logged. Use 'rstuf --auth admin login'"
