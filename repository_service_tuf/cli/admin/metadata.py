@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2022-2023 VMware Inc
 #
 # SPDX-License-Identifier: MIT
+import sys
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
@@ -658,7 +659,8 @@ def _get_signing_key(role_info: MetadataInfo) -> RSTUFKey:
                 f"\nRetry to load the key {sign_key_name}?"
             )
             if not retry:
-                raise click.ClickException("Aborted.")
+                console.print("Aborted.")
+                sys.exit(0)
         else:
             break
 

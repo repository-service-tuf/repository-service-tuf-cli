@@ -441,7 +441,7 @@ class TestTUFHelper:
             pretend.call({"a": "b"}),
         ]
 
-    def test__sign(self, test_tuf_management):
+    def test__sign(self, test_tuf_management: TUFManagement):
         fake_role = pretend.stub(
             signatures=pretend.stub(
                 clear=pretend.call_recorder(lambda *a: None)

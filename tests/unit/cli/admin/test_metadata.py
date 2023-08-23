@@ -865,7 +865,7 @@ class TestMetadataSign:
             input="\n".join(input_step),
             obj=test_context,
         )
-        assert test_result.exit_code == 1, test_result.output
+        assert test_result.exit_code == 0, test_result.output
         assert "Aborted." in test_result.output
         assert metadata.request_server.calls == [
             pretend.call(
@@ -948,7 +948,9 @@ class TestMetadataSign:
         self, client, test_context, metadata_sign_input
     ):
         input_step = metadata_sign_input
-        input_step[4] = "tests/files/key_storage/JanisJoplin.key"
+        input_step[
+            4
+        ] = "tests/files/key_storage/JanisJoplin.key"  # Enter the root`s private key path  # noqa
 
         with open("tests/files/das-root.json", "r") as f:
             das_root = f.read()
