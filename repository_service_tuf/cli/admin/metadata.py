@@ -609,7 +609,7 @@ def update(
         console.print("\nNo file will be generated as no changes were made\n")
 
 
-def _get_pending_signatures(
+def _get_pending_roles(
     settings: Any, api_url: Optional[str]
 ) -> Dict[str, Any]:
     if settings.AUTH is False and api_url is None:
@@ -629,11 +629,11 @@ def _get_pending_signatures(
     if response_data is None:
         raise click.ClickException(response.text)
 
-    signing_roles: Dict[str, Any] = response_data.get("metadata", {})
-    if len(signing_roles) == 0:
+    pending_roles: Dict[str, Any] = response_data.get("metadata", {})
+    if len(pending_roles) == 0:
         raise click.ClickException("No metadata available for signing")
 
-    return signing_roles
+    return pending_roles
 
 
 def _get_signing_key(role_info: MetadataInfo) -> RSTUFKey:
@@ -697,11 +697,11 @@ def sign(context, api_url: Optional[str]) -> None:
 
     settings = context.obj["settings"]
 
-    signing_roles = _get_pending_signatures(settings, api_url)
+    pending_roles = _get_pending_roles(settings, api_url)
     rolename = prompt.Prompt.ask(
-        "\nChoose a metadata to sign", choices=[role for role in signing_roles]
+        "\nChoose a metadata to sign", choices=[role for role in pending_roles]
     )
-    role_info = MetadataInfo(Metadata.from_dict(signing_roles[rolename]))
+    role_info = MetadataInfo(Metadata.from_dict(pending_roles[rolename]))
     console.print(
         f"Signing [cyan]{rolename}[/] version "
         f"{role_info._new_md.signed.version}"
