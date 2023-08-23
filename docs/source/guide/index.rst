@@ -706,7 +706,7 @@ There are a few of ways to you can fully complete the metadata update ceremony:
 sign (``sign``)
 ...............
 
-.. Note:: It is required to access the private key for signing.
+.. Note:: It's required to have access to the private key used for signing.
 
 .. warning:: Do not share the private key.
 
