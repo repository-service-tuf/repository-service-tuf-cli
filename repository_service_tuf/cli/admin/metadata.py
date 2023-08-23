@@ -646,7 +646,7 @@ def _get_signing_key(role_info: MetadataInfo) -> RSTUFKey:
     sign_key_name = prompt.Prompt.ask(
         "\nChoose a private key to load",
         choices=[
-            signing_key.unrecognized_fields["name"]
+            signing_key.unrecognized_fields.get("name", signing_key.keyid[:7])
             for signing_key in pending_keys
         ],
     )
@@ -667,7 +667,9 @@ def _get_signing_key(role_info: MetadataInfo) -> RSTUFKey:
     rstuf_key_id = rstuf_key.key["keyid"]
 
     current_role_key = role_info._new_md.signed.keys[rstuf_key_id]
-    current_role_key_name = current_role_key.unrecognized_fields["name"]
+    current_role_key_name = current_role_key.unrecognized_fields.get(
+        "name", current_role_key.keyid[:7]
+    )
     if current_role_key_name != sign_key_name:
         raise click.ClickException(f"Loaded key is not '{sign_key_name}'")
 
