@@ -742,14 +742,14 @@ class TestMetadataSign:
                     },
                 },
                 "Metadata sign accepted.",
-                "Metadata signature",
+                "Metadata sign",
             )
         ]
         assert metadata.task_status.calls == [
             pretend.call(
                 "fake-taskid",
                 test_context["settings"],
-                "Metadata Signature status:",
+                "Metadata sign status:",
             )
         ]
 
@@ -933,14 +933,14 @@ class TestMetadataSign:
                     },
                 },
                 "Metadata sign accepted.",
-                "Metadata signature",
+                "Metadata sign",
             )
         ]
         assert metadata.task_status.calls == [
             pretend.call(
                 "fake-taskid",
                 test_context["settings"],
-                "Metadata Signature status:",
+                "Metadata sign status:",
             )
         ]
 

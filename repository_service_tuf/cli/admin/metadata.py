@@ -114,8 +114,10 @@ METADATA_SIGNING = """
 Metadata signing allows sending signature of pending Repository Service for TUF
 (RSTUF) role metadata to an existing RSTUF API deployment.
 
-It retrieves the pending metadata from the RSTUF API.
-Select the metadata role pending signature and the private key to load.
+The Metadata Signing does the following steps:
+- retrieves the metadata pending for signatures from RSTUF API
+- selects the metadata role for signing
+- loads the private key for signing
 
 After loading the key it will sign the role metadata and send the request to
 the RSTUF API with the signature.
@@ -683,7 +685,7 @@ def _sign_metadata(role_info: MetadataInfo, rstuf_key: RSTUFKey) -> Signature:
 @metadata.command()
 @click.option(
     "--api-url",
-    help="URL to an RSTUF API deployment or local path to the current root.json file.",
+    help="URL to an RSTUF API.",
     required=False,
 )
 @click.pass_context
@@ -715,7 +717,7 @@ def sign(context, api_url: Optional[str]) -> None:
         URL.metadata_sign.value,
         payload,
         "Metadata sign accepted.",
-        "metadata sign",
+        "Metadata sign",
     )
-    task_status(task_id, settings, "Metadata Sign status:")
+    task_status(task_id, settings, "Metadata sign status:")
     console.print("\nMetadata Signed! 🔑\n")

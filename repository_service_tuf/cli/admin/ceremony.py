@@ -358,7 +358,8 @@ def _configure_keys(
                 "\n- [cyan]private key[/] requires the file path and password"
                 "\n- [cyan]public info[/] requires the a key id and key hash"
                 "\n  tip: `rstuf key info` retrieves the public information"
-                "\nSelect to use [cyan]private key[/] or [cyan]public[/]?",
+                "\nSelect to use [cyan]private key[/] or [cyan]public "
+                "info[/]?",
                 choices=["private", "public"],
                 default="public",
             )
