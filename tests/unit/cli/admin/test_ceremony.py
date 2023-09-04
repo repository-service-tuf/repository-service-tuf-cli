@@ -88,6 +88,76 @@ class TestCeremonyInteraction:
         # passwords not shown in output
         assert "strongPass" not in test_result.output
 
+    def test_ceremony_using_root_key2_public_key(
+        self, client, test_context, test_inputs, test_setup
+    ):
+        ceremony.setup = test_setup
+        input_step1, input_step2, _, input_step4 = test_inputs
+
+        input_step3 = [
+            "y",  # Ready to start loading the root keys? [y/n]
+            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
+            "",  # Give a name/tag to the key [Optional]
+            "",  # Select to use private key or public? [private/public] (public)  # noqa
+            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "fake_id",  # # Enter root`s key id
+            "fake_hash",  # Enter root`s public key hash
+            "root key 2",  # Give a name/tag to the key [Optional]
+            "",
+        ]
+
+        test_result = client.invoke(
+            ceremony.ceremony,
+            "--save",
+            input="\n".join(
+                input_step1 + input_step2 + input_step3 + input_step4
+            ),
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 0, test_result.output
+        assert "Ceremony done. 🔐 🎉." in test_result.output
+        # passwords not shown in output
+        assert "strongPass" not in test_result.output
+
+    def test_ceremony_using_root_key2_public_key_empty_retry(
+        self, client, test_context, test_inputs, test_setup
+    ):
+        ceremony.setup = test_setup
+        input_step1, input_step2, _, input_step4 = test_inputs
+
+        input_step3 = [
+            "y",  # Ready to start loading the root keys? [y/n]
+            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
+            "",  # Give a name/tag to the key [Optional]
+            "",  # Select to use private key or public? [private/public] (public)  # noqa
+            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "",  # # Enter root`s key id
+            "fake_id",  # # Enter root`s key id
+            "",  # Enter root`s public key hash
+            "fake_hash",  # Enter root`s public key hash
+            "",  # Give a name/tag to the key [Optional]
+            "",
+        ]
+
+        test_result = client.invoke(
+            ceremony.ceremony,
+            "--save",
+            input="\n".join(
+                input_step1 + input_step2 + input_step3 + input_step4
+            ),
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 0, test_result.output
+        assert "Ceremony done. 🔐 🎉." in test_result.output
+        # passwords not shown in output
+        assert "strongPass" not in test_result.output
+
     def test_ceremony_negative_expiry_and_try_again(
         self, client, test_context, test_inputs, test_setup
     ):
@@ -126,7 +196,7 @@ class TestCeremonyInteraction:
         # passwords not shown in output
         assert "strongPass" not in test_result.output
 
-    def test_ceremony_key_bad_input_try_again_yes(
+    def test_ceremony_key_bad_input_try_again(
         self, client, test_context, test_inputs, test_setup
     ):
         ceremony.setup = test_setup
@@ -139,7 +209,6 @@ class TestCeremonyInteraction:
             "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
             "wrong password",  # Enter the root`s private key password
             "",  # Give a name/tag to the key [Optional]
-            "y",  # Try again?
             "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
             "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
             "strongPass",  # Enter the root`s private key password
@@ -161,35 +230,6 @@ class TestCeremonyInteraction:
 
         assert test_result.exit_code == 0, test_result.output
         assert "Ceremony done. 🔐 🎉." in test_result.output
-        # passwords not shown in output
-        assert "strongPass" not in test_result.output
-
-    def test_ceremony_key_bad_input_try_again_no(
-        self, client, test_context, test_inputs, test_setup
-    ):
-        ceremony.setup = test_setup
-        input_step1, input_step2, input_step3, input_step4 = test_inputs
-
-        # overwrite the input_step2
-        input_step3 = [
-            "y",  # Ready to start loading the root keys? [y/n]
-            "",  # Select the root`s key type [ed25519/ecdsa/rsa]
-            "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
-            "wrong password",  # Enter the root`s private key password
-            "",  # Give a name/tag to the key [Optional]
-            "n",  # Try again?
-        ]
-
-        test_result = client.invoke(
-            ceremony.ceremony,
-            input="\n".join(
-                input_step1 + input_step2 + input_step3 + input_step4
-            ),
-            obj=test_context,
-        )
-
-        assert test_result.exit_code == 1, test_result.output
-        assert "Required key not validated." in test_result.output
         # passwords not shown in output
         assert "strongPass" not in test_result.output
 
