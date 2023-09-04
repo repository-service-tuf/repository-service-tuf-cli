@@ -56,13 +56,13 @@ class TestCeremonyInteraction:
     def test_ceremony_start_not_ready_load_the_keys(
         self, client, test_context, test_inputs
     ):
-        input_step1, input_step2, _, _ = test_inputs
+        input_step1, input_step2, input_step3, _ = test_inputs
         # overwrite step 1:
-        # >Ready to start loading the keys? Passwords will be required for keys
-        input_step1[-1] = "n"
+        # >Ready to start loading the keys?
+        input_step3[0] = "n"
         test_result = client.invoke(
             ceremony.ceremony,
-            input="\n".join(input_step1 + input_step2),
+            input="\n".join(input_step1 + input_step2 + input_step3),
             obj=test_context,
         )
         assert "Ceremony aborted." in test_result.output
@@ -73,6 +73,76 @@ class TestCeremonyInteraction:
     ):
         ceremony.setup = test_setup
         input_step1, input_step2, input_step3, input_step4 = test_inputs
+
+        test_result = client.invoke(
+            ceremony.ceremony,
+            "--save",
+            input="\n".join(
+                input_step1 + input_step2 + input_step3 + input_step4
+            ),
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 0, test_result.output
+        assert "Ceremony done. 🔐 🎉." in test_result.output
+        # passwords not shown in output
+        assert "strongPass" not in test_result.output
+
+    def test_ceremony_using_root_key2_public_key(
+        self, client, test_context, test_inputs, test_setup
+    ):
+        ceremony.setup = test_setup
+        input_step1, input_step2, _, input_step4 = test_inputs
+
+        input_step3 = [
+            "y",  # Ready to start loading the root keys? [y/n]
+            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
+            "",  # Give a name/tag to the key [Optional]
+            "",  # Select to use private key or public? [private/public] (public)  # noqa
+            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "fake_id",  # # Enter root`s key id
+            "fake_hash",  # Enter root`s public key hash
+            "root key 2",  # Give a name/tag to the key [Optional]
+            "",
+        ]
+
+        test_result = client.invoke(
+            ceremony.ceremony,
+            "--save",
+            input="\n".join(
+                input_step1 + input_step2 + input_step3 + input_step4
+            ),
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 0, test_result.output
+        assert "Ceremony done. 🔐 🎉." in test_result.output
+        # passwords not shown in output
+        assert "strongPass" not in test_result.output
+
+    def test_ceremony_using_root_key2_public_key_empty_retry(
+        self, client, test_context, test_inputs, test_setup
+    ):
+        ceremony.setup = test_setup
+        input_step1, input_step2, _, input_step4 = test_inputs
+
+        input_step3 = [
+            "y",  # Ready to start loading the root keys? [y/n]
+            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
+            "",  # Give a name/tag to the key [Optional]
+            "",  # Select to use private key or public? [private/public] (public)  # noqa
+            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "",  # # Enter root`s key id
+            "fake_id",  # # Enter root`s key id
+            "",  # Enter root`s public key hash
+            "fake_hash",  # Enter root`s public key hash
+            "",  # Give a name/tag to the key [Optional]
+            "",
+        ]
 
         test_result = client.invoke(
             ceremony.ceremony,
@@ -126,23 +196,28 @@ class TestCeremonyInteraction:
         # passwords not shown in output
         assert "strongPass" not in test_result.output
 
-    def test_ceremony_key_bad_input_try_again_yes(
+    def test_ceremony_key_bad_input_try_again(
         self, client, test_context, test_inputs, test_setup
     ):
         ceremony.setup = test_setup
         input_step1, input_step2, input_step3, input_step4 = test_inputs
 
         # overwrite the input_step2
-        input_step2 = [
-            "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
-            "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
-            "wrong password",  # Enter 1/1 the ONLINE`s private key password
-            "",  # [Optional] Give a name/tag to the key
-            "y",  # Try again?
-            "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
-            "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
-            "strongPass",  # Enter 1/1 the ONLINE`s private key password
-            "",  # [Optional] Give a name/tag to the key
+        input_step3 = [
+            "y",  # Ready to start loading the root keys? [y/n]
+            "",  # Select the root`s key type [ed25519/ecdsa/rsa]
+            "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+            "wrong password",  # Enter the root`s private key password
+            "",  # Give a name/tag to the key [Optional]
+            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
+            "",  # Give a name/tag to the key [Optional]
+            "private",  # Select to use private key or public? [private/public] (public)  # noqa
+            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "tests/files/key_storage/JimiHendrix.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
+            "",  # Give a name/tag to the key [Optional]
         ]
 
         test_result = client.invoke(
@@ -158,56 +233,17 @@ class TestCeremonyInteraction:
         # passwords not shown in output
         assert "strongPass" not in test_result.output
 
-    def test_ceremony_key_bad_input_try_again_no(
-        self, client, test_context, test_inputs, test_setup
-    ):
-        ceremony.setup = test_setup
-        input_step1, input_step2, input_step3, input_step4 = test_inputs
-
-        # overwrite the input_step2
-        input_step2 = [
-            "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
-            "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
-            "wrong password",  # Enter 1/1 the ONLINE`s private key password
-            "",  # [Optional] Give a name/tag to the key
-            "n",  # Try again?
-        ]
-
-        test_result = client.invoke(
-            ceremony.ceremony,
-            input="\n".join(
-                input_step1 + input_step2 + input_step3 + input_step4
-            ),
-            obj=test_context,
-        )
-
-        assert test_result.exit_code == 1, test_result.output
-        assert "Required key not validated." in test_result.output
-        # passwords not shown in output
-        assert "strongPass" not in test_result.output
-
     def test_ceremony_key_with_name(
         self, client, test_context, test_inputs, test_setup
     ):
         # Test a case when the user gives custom names to the keys.
         ceremony.setup = test_setup
         input_step1, input_step2, input_step3, input_step4 = test_inputs
-        input_step2 = [
-            "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
-            "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
-            "strongPass",  # Enter 1/1 the ONLINE`s private key password,
-            "Online key",  # [Optional] Give a name/tag to the key
-        ]
-        input_step3 = [
-            "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
-            "tests/files/key_storage/JanisJoplin.key",  # Enter 1/2 the root`s private key path  # noqa
-            "strongPass",  # Enter 1/2 the root`s private key password
-            "Martin's Key",  # [Optional] Give a name/tag to the key
-            "",  # Choose 2/2 root key type [ed25519/ecdsa/rsa]
-            "tests/files/key_storage/JimiHendrix.key",  # Enter 2/2 the root`s private key path  # noqa
-            "strongPass",  # Enter 2/2 the root`s private key password:
-            "Steven's Key",  # [Optional] Give a name/tag to the key
-        ]
+
+        # update all: Give a name/tag to the key [Optional]
+        input_step2[-1] = "Online key"
+        input_step3[4] = "Martin's Key"
+        input_step3[9] = "Steven's Key"
 
         test_result = client.invoke(
             ceremony.ceremony,
@@ -230,18 +266,20 @@ class TestCeremonyInteraction:
 
         # overwrite the input_step3 with same key in input_step2 (online key)
         input_step3 = [
+            "y",  # Ready to start loading the root keys? [y/n]
+            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "tests/files/key_storage/online.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
+            "",  # Give a name/tag to the key [Optional]
             "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
-            "tests/files/key_storage/online.key",  # Enter 1/2 the root`s private key path  # noqa
-            "strongPass",  # Enter 1/2 the root`s private key password
-            "",  # [Optional] Give a name/tag to the key
-            "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
-            "tests/files/key_storage/JanisJoplin.key",  # Enter 1/2 the root`s private key path  # noqa
-            "strongPass",  # Enter 1/2 the root`s private key password
-            "",  # [Optional] Give a name/tag to the key
+            "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
+            "",  # Give a name/tag to the key [Optional]
+            "private",  # Select to use private key or public? [private/public] (public)  # noqa
             "",  # Choose 2/2 root key type [ed25519/ecdsa/rsa]
-            "tests/files/key_storage/JimiHendrix.key",  # Enter 2/2 the root`s private key path  # noqa
-            "strongPass",  # Enter 2/2 the root`s private key password:
-            "",  # [Optional] Give a name/tag to the key
+            "tests/files/key_storage/JimiHendrix.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
+            "",  # Give a name/tag to the key [Optional]
         ]
 
         test_result = client.invoke(

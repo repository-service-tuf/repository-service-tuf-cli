@@ -23,6 +23,7 @@ class URL(Enum):
     metadata = "api/v1/metadata/"
     task = "api/v1/task/?task_id="
     publish_targets = "api/v1/targets/publish/"
+    metadata_sign = "api/v1/metadata/sign/"
 
 
 class Methods(Enum):
@@ -146,7 +147,10 @@ def bootstrap_status(settings: LazySettings) -> Dict[str, Any]:
 
 
 def task_status(
-    task_id: str, settings: LazySettings, title: Optional[str]
+    task_id: str,
+    settings: LazySettings,
+    title: Optional[str],
+    silent: Optional[bool] = False,
 ) -> Dict[str, Any]:
     headers = get_headers(settings)
     received_states = []
@@ -168,10 +172,12 @@ def task_status(
         if data:
             if state := data.get("state"):
                 if state not in received_states:
-                    console.print(f"{title}{state}")
+                    if silent is False:
+                        console.print(f"{title} {state}")
                     received_states.append(state)
                 else:
-                    console.print(".", end="")
+                    if silent is False:
+                        console.print(".", end="")
 
                 if state == "SUCCESS":
                     return data
@@ -216,6 +222,7 @@ def send_payload(
     payload: Dict[str, Any],
     expected_msg: str,
     command_name: str,
+    expected_status_code: Optional[int] = 202,
 ) -> str:
     """
     Send 'payload' to a given 'settings.SERVER'.
@@ -226,7 +233,7 @@ def send_payload(
         payload: dictionary containing the payload to send
         expected_msg: expected message to receive as a response to the request
         command_name: name of the command sending the payload, used for logging
-
+        expected_status_code: [Optional] expected status code. Default: 202
     Returns:
         Task id of the job sending the payload.
     """
@@ -239,7 +246,7 @@ def send_payload(
         headers=headers,
     )
 
-    if response.status_code != 202:
+    if response.status_code != expected_status_code:
         raise click.ClickException(
             f"Error {response.status_code} {response.text}"
         )

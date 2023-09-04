@@ -15,8 +15,8 @@ from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.helpers.tuf import (
     BootstrapSetup,
+    MetadataInfo,
     Roles,
-    RootInfo,
     RSTUFKey,
     ServiceSettings,
     TUFManagement,
@@ -80,23 +80,24 @@ def test_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
         "",  # What is the metadata expiration for the snapshot role?(Days) (365)?  # noqa
         "",  # What is the metadata expiration for the timestamp role?(Days) (365)?  # noqa
         "",  # What is the metadata expiration for the bins role?(Days) (365)?
-        "Y",  # Ready to start loading the keys? Passwords will be required for keys [y/n]  # noqa
     ]
     input_step2 = [
-        "",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
-        "tests/files/key_storage/online.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
-        "strongPass",  # Enter 1/1 the ONLINE`s private key password,
-        "",  # [Optional] Give a name/tag to the key:
+        "",  # Select the ONLINE`s key type [ed25519/ecdsa/rsa] (ed25519)
+        "f7a6872f297634219a80141caa2ec9ae8802098b07b67963272603e36cc19fd8",  # Enter ONLINE`s key id  # noqa
+        "9fe7ddccb75b977a041424a1fdc142e01be4abab918dc4c611fbfe4a3360a9a8",  # Enter ONLINE`s public key hash   # noqa
+        "",  # Give a name/tag to the key [Optional]
     ]
     input_step3 = [
-        "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
-        "tests/files/key_storage/JanisJoplin.key",  # Enter 1/2 the root`s private key path  # noqa
-        "strongPass",  # Enter 1/2 the root`s private key password
-        "",  # [Optional] Give a name/tag to the key:
-        "",  # Choose 2/2 root key type [ed25519/ecdsa/rsa]
-        "tests/files/key_storage/JimiHendrix.key",  # Enter 2/2 the root`s private key path  # noqa
-        "strongPass",  # Enter 2/2 the root`s private key password:
-        "",  # [Optional] Give a name/tag to the key:
+        "y",  # Ready to start loading the root keys? [y/n]
+        "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+        "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+        "strongPass",  # Enter the root`s private key password
+        "",  # Give a name/tag to the key [Optional]
+        "private",  # Select to use private key or public? [private/public] (public)  # noqa
+        "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+        "tests/files/key_storage/JimiHendrix.key",  # Enter the root`s private key path  # noqa
+        "strongPass",  # Enter the root`s private key password
+        "",  # Give a name/tag to the key [Optional]
     ]
     input_step4 = [
         "y",  # Is the online key configuration correct? [y/n]
@@ -116,7 +117,7 @@ def root() -> Metadata[Root]:
 
 
 @pytest.fixture
-def root_info(root: Metadata[Root]) -> RootInfo:
+def root_info(root: Metadata[Root]) -> MetadataInfo:
     root_keys = [
         Key("id1", "ed25519", "", {"sha256": "abc"}),
         Key("id2", "ed25519", "", {"sha256": "foo"}),
@@ -128,7 +129,7 @@ def root_info(root: Metadata[Root]) -> RootInfo:
     for online_role in ["timestamp", "snapshot", "targets"]:
         root.signed.add_key(online_key, online_role)
 
-    return RootInfo(root)
+    return MetadataInfo(root)
 
 
 @pytest.fixture
@@ -168,3 +169,17 @@ def md_update_input() -> Tuple[List[str], List[str], List[str], List[str]]:
         "n",  # Do you want to change the online key? [y/n]
     ]
     return input_step1, input_step2, input_step3, input_step4
+
+
+@pytest.fixture
+def metadata_sign_input() -> List[str]:
+    input = [
+        "http://127.0.0.1",  # API URL address
+        "root",  # Choose a metadata to sign [root]
+        "Jimi Hendrix",  # Choose a private key to load [Jimi Hendrix]
+        "",  # Choose Jimi Hendrix key type [ed25519/ecdsa/rsa]
+        "tests/files/key_storage/JimiHendrix.key",  # Enter the Jimi Hendrix`s private key path  # noqa
+        "strongPass",  # Enter the Jimi Hendrix`s private key password
+    ]
+
+    return input

@@ -155,7 +155,9 @@ timestamp, targets, and delegated targets (hash bin) roles.
 
 The RSTUF Worker uses this key during the process of managing the metadata.
 
-Note: the ceremony process won't show any password or key content.
+Note: It requires the public key information (key id/public hash) only.
+
+Tip: "rstuf key info:" retrieves the public information
 """
 
 STEP_3 = """
@@ -341,39 +343,96 @@ def _configure_role(role: Roles) -> None:
 def _configure_keys(
     role: str, number_of_keys: int
 ) -> Generator[RSTUFKey, None, None]:
+    colored_role = click.style(role, fg="cyan")
     key_count = 1
     while key_count <= number_of_keys:
+        console.print(
+            f"\n🔑 Key {key_count}/{number_of_keys} [cyan]{role}[/]\n"
+        )
+
+        if role == Roles.ROOT.value and key_count == 1:
+            signing_key = "private"
+
+        elif role == "ONLINE":
+            signing_key = "public"
+        else:
+            signing_key = prompt.Prompt.ask(
+                "[cyan]Private[/] or [cyan]Public[/] key"
+                "\n- [cyan]private key[/] requires the file path and password"
+                "\n- [cyan]public info[/] requires the a key id and key hash"
+                "\n  tip: `rstuf key info` retrieves the public information"
+                "\nSelect to use [cyan]private key[/] or [cyan]public "
+                "info[/]?",
+                choices=["private", "public"],
+                default="public",
+            )
+
         key_type = prompt.Prompt.ask(
-            f"\nChoose {key_count}/{number_of_keys} [cyan]{role}[/] key type",
+            f"Select the {colored_role}`s key type",
             choices=KeyType.get_all_members(),
             default=KeyType.KEY_TYPE_ED25519.value,
         )
-        filepath = prompt.Prompt.ask(
-            f"Enter {key_count}/{number_of_keys} the "
-            f"[cyan]{role}[/]`s private key [green]path[/]"
-        )
+        if signing_key == "private":
+            filepath = prompt.Prompt.ask(
+                f"Enter the {colored_role}`s [green]private key path[/]"
+            )
 
-        colored_role = click.style(role, fg="cyan")
-        colored_pass = click.style("password", fg="green")
-        password = click.prompt(
-            f"Enter {key_count}/{number_of_keys} the "
-            f"{colored_role}`s private key {colored_pass}",
-            hide_input=True,
-        )
-        name = prompt.Prompt.ask(
-            "[Optional] Give a [green]name/tag[/] to the key",
-            default="",
-            show_default=False,
-        )
-        role_key: RSTUFKey = load_key(filepath, key_type, password, name)
+            password = click.prompt(
+                f"Enter the {colored_role}`s private key password",
+                hide_input=True,
+            )
+            name = prompt.Prompt.ask(
+                "[Optional] Give a name/tag to the key",
+                default="",
+                show_default=False,
+            )
+            role_key: RSTUFKey = load_key(filepath, key_type, password, name)
+            if role_key.error:
+                console.print(role_key.error)
 
-        if role_key.error:
-            console.print(role_key.error)
-            try_again = prompt.Confirm.ask("Try again?", default="y")
-            if try_again:
-                continue
-            else:
-                raise click.ClickException("Required key not validated.")
+            console.print(
+                ":white_check_mark: Key "
+                f"{key_count}/{number_of_keys} [green]Verified[/]"
+            )
+
+        else:
+            while True:
+                keyid = prompt.Prompt.ask(
+                    f"Enter {colored_role}`s [green]key id[/]"
+                )
+                if keyid.strip() != "":
+                    break
+
+            while True:
+                public = prompt.Prompt.ask(
+                    f"Enter {colored_role}`s [green]public key hash[/]"
+                )
+                if public.strip() != "":
+                    break
+
+            name = prompt.Prompt.ask(
+                "Give a name/tag to the key [Optional]",
+                default=keyid[:7],
+                show_default=False,
+            )
+
+            role_key = RSTUFKey(
+                key={
+                    "keytype": key_type,
+                    "scheme": key_type,
+                    "keyid": keyid,
+                    "keyid_hash_algorithms": ["sha256", "sha512"],
+                    "keyval": {
+                        "public": public,
+                    },
+                },
+                key_path="N/A (public key only)",
+                name=name,
+            )
+
+        if role_key.key.get("keyid") is None:
+            console.print(":cross_mark: [red]Failed[/]: Key `keyid` is None.")
+            continue
 
         if _key_already_in_use(role_key.key) is True:
             console.print(":cross_mark: [red]Failed[/]: Key is duplicated.")
@@ -381,10 +440,6 @@ def _configure_keys(
 
         yield role_key
 
-        console.print(
-            ":white_check_mark: Key "
-            f"{key_count}/{number_of_keys} [green]Verified[/]"
-        )
         key_count += 1
 
 
@@ -549,17 +604,16 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     for role in Roles:
         _configure_role(role)
 
-    start_ceremony = prompt.Confirm.ask(
-        "\nReady to start loading the keys? Passwords will be "
-        "required for keys"
-    )
-    if start_ceremony is False:
-        raise click.ClickException("Ceremony aborted.")
-
     # STEP 2: configure the online key (one)
     console.print(markdown.Markdown(STEP_2), width=100)
     for key in _configure_keys("ONLINE", number_of_keys=1):
         setup.online_key = key
+
+    start_ceremony = prompt.Confirm.ask(
+        "\nReady to start loading the root keys?"
+    )
+    if start_ceremony is False:
+        raise click.ClickException("Ceremony aborted.")
 
     # STEP 3: load the root keys
     console.print(markdown.Markdown(STEP_3), width=100)

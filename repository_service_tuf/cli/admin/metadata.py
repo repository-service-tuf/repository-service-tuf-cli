@@ -1,11 +1,13 @@
 # SPDX-FileCopyrightText: 2022-2023 VMware Inc
 #
 # SPDX-License-Identifier: MIT
+import sys
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from rich import box, markdown, prompt, table
 from securesystemslib.exceptions import StorageError  # type: ignore
+from securesystemslib.signer import Signature  # type: ignore
 from tuf.api.metadata import Metadata, Root
 from tuf.api.serialization import DeserializationError
 
@@ -14,13 +16,17 @@ from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.api_client import (
     URL,
+    Methods,
+    get_headers,
     get_md_file,
+    request_server,
     send_payload,
     task_status,
 )
 from repository_service_tuf.helpers.tuf import (
-    RootInfo,
+    MetadataInfo,
     RSTUFKey,
+    UnsignedMetadataError,
     load_key,
     load_payload,
     save_payload,
@@ -103,6 +109,21 @@ The online key is used to sign all roles except root.
 Note: there can be only one online key at a time.
 """
 
+METADATA_SIGNING = """
+# Metadata Signing
+
+Metadata signing allows sending signature of pending Repository Service for TUF
+(RSTUF) role metadata to an existing RSTUF API deployment.
+
+The Metadata Signing does the following steps:
+- retrieves the metadata pending for signatures from RSTUF API
+- selects the metadata role for signing
+- loads the private key for signing
+
+After loading the key it will sign the role metadata and send the request to
+the RSTUF API with the signature.
+"""
+
 
 @admin.group()
 @click.pass_context
@@ -146,7 +167,7 @@ def _create_keys_table(
     return keys_table
 
 
-def _print_root_info(root_info: RootInfo):
+def _print_root_info(root_info: MetadataInfo):
     root_table = table.Table()
     root_table.add_column("Root", justify="left", vertical="middle")
     root_table.add_column("KEYS", justify="center", vertical="middle")
@@ -187,7 +208,7 @@ def _get_key(role: str) -> RSTUFKey:
 
 
 def _is_valid_current_key(
-    keyid: str, root_info: RootInfo, already_loaded_keyids: List[str]
+    keyid: str, root_info: MetadataInfo, already_loaded_keyids: List[str]
 ) -> bool:
     """Verify that key with `keyid` have been used to sign the current root"""
     if keyid in already_loaded_keyids:
@@ -210,7 +231,7 @@ def _is_valid_current_key(
     return True
 
 
-def _current_root_keys_validation(root_info: RootInfo):
+def _current_md_keys_validation(root_info: MetadataInfo):
     """
     Authorize user by loading current root threshold number of root keys
     used for signing the current root metadata.
@@ -236,7 +257,7 @@ def _current_root_keys_validation(root_info: RootInfo):
 
         key_count += 1
         loaded.append(keyid)
-        root_info.save_current_root_key(root_key)
+        root_info.save_current_md_key(root_key)
         console.print(
             ":white_check_mark: Key "
             f"{key_count}/{threshold} [green]Verified[/]"
@@ -245,7 +266,7 @@ def _current_root_keys_validation(root_info: RootInfo):
     console.print("\n[green]Authorization is successful [/]\n", width=100)
 
 
-def _keys_removal(root_info: RootInfo):
+def _keys_removal(root_info: MetadataInfo):
     """Asking the user if they want to remove any of the root keys"""
     while True:
         if len(root_info.keys) < 1:
@@ -273,7 +294,7 @@ def _keys_removal(root_info: RootInfo):
         console.print(f"Key with name/tag [yellow]{name}[/] removed\n")
 
 
-def _keys_additions(root_info: RootInfo):
+def _keys_additions(root_info: MetadataInfo):
     while True:
         # Get all signing keys that are still inside the new root.
         keys: List[Dict[str, Any]] = []
@@ -326,7 +347,7 @@ def _get_positive_int_input(msg: str, input_name: str, default: Any) -> int:
         console.print(f"{input_name} must be at least 1")
 
 
-def _modify_expiration(root_info: RootInfo):
+def _modify_expiration(root_info: MetadataInfo):
     console.print(markdown.Markdown(EXPIRY_CHANGES_MSG), width=100)
     console.print("\n")
     change: bool
@@ -360,7 +381,7 @@ def _modify_expiration(root_info: RootInfo):
                 return
 
 
-def _modify_root_keys(root_info: RootInfo):
+def _modify_root_keys(root_info: MetadataInfo):
     """Modify root keys"""
     console.print(markdown.Markdown(ROOT_KEYS_CHANGES_MSG), width=100)
     console.print("\n")
@@ -389,7 +410,7 @@ def _modify_root_keys(root_info: RootInfo):
         _print_root_info(root_info)
 
 
-def _modify_online_key(root_info: RootInfo):
+def _modify_online_key(root_info: MetadataInfo):
     console.print(markdown.Markdown(ONLINE_KEY_CHANGE), width=100)
     while True:
         online_key_table = _create_keys_table(
@@ -542,7 +563,7 @@ def update(
         console.print("\n")
     try:
         root_md: Metadata = get_md_file(current_root_uri)
-        root_info: RootInfo = RootInfo(root_md)
+        root_info: MetadataInfo = MetadataInfo(root_md)
     except StorageError:
         raise click.ClickException(
             f"Cannot fetch/load current root {current_root_uri}"
@@ -554,7 +575,7 @@ def update(
 
     _print_root_info(root_info)
 
-    _current_root_keys_validation(root_info)
+    _current_md_keys_validation(root_info)
 
     _modify_expiration(root_info)
 
@@ -587,3 +608,120 @@ def update(
     else:
         # There are no changes made to the root metadata file.
         console.print("\nNo file will be generated as no changes were made\n")
+
+
+def _get_pending_roles(
+    settings: Any, api_url: Optional[str]
+) -> Dict[str, Any]:
+    if settings.AUTH is False and api_url is None:
+        api_url = prompt.Prompt.ask("\n[cyan]API[/] URL address")
+        settings.SERVER = api_url
+
+    headers = get_headers(settings)
+    response = request_server(
+        settings.SERVER, URL.metadata_sign.value, Methods.get, headers=headers
+    )
+    if response.status_code != 200:
+        raise click.ClickException(
+            f"Failed to retrieve metadata for signing. Error: {response.text}"
+        )
+
+    response_data: Dict[str, Any] = response.json().get("data")
+    if response_data is None:
+        raise click.ClickException(response.text)
+
+    pending_roles: Dict[str, Any] = response_data.get("metadata", {})
+    if len(pending_roles) == 0:
+        raise click.ClickException("No metadata available for signing")
+
+    return pending_roles
+
+
+def _get_signing_key(role_info: MetadataInfo) -> RSTUFKey:
+    pending_keys: List = []
+    for key_id in role_info._new_md.signed.roles[Root.type].keyids:
+        if key_id not in role_info._new_md.signatures:
+            pending_keys.append(role_info._new_md.signed.keys[key_id])
+
+    sign_key_name = prompt.Prompt.ask(
+        "\nChoose a private key to load",
+        choices=[
+            signing_key.unrecognized_fields.get("name", signing_key.keyid[:7])
+            for signing_key in pending_keys
+        ],
+    )
+
+    while True:
+        rstuf_key = _get_key(sign_key_name)
+        if rstuf_key.error:
+            console.print(rstuf_key.error)
+            retry = prompt.Confirm.ask(
+                f"\nRetry to load the key {sign_key_name}?"
+            )
+            if not retry:
+                console.print("Aborted.")
+                sys.exit(0)
+        else:
+            break
+
+    rstuf_key_id = rstuf_key.key["keyid"]
+
+    current_role_key = role_info._new_md.signed.keys[rstuf_key_id]
+    current_role_key_name = current_role_key.unrecognized_fields.get(
+        "name", current_role_key.keyid[:7]
+    )
+    if current_role_key_name != sign_key_name:
+        raise click.ClickException(f"Loaded key is not '{sign_key_name}'")
+
+    return rstuf_key
+
+
+def _sign_metadata(role_info: MetadataInfo, rstuf_key: RSTUFKey) -> Signature:
+    signer = role_info.get_signer(rstuf_key)
+    try:
+        signature = role_info._new_md.sign(signer)
+    except UnsignedMetadataError as err:
+        raise click.ClickException("Problem signing the metadata") from err
+
+    return signature
+
+
+@metadata.command()
+@click.option(
+    "--api-url",
+    help="URL to an RSTUF API.",
+    required=False,
+)
+@click.pass_context
+def sign(context, api_url: Optional[str]) -> None:
+    """
+    Start metadata signature.
+    """
+    console.print(markdown.Markdown(METADATA_SIGNING), width=100)
+
+    settings = context.obj["settings"]
+
+    pending_roles = _get_pending_roles(settings, api_url)
+    rolename = prompt.Prompt.ask(
+        "\nChoose a metadata to sign", choices=[role for role in pending_roles]
+    )
+    role_info = MetadataInfo(Metadata.from_dict(pending_roles[rolename]))
+    console.print(
+        f"Signing [cyan]{rolename}[/] version "
+        f"{role_info._new_md.signed.version}"
+    )
+
+    rstuf_key = _get_signing_key(role_info)
+    signature = _sign_metadata(role_info, rstuf_key)
+
+    payload = {"role": rolename, "signature": signature.to_dict()}
+    console.print("\nSending signature")
+    task_id = send_payload(
+        settings,
+        URL.metadata_sign.value,
+        payload,
+        "Metadata sign accepted.",
+        "Metadata sign",
+    )
+    task_status(task_id, settings, "Metadata sign status:")
+    console.print("\nMetadata Signed! 🔑\n")
