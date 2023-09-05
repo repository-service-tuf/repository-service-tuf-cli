@@ -77,11 +77,15 @@ def _run_login(context, server_, password_, expires_):
             "write:bootstrap "
             "read:bootstrap "
             "read:settings "
+            "write:settings "
             "read:token "
             "read:tasks "
             "write:token "
             "write:metadata "
             "read:metadata "
+            "write:metadata_sign "
+            "read:metadata_sign "
+            "delete:metadata_sign "
         ),
         "expires": expires,
     }
