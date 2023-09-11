@@ -30,7 +30,7 @@ dependencies = [
   "requests",
   "rich",
   "rich-click",
-  "securesystemslib[crypto]",
+  "securesystemslib[crypto]==0.28.0",
   "tuf==3.0.0",
 ]
 dynamic = ["version"]
