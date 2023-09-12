@@ -138,7 +138,7 @@ class TestLoginGroupCLI:
             "1",
         ]
 
-        login.is_logged = pretend.call_recorder(
+        login.token_state = pretend.call_recorder(
             lambda *a: pretend.stub(state=False)
         )
         login._login = pretend.call_recorder(
@@ -160,7 +160,7 @@ class TestLoginGroupCLI:
                 test_context["config"], test_context["settings"].to_dict()
             )
         ]
-        assert login.is_logged.calls == [
+        assert login.token_state.calls == [
             pretend.call(test_context["settings"])
         ]
 
@@ -175,7 +175,7 @@ class TestLoginGroupCLI:
             "1",
         ]
 
-        login.is_logged = pretend.call_recorder(
+        login.token_state = pretend.call_recorder(
             lambda *a: pretend.stub(
                 state=True,
                 data={"expired": False, "expiration": "2022-08-23T09:10:14"},
@@ -198,7 +198,7 @@ class TestLoginGroupCLI:
             "Already logged to http://test-rstuf."
             " Valid until '2022-08-23T09:10:14'" in test_result.output
         )
-        assert login.is_logged.calls == [
+        assert login.token_state.calls == [
             pretend.call(test_context["settings"])
         ]
 

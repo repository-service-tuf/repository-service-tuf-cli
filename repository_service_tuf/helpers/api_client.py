@@ -65,11 +65,13 @@ def request_server(
     return response
 
 
-def is_logged(settings: LazySettings):
-    if settings.get("AUTH") is False:
+def token_state(settings: LazySettings):
+    token = settings.get("TOKEN")
+
+    # user doesn't use --auth and don't use --token
+    if settings.get("AUTH") is False and token is None:
         return None
 
-    token = settings.get("TOKEN")
     server = settings.get("SERVER")
     headers = {"Authorization": f"Bearer {token}"}
 
@@ -90,37 +92,31 @@ def is_logged(settings: LazySettings):
 
 
 def get_headers(settings: LazySettings) -> Dict[str, str]:
-    if settings.get("AUTH") is False:
-        return {}
-
     server = settings.get("SERVER")
     token = settings.get("TOKEN")
+
     if server and token:
-        token_access_check = is_logged(settings)
+        token_access_check = token_state(settings)
         if token_access_check.state is False:
+            if settings.AUTH is True:
+                message = "\n\nTry re-login: 'rstuf --auth admin login'"
+            else:
+                message = "\n\nToken is expired"
+
             raise click.ClickException(
-                f"{str(token_access_check.data)}"
-                "\n\nTry re-login: 'rstuf --auth admin login'"
+                f"{str(token_access_check.data)}.{message}"
             )
 
-        expired_admin = token_access_check.data.get("expired")
-        if expired_admin is True:
-            raise click.ClickException(
-                "The token has expired. Run 'rstuf --auth admin login'"
-            )
         else:
             headers = {"Authorization": f"Bearer {token}"}
-            response = request_server(
-                server, URL.bootstrap.value, Methods.get, headers=headers
-            )
-            if response.status_code != 200:
-                raise click.ClickException(
-                    f"Unexpected error: {response.text}"
-                )
-    else:
+
+    elif settings.get("AUTH") is True:
         raise click.ClickException(
             "Login first. Run 'rstuf --auth admin login'"
         )
+
+    else:
+        headers = {}
 
     return headers
 

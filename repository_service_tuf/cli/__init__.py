@@ -8,10 +8,12 @@ import pkgutil
 import re
 import sys
 from pathlib import Path
+from typing import Optional
 
 import rich_click as click  # type: ignore
 from auto_click_auto import enable_click_shell_completion
 from auto_click_auto.constants import ShellType
+from click import Context
 from rich.console import Console
 from rich.panel import Panel
 
@@ -55,13 +57,27 @@ except FileNotFoundError:
     default=False,
     required=False,
 )
+@click.option(
+    "-t",
+    "--token",
+    help=(
+        "RSTUF API authentication token. If the `--auth` option is provided "
+        "this token is not used for authentication."
+    ),
+    required=False,
+    default=None,
+)
 # adds the --version parameter
 @click.version_option(prog_name=prog_name, version=version)
 @click.pass_context
-def rstuf(context, config, auth):
-    """
-    Repository Service for TUF Command Line Interface (CLI).
-    """
+def rstuf(
+    context: Context,
+    config: Optional[str],
+    auth: Optional[str],
+    token: Optional[str],
+):
+    """Repository Service for TUF Command Line Interface (CLI)."""
+
     context.obj = {
         "settings": Dynaconf(settings_files=[config]),
         "config": config,
@@ -77,6 +93,11 @@ def rstuf(context, config, auth):
                 style="green",
             )
         )
+
+    # no `--auth` but `--token`, so we write the token in the settings
+    elif auth is False and token:
+        settings.TOKEN = token
+
     settings.AUTH = auth
 
 
