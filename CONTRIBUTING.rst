@@ -119,8 +119,8 @@ To automatically run checks before you commit your changes you should run:
 
     $ make precommit
 
-This will install the git hook scripts for the first time, update to the
-latest versions of the hooks and run the pre-commit tool.
+This will install the git hook scripts for the first time, and run the
+pre-commit tool.
 Now ``pre-commit`` will run automatically on ``git commit``.
 
 

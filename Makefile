@@ -14,7 +14,6 @@ requirements:
 
 precommit:
 	pre-commit install
-	pre-commit autoupdate
 	pre-commit run --all-files --show-diff-on-failure
 
 coverage:
