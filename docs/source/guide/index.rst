@@ -1031,10 +1031,10 @@ the command to be carried out successfully.
 
     Usage: rstuf artifact add [OPTIONS] FILEPATH
 
-    Add artifacts to the metadata (`targets.json`).
+    Add artifacts to the TUF metadata.
 
     ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────╮
-    │ --path  -p  TEXT  A custom path (`TARGETPATH`) for the file, defined in the metadata. [required] │
+    │ --path  -p  TEXT  A custom path (`TARGETPATH`) for the file, defined in the metadata.            │
     │ --help          -h    Show this message and exit.                                                │
     ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 

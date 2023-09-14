@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MIT
+from typing import Optional
 
 from click import Context
 
@@ -25,11 +26,11 @@ from repository_service_tuf.helpers.cli import (
     "--path",
     help="A custom path (`TARGETPATH`) for the file, defined in the metadata.",
     type=str,
-    required=True,
+    required=False,
     default=None,
 )
 @click.pass_context
-def add(context: Context, filepath: str, path: str) -> str:
+def add(context: Context, filepath: str, path: Optional[str]) -> str:
     """
     Add artifacts to the TUF metadata.
 
@@ -38,10 +39,13 @@ def add(context: Context, filepath: str, path: str) -> str:
     - file info is discovered and added to the request payload. The blake2b-256
     cryptographic hash function is used to hash the file.
     - `custom` key of the payload is an empty object
-    - `path` key of the payload is defined by the user
+    - `path` key of the payload is optionally defined by the user
     """
 
     settings = context.obj.get("settings")
+
+    if path is None:
+        path = filepath
 
     payload = create_artifact_payload_from_filepath(
         filepath=filepath, path=path
