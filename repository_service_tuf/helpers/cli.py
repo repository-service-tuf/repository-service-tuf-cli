@@ -97,7 +97,7 @@ def create_artifact_payload_from_filepath(
                     },
                     custom=None,
                 ),
-                path=path,
+                path=f"{path.rstrip('/')}/{filepath.split('/')[-1]}",
             )
         ]
     )
