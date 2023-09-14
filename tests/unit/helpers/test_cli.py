@@ -59,7 +59,7 @@ class TestCLIHelpers:
         filepath of the artifact
         """
 
-        path = "/fake/path"
+        path = "/fake/path/"
 
         expected_artifact_payload = {
             "targets": [
@@ -71,7 +71,7 @@ class TestCLIHelpers:
                         },
                         "custom": None,
                     },
-                    "path": path,
+                    "path": f"{path}{temp_file.split('/')[-1]}",
                 }
             ],
             "add_task_id_to_custom": False,
