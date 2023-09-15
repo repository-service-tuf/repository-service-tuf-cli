@@ -634,8 +634,8 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     )
     if pending_signatures > 0:
         console.print(
-            "Root is not trustworthy yet."
-            f" {pending_signatures} pending signatures are left.",
+            "Root is not trustworthy yet,"
+            f" {pending_signatures} pending signature(s) left.",
         )
 
     json_payload: Dict[str, Any] = dict()

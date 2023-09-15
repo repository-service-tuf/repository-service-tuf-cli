@@ -402,7 +402,7 @@ class TestCeremonyInteraction:
 
         assert test_result.exit_code == 0, test_result.output
         assert (
-            "Root is not trustworthy yet. 18 pending signatures are left"
+            "Root is not trustworthy yet, 18 pending signature(s) left"
             in test_result.output
         )
         assert "Ceremony done. 🔐 🎉." in test_result.output
