@@ -633,6 +633,8 @@ def _get_pending_roles(
     if settings.AUTH is False and api_url is None:
         api_url = prompt.Prompt.ask("\n[cyan]API[/] URL address")
         settings.SERVER = api_url
+    elif settings.AUTH is False and api_url is not None:
+        settings.SERVER = api_url
 
     headers = get_headers(settings)
     response = request_server(
