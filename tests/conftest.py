@@ -176,6 +176,7 @@ def metadata_sign_input() -> List[str]:
     input = [
         "http://127.0.0.1",  # API URL address
         "root",  # Choose a metadata to sign [root]
+        "y",  # Do you still want to sign root? [y]
         "Jimi Hendrix",  # Choose a private key to load [Jimi Hendrix]
         "",  # Choose Jimi Hendrix key type [ed25519/ecdsa/rsa]
         "tests/files/key_storage/JimiHendrix.key",  # Enter the Jimi Hendrix`s private key path  # noqa
