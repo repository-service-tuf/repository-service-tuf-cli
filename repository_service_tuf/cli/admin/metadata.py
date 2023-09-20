@@ -692,13 +692,14 @@ def _get_signing_key(role_info: MetadataInfo) -> RSTUFKey:
     if current_role_key_name != sign_key_name:
         raise click.ClickException(f"Loaded key is not '{sign_key_name}'")
 
+    rstuf_key.name = current_role_key_name
     return rstuf_key
 
 
 def _sign_metadata(role_info: MetadataInfo, rstuf_key: RSTUFKey) -> Signature:
     signer = role_info.get_signer(rstuf_key)
     try:
-        signature = role_info._new_md.sign(signer)
+        signature = role_info._new_md.sign(signer, append=True)
     except UnsignedMetadataError as err:
         raise click.ClickException("Problem signing the metadata") from err
 
