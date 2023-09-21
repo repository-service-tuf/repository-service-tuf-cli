@@ -10,6 +10,7 @@ from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
 
 import click
+from rich import table
 from rich.console import Console
 from securesystemslib.exceptions import (  # type: ignore
     CryptoError,
@@ -443,3 +444,18 @@ def save_payload(file_path: str, payload: Dict[str, Any]):
             f.write(json.dumps(payload, indent=2))
     except OSError as err:
         raise click.ClickException(f"Failed to save {file_path}. {str(err)}")
+
+
+def print_key_table(rstuf_key: RSTUFKey) -> None:
+    key_table = table.Table()
+    key_table.add_column("Key ID", justify="center")
+    key_table.add_column("Key Type", justify="center")
+    key_table.add_column("Public Key", justify="center")
+    row_items = [
+        rstuf_key.key["keyid"],
+        rstuf_key.key["keytype"],
+        rstuf_key.key["keyval"]["public"],
+    ]
+
+    key_table.add_row(*row_items)
+    console.print(key_table)

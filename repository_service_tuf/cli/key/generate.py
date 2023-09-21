@@ -16,6 +16,7 @@ from securesystemslib.interface import (  # type: ignore
 from repository_service_tuf.cli import click
 from repository_service_tuf.cli.key import key
 from repository_service_tuf.constants import KeyType
+from repository_service_tuf.helpers.tuf import load_key, print_key_table
 
 console = Console()
 
@@ -74,3 +75,6 @@ def generate() -> None:
         # Current click configuration will never trigger this case, adding
         # this as a fail-safe if we add new key-types
         raise ValueError(f"Key type `{key_type}` is not supported!")
+
+    rstuf_key = load_key(filename, key_type, password, "")
+    print_key_table(rstuf_key)
