@@ -18,10 +18,6 @@ by integration (i.e., CI/CD tools).
 
 This CLI is part of the Repository Service for TUF (RSTUF).
 
-.. note::
-
-    Not a functional tool, it is still in the development stage. Wait for release 0.0.1
-
 Installation
 ============
 Using pip:
