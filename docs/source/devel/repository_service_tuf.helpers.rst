@@ -12,6 +12,14 @@ repository\_service\_tuf.helpers.api\_client module
    :undoc-members:
    :show-inheritance:
 
+repository\_service\_tuf.helpers.cli module
+-------------------------------------------
+
+.. automodule:: repository_service_tuf.helpers.cli
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 repository\_service\_tuf.helpers.tuf module
 -------------------------------------------
 
