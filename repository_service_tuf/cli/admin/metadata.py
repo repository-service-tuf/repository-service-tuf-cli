@@ -1,11 +1,12 @@
 # SPDX-FileCopyrightText: 2022-2023 VMware Inc
 #
 # SPDX-License-Identifier: MIT
+import copy
 import sys
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from rich import box, markdown, prompt, table
+from rich import align, box, markdown, prompt, table, text
 from securesystemslib.exceptions import StorageError  # type: ignore
 from securesystemslib.signer import Signature  # type: ignore
 from tuf.api.metadata import Metadata, Root
@@ -135,7 +136,7 @@ def metadata(context):
 
 def _create_keys_table(
     keys: List[Dict[str, Any]], offline_keys: bool, is_minimal: bool
-) -> table.Table:
+) -> align.Align:
     """Gets a new keys table."""
     keys_table: table.Table
     if is_minimal:
@@ -164,27 +165,43 @@ def _create_keys_table(
             f'[yellow]{key["keyval"]["public"]}',
         )
 
-    return keys_table
+    return align.Align.center(keys_table, vertical="middle")
 
 
-def _print_root_info(root_info: MetadataInfo):
-    root_table = table.Table()
-    root_table.add_column("Root", justify="left", vertical="middle")
-    root_table.add_column("KEYS", justify="center", vertical="middle")
-    number_of_keys = len(root_info.keys)
+def _print_md_info_helper(
+    table: table.Table, keys: List[Dict[str, Any]], title: str
+):
+    table.add_row(text.Text(f"{title}", style="b cyan", justify="center"))
+    pending_keys_table = _create_keys_table(keys, True, False)
+    table.add_row(pending_keys_table)
 
-    root_keys_table = _create_keys_table(root_info.keys, True, True)
 
-    root_table.add_row(
+def _print_md_info(md_info: MetadataInfo, trusted_md: Optional[bool] = True):
+    md_table = table.Table()
+    md_table.add_column(md_info.type, justify="left", vertical="middle")
+    md_table.add_column("KEYS", justify="center", vertical="middle")
+    md_keys_table = table.Table(box=box.MINIMAL, show_header=False)
+
+    if not trusted_md:
+        # This role is not yet trusted, not all keys were used for signing.
+        used_keys, pending_keys = md_info._get_pending_and_used_keys()
+        _print_md_info_helper(md_keys_table, used_keys, "\nSIGNING KEYS")
+        _print_md_info_helper(md_keys_table, pending_keys, "\nPENDING KEYS")
+    else:
+        keys = md_info.keys
+        md_signing_keys_table = _create_keys_table(keys, True, True)
+        md_keys_table.add_row(md_signing_keys_table)
+
+    md_table.add_row(
         (
-            f"\nNumber of Keys: [yellow]{number_of_keys}[/]"
-            f"\nThreshold: [yellow]{root_info.threshold}[/]"
-            f"\nRoot Expiration: [yellow]{root_info.expiration_str}[/]"
+            f"\nNumber of Keys: [yellow]{len(md_info.keys)}[/]"
+            f"\nThreshold: [yellow]{md_info.threshold}[/]"
+            f"\n{md_info.type} Expiration: [yellow]{md_info.expiration_str}[/]"
         ),
-        root_keys_table,
+        md_keys_table,
     )
 
-    console.print("\n", root_table)
+    console.print("\n", md_table)
     console.print("\n")
 
 
@@ -407,7 +424,7 @@ def _modify_root_keys(root_info: MetadataInfo):
 
         console.print("\nHere is the current content of root:")
 
-        _print_root_info(root_info)
+        _print_md_info(root_info)
 
 
 def _modify_online_key(root_info: MetadataInfo):
@@ -573,7 +590,7 @@ def update(
 
     console.print(markdown.Markdown(CURRENT_ROOT_INFO), width=100)
 
-    _print_root_info(root_info)
+    _print_md_info(root_info)
 
     _current_md_keys_validation(root_info)
 
@@ -615,6 +632,8 @@ def _get_pending_roles(
 ) -> Dict[str, Any]:
     if settings.AUTH is False and api_url is None:
         api_url = prompt.Prompt.ask("\n[cyan]API[/] URL address")
+        settings.SERVER = api_url
+    elif settings.AUTH is False and api_url is not None:
         settings.SERVER = api_url
 
     headers = get_headers(settings)
@@ -673,13 +692,14 @@ def _get_signing_key(role_info: MetadataInfo) -> RSTUFKey:
     if current_role_key_name != sign_key_name:
         raise click.ClickException(f"Loaded key is not '{sign_key_name}'")
 
+    rstuf_key.name = current_role_key_name
     return rstuf_key
 
 
 def _sign_metadata(role_info: MetadataInfo, rstuf_key: RSTUFKey) -> Signature:
     signer = role_info.get_signer(rstuf_key)
     try:
-        signature = role_info._new_md.sign(signer)
+        signature = role_info._new_md.sign(signer, append=True)
     except UnsignedMetadataError as err:
         raise click.ClickException("Problem signing the metadata") from err
 
@@ -702,10 +722,23 @@ def sign(context, api_url: Optional[str]) -> None:
     settings = context.obj["settings"]
 
     pending_roles = _get_pending_roles(settings, api_url)
-    rolename = prompt.Prompt.ask(
-        "\nChoose a metadata to sign", choices=[role for role in pending_roles]
-    )
-    role_info = MetadataInfo(Metadata.from_dict(pending_roles[rolename]))
+    role_info: MetadataInfo
+    rolename: str
+    while True:
+        rolename = prompt.Prompt.ask(
+            "\nChoose a metadata to sign",
+            choices=[role for role in pending_roles],
+        )
+        role_info = MetadataInfo(
+            Metadata.from_dict(copy.deepcopy(pending_roles[rolename]))
+        )
+        _print_md_info(role_info, False)
+        confirmation = prompt.Confirm.ask(
+            f"\nDo you still want to sign {rolename}?"
+        )
+        if confirmation:
+            break
+
     console.print(
         f"Signing [cyan]{rolename}[/] version "
         f"{role_info._new_md.signed.version}"

@@ -7,7 +7,7 @@ import json
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import click
 from rich.console import Console
@@ -102,6 +102,10 @@ class MetadataInfo:
         self._new_md.signed.roles[Root.type].threshold = value
 
     @property
+    def type(self) -> str:
+        return self._trusted_md.signed.type.capitalize()
+
+    @property
     def expiration(self) -> datetime:
         return self._new_md.signed.expires
 
@@ -146,6 +150,25 @@ class MetadataInfo:
             name = key.unrecognized_fields["name"]
 
         return name
+
+    def _get_pending_and_used_keys(
+        self,
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """
+        Helper function that can be used to get all keys that have been used
+        for signing and does that have not been yet.
+        """
+        used_keys_info: List[Dict[str, Any]] = []
+        pending_keys_info: List[Dict[str, Any]] = []
+        for key_info in self.keys:
+            if key_info["keyid"] not in self._new_md.signatures:
+                # Key has not been used for signing yet.
+                pending_keys_info.append(key_info)
+            else:
+                # Key has been used for signing.
+                used_keys_info.append(key_info)
+
+        return used_keys_info, pending_keys_info
 
     def is_keyid_used(self, keyid: str) -> bool:
         """Check if keyid is used in root keys"""
