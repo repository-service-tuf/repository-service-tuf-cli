@@ -19,7 +19,7 @@ exceptiongroup==1.1.3; python_version < '3.11'
 filelock==3.12.4; python_version >= '3.8'
 flake8==6.1.0; python_full_version >= '3.8.1'
 gitdb==4.0.10; python_version >= '3.7'
-gitpython==3.1.36; python_version >= '3.7'
+gitpython==3.1.37; python_version >= '3.7'
 hatchling==0.22.0
 identify==2.5.29; python_version >= '3.8'
 idna==3.4; python_version >= '3.5'
@@ -68,16 +68,16 @@ sphinxcontrib-serializinghtml==1.1.9; python_version >= '3.9'
 stevedore==5.1.0; python_version >= '3.8'
 tomli==2.0.1; python_version >= '3.1'
 tox==4.11.3; python_version >= '3.8'
-types-requests==2.31.0.2
+types-requests==2.31.0.4
 types-urllib3==1.26.25.14
 typing-extensions==4.8.0; python_version >= '3.8'
-urllib3==2.0.4; python_version >= '3.7'
+urllib3==2.0.5; python_version >= '3.7'
 virtualenv==20.24.5; python_version >= '3.7'
-zipp==3.16.2; python_version >= '3.8'
+zipp==3.17.0; python_version >= '3.8'
 auto-click-auto==0.1.1; python_version >= '3.7' and python_version < '4.0'
 cffi==1.15.1
 configobj==5.0.8
-cryptography==41.0.3
+cryptography==41.0.4
 dynaconf[ini]==3.2.3; python_version >= '3.8'
 greenlet==2.0.2; platform_machine == 'aarch64' or (platform_machine == 'ppc64le' or (platform_machine == 'x86_64' or (platform_machine == 'amd64' or (platform_machine == 'AMD64' or (platform_machine == 'win32' or platform_machine == 'WIN32')))))
 psycopg2==2.9.7; python_version >= '3.6'
@@ -86,5 +86,5 @@ pynacl==1.5.0; python_version >= '3.6'
 rich-click==1.6.1; python_version >= '3.7'
 securesystemslib[crypto]==0.28.0; python_version ~= '3.7'
 six==1.16.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'
-sqlalchemy==2.0.20; python_version >= '3.7'
+sqlalchemy==2.0.21; python_version >= '3.7'
 tuf==3.0.0; python_version >= '3.7'
