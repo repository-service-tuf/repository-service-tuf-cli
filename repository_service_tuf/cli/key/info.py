@@ -1,13 +1,17 @@
 # SPDX-FileCopyrightText: 2022-2023 VMware Inc
 #
 # SPDX-License-Identifier: MIT
-from rich import prompt, table
+from rich import prompt
 from rich.console import Console  # type: ignore
 
 from repository_service_tuf.cli import click
 from repository_service_tuf.cli.key import key
 from repository_service_tuf.constants import KeyType
-from repository_service_tuf.helpers.tuf import RSTUFKey, load_key
+from repository_service_tuf.helpers.tuf import (
+    RSTUFKey,
+    load_key,
+    print_key_table,
+)
 
 console = Console()
 
@@ -36,17 +40,4 @@ def info() -> None:
     if rstuf_key.error:
         console.print(rstuf_key.error)
         raise click.ClickException("Failed to load the Key")
-
-    key_table = table.Table()
-    key_table.add_column("Key ID", justify="center")
-    key_table.add_column("Key Type", justify="center")
-    key_table.add_column("Public Key", justify="center")
-    row_items = [
-        rstuf_key.key["keyid"],
-        rstuf_key.key["keytype"],
-        rstuf_key.key["keyval"]["public"],
-    ]
-
-    key_table.add_row(*row_items)
-
-    console.print(key_table)
+    print_key_table(rstuf_key)

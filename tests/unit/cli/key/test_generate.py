@@ -12,6 +12,7 @@ from securesystemslib.exceptions import FormatError  # type: ignore
 from repository_service_tuf.cli.key import generate
 from repository_service_tuf.cli.key.generate import _verify_password
 from repository_service_tuf.constants import KeyType
+from repository_service_tuf.helpers import tuf
 
 
 class TestGenerateInteraction:
@@ -42,7 +43,9 @@ class TestGenerateInteraction:
         assert test_result.exit_code == 1
 
     @pytest.mark.parametrize("key_type", KeyType.get_all_members() + ["test"])
-    def test_generate_types_generation(self, key_type, client) -> None:
+    def test_generate_types_generation(
+        self, key_type, client, monkeypatch
+    ) -> None:
         """
         Test that all `KeyType` enum members input choices call the appropriate
         keypair generate function
@@ -57,6 +60,15 @@ class TestGenerateInteraction:
         ]
 
         generate._verify_password = pretend.call_recorder(lambda a: password)
+        generate.load_key = pretend.call_recorder(
+            lambda *a: tuf.RSTUFKey(
+                key={
+                    "keyid": "keyid",
+                    "keytype": "keytype",
+                    "keyval": {"public": "k_public", "private": "private"},
+                }
+            )
+        )
 
         mock_file_path = "repository_service_tuf.cli.key.generate."
         mocked_functions = {
@@ -73,10 +85,18 @@ class TestGenerateInteraction:
                 test_result = client.invoke(
                     generate.generate,
                     input="\n".join(inputs),
+                    catch_exceptions=False,
                 )
 
                 mock_keypair.called_once()
                 assert test_result.exit_code == 0
+                assert generate.load_key.calls == [
+                    pretend.call(filename, key_type, password, "")
+                ]
+                assert "keyid" in test_result.output
+                assert "keytype" in test_result.output
+                assert "k_public" in test_result.output
+                assert "k_private" not in test_result.output
 
         else:
             test_result = client.invoke(
@@ -85,6 +105,11 @@ class TestGenerateInteraction:
             )
 
             assert test_result.exit_code == 1
+            assert generate.load_key.calls == []
+            assert "keyid" not in test_result.output
+            assert "keytype" not in test_result.output
+            assert "k_public" not in test_result.output
+            assert "k_private" not in test_result.output
 
     @pytest.mark.parametrize("filename", ["\n", "test-filename"])
     def test_generate(self, filename: str, client) -> None:

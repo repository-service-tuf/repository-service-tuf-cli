@@ -28,9 +28,11 @@ class TestKeyInfoInteraction:
                 )
             ),
         )
-
         result = client.invoke(
-            info.info, input="\n".join(input), obj=test_context
+            info.info,
+            input="\n".join(input),
+            obj=test_context,
+            catch_exceptions=False,
         )
         assert result.exit_code == 0, result.output
         assert "keyid" in result.output

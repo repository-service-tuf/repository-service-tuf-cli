@@ -136,6 +136,8 @@ Running RSTUF CLI
 
 .. code:: shell
 
+    $ pip install -e .
+
     $ rstuf
 
     Usage: rstuf [OPTIONS] COMMAND [ARGS]...
