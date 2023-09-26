@@ -30,6 +30,7 @@ class URL(Enum):
 class Methods(Enum):
     get = "get"
     post = "post"
+    delete = "delete"
 
 
 @dataclass
@@ -58,6 +59,15 @@ def request_server(
 
         elif method == Methods.post:
             response = requests.post(
+                f"{server}/{url}",
+                json=payload,
+                data=data,
+                headers=headers,
+                timeout=300,
+            )
+
+        elif method == Methods.delete:
+            response = requests.delete(
                 f"{server}/{url}",
                 json=payload,
                 data=data,
