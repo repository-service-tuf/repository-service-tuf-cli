@@ -52,8 +52,7 @@ def calculate_blake2b_256(filepath: str) -> str:
     """
     Calculate the blake2b-256 hash of the given file.
 
-    :param filepath: The path to the file for which we want to calculate the
-    hash.
+    :param filepath: path to the file for which we want to calculate the hash.
     """
 
     # Using non-default digest size of 32 for blake2b-256
@@ -79,8 +78,7 @@ def create_artifact_payload_from_filepath(
 
     The blake2b-256 cryptographic hash function is used to hash the file.
 
-    :param filepath: The path to the file to be added as an artifact to the
-    metadata.
+    :param filepath: path to the artifact to be added to the metadata.
     :param path: The path defined in the metadata for the target.
     """
 
