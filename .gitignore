@@ -1,5 +1,8 @@
 # repository-service-tuf-cli
 metadata/
+rstuf-umbrella/
+payload.json
+metadata-update-payload.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -130,9 +133,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-
-payload.json
-metadata-update-payload.json
 
 # VScode settings folder
 .vscode
