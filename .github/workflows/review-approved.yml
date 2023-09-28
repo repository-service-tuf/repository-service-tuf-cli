@@ -1,0 +1,14 @@
+name: FT pre-merge
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  functional-tests-local:
+    name: Deploy Local Services
+    if: github.event.review.state == 'approved'
+    uses: ./.github/workflows/functional-tests.yml
+    with:
+      api_version: dev
+      worker_version: dev
