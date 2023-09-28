@@ -11,13 +11,10 @@ permissions:
 
 jobs:
   functional-latest:
-    uses: repository-service-tuf/repository-service-tuf/.github/workflows/functional.yml@main
+    uses: ./.github/workflows/functional-tests.yml
     with:
       worker_version: latest
       api_version: latest
-      cli_version: dev
-    secrets:
-      RSTUF_ONLINE_KEY: ${{ secrets.RSTUF_ONLINE_KEY }}
 
   build:
     name: Build

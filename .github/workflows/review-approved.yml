@@ -1,0 +1,23 @@
+name: FT pre-merge
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  functional-tests-local:
+    name: Deploy Local Services
+    if: github.event.review.state == 'approved'
+    uses: ./.github/workflows/functional-tests.yml
+    with:
+      api_version: dev
+      cli_version: dev
+
+  functional-tests-local-redis:
+    name: Deploy Local Services with Redis as Broker
+    if: github.event.review.state == 'approved'
+    uses: ./.github/workflows/functional-tests.yml
+    with:
+      docker_compose: docker-compose-redis.yml
+      api_version: dev
+      cli_version: dev
