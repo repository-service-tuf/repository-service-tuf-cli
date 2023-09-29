@@ -511,6 +511,43 @@ class TestCeremonyInteraction:
         )
         assert "Ceremony done. 🔐 🎉." in test_result.output
 
+    def test_ceremony_keys_less_than_a_threshold(
+        self, client, test_context, test_inputs, test_setup
+    ):
+        ceremony.setup = test_setup
+        input_step1, input_step2, input_step3, input_step4 = test_inputs
+        # Setting threshold to a high value to guarantee there are stil
+        # signatures needed to finish the bootstrap process
+        input_step1 = [
+            "y",  # Do you want more information about roles and responsibilities?  # noqa
+            "y",  # Do you want to start the ceremony?
+            "",  # What is the metadata expiration for the root role?(Days)
+            "",  # What is the number of keys for the root role? (2)
+            "3",  # What is the key threshold for root role signing?
+            "",  # What is the metadata expiration for the targets role?(Days) (365)?  # noqa
+            "y",  # Show example?
+            "16",  # Choose the number of delegated hash bin roles
+            "http://www.example.com/repository",  # What is the targets base URL  # noqa
+            "",  # What is the metadata expiration for the snapshot role?(Days) (365)?  # noqa
+            "",  # What is the metadata expiration for the timestamp role?(Days) (365)?  # noqa
+            "",  # What is the metadata expiration for the bins role?(Days) (365)?  # noqa
+        ]
+        test_result = client.invoke(
+            ceremony.ceremony,
+            "--save",
+            input="\n".join(
+                input_step1 + input_step2 + input_step3 + input_step4
+            ),
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 0, test_result.output
+        assert (
+            "Not enough keys set for root, 1 more key(s) left to reach threshold."  # noqa
+            in test_result.output
+        )
+        assert "Ceremony done. 🔐 🎉." in test_result.output
+
 
 class TestCeremonyOptions:
     """Test the options"""

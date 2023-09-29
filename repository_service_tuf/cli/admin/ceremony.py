@@ -635,6 +635,15 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
             f" {pending_signatures} pending signature(s) left.",
         )
 
+    required_num_of_keys = (
+        setup.threshold[Roles.ROOT] - setup.number_of_keys[Roles.ROOT]
+    )
+    if required_num_of_keys > 0:
+        console.print(
+            "Not enough keys set for root,"
+            f" {required_num_of_keys} more key(s) left to reach threshold.",
+        )
+
     json_payload: Dict[str, Any] = dict()
     json_payload["settings"] = setup.to_dict()
     json_payload["metadata"] = {
