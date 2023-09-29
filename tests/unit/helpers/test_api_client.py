@@ -29,7 +29,11 @@ class TestAPIClient:
         assert result == fake_response
         assert api_client.requests.get.calls == [
             pretend.call(
-                "http://server/url", json=None, data=None, headers=None
+                "http://server/url",
+                json=None,
+                data=None,
+                headers=None,
+                timeout=300,
             )
         ]
 
@@ -49,7 +53,11 @@ class TestAPIClient:
         assert result == fake_response
         assert api_client.requests.post.calls == [
             pretend.call(
-                "http://server/url", json={"k": "v"}, data=None, headers=None
+                "http://server/url",
+                json={"k": "v"},
+                data=None,
+                headers=None,
+                timeout=300,
             )
         ]
 
@@ -849,7 +857,7 @@ class TestAPIClient:
     def test_get_md_file_url(self, monkeypatch):
         api_client.console.print = pretend.call_recorder(lambda *a: None)
         api_client.requests.get = pretend.call_recorder(
-            lambda *a: pretend.stub(
+            lambda *a, **kw: pretend.stub(
                 status_code=200, content='{"metadata": "root"}'
             )
         )
@@ -867,14 +875,14 @@ class TestAPIClient:
             pretend.call(f"Fetching file {url}"),
         ]
         assert api_client.requests.get.calls == [
-            pretend.call(url),
+            pretend.call(url, timeout=300),
         ]
         assert fake_from_bytes.calls == [pretend.call('{"metadata": "root"}')]
 
     def test_get_md_file_url_response_not_200(self):
         api_client.console.print = pretend.call_recorder(lambda *a: None)
         api_client.requests.get = pretend.call_recorder(
-            lambda *a: pretend.stub(
+            lambda *a, **kw: pretend.stub(
                 status_code=404,
             )
         )
@@ -889,5 +897,5 @@ class TestAPIClient:
             pretend.call(f"Fetching file {url}"),
         ]
         assert api_client.requests.get.calls == [
-            pretend.call(url),
+            pretend.call(url, timeout=300),
         ]
