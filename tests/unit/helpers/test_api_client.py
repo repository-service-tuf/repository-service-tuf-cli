@@ -61,6 +61,30 @@ class TestAPIClient:
             )
         ]
 
+    def test_request_server_delete(self):
+        fake_response = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(lambda: {"key": "value"}),
+        )
+        api_client.requests = pretend.stub(
+            delete=pretend.call_recorder(lambda *a, **kw: fake_response)
+        )
+
+        result = api_client.request_server(
+            "http://server", "url", api_client.Methods.delete, {"k": "v"}
+        )
+
+        assert result == fake_response
+        assert api_client.requests.delete.calls == [
+            pretend.call(
+                "http://server/url",
+                json={"k": "v"},
+                data=None,
+                headers=None,
+                timeout=300,
+            )
+        ]
+
     def test_request_server_invalid_method(self):
         with pytest.raises(ValueError) as err:
             api_client.request_server(
