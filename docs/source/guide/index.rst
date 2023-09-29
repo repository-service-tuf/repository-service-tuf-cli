@@ -70,7 +70,7 @@ such as Ceremony, Token Generation, etc.
 
 .. code:: shell
 
-    ❯ rstuf admin login
+    ❯ rstuf --auth admin login
     ╔══════════════════════════════════════════════════════════════════════════════════════╗
     ║                     Login to Repository Service for TUF                              ║
     ╚══════════════════════════════════════════════════════════════════════════════════════╝
@@ -972,6 +972,12 @@ process, for the online key or the TUF roles' keys (``root``, ``targets``, etc. 
     Enter password to encrypt private key file 'id_ed25519':
     Confirm:
 
+    ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+    ┃                   Key ID                   ┃ Key Type ┃                Public Key                 ┃
+    ┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+    │ f2f9f111b4a8dfb3766c8066628c81bd3aef42b34… │ ed25519  │ bb713c55bbf9b13ff7f92193af55b2f65ae15e55… │
+    └────────────────────────────────────────────┴──────────┴───────────────────────────────────────────┘
+
 .. rstuf-cli-key-info
 
 Key Information (``info``)
@@ -992,4 +998,49 @@ Show relevant information about a key.
     │ --help          -h    Show this message and exit.                                                │
     ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 
+
+.. rstuf-cli-artifact
+
+Artifact Management (``artifact``)
+==================================
+
+Manages artifacts using the RSTUF REST API.
+
+.. code::
+
+    ❯ rstuf artifact
+
+    Usage: rstuf artifact [OPTIONS] COMMAND [ARGS]...
+
+    Artifact Management Commands
+
+    ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --help          -h    Show this message and exit.                                                │
+    ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+    ╭─ Commands ───────────────────────────────────────────────────────────────────────────────────────╮
+    │ add          Add artifacts to the TUF metadata.                                                  │
+    ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+.. rstuf-cli-artifact-add
+
+Artifact Addition (``add``)
+---------------------------
+
+This command adds the provided artifact to the TUF Metadata using the RSTUF REST API.
+If the API requires authentication/authorization the user needs to authenticate accordingly for
+the command to be carried out successfully.
+
+.. code::
+
+    ❯ rstuf artifact add --help
+
+    Usage: rstuf artifact add [OPTIONS] FILEPATH
+
+    Add artifacts to the TUF metadata.
+
+    ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --path  -p  TEXT  A custom path (`TARGETPATH`) for the file, defined in the metadata. [required] │
+    │ --help          -h    Show this message and exit.                                                │
+    ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 

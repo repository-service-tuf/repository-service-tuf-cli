@@ -722,6 +722,8 @@ class TestMetadataSign:
         )
         assert test_result.exit_code == 0, test_result.output
         assert "Metadata Signed! 🔑" in test_result.output
+        assert "SIGNING KEYS" in test_result.output
+        assert "PENDING KEYS" in test_result.output
         assert metadata.request_server.calls == [
             pretend.call(
                 "http://127.0.0.1",
@@ -841,11 +843,77 @@ class TestMetadataSign:
             )
         ]
 
+    def test_metadata_sign_print_role_and_change(self, client, test_context):
+        input_step = [
+            "http://127.0.0.1",  # API URL address
+            "root",  # Choose a metadata to sign [root]
+            "n",  # Do you still want to sign root? [y]
+            "root",  # Choose a metadata to sign [root]
+            "y",  # Do you still want to sign root? [y]
+            "Jimi Hendrix",  # Choose a private key to load [Jimi Hendrix]
+            "",  # Choose Jimi Hendrix key type [ed25519/ecdsa/rsa]
+            "tests/files/key_storage/JimiHendrix.key",  # Enter the Jimi Hendrix`s private key path  # noqa
+            "strongPass",  # Enter the Jimi Hendrix`s private key password
+        ]
+
+        with open("tests/files/das-root.json", "r") as f:
+            das_root = f.read()
+
+        fake_response_data = {"data": {"metadata": json.loads(das_root)}}
+        fake_response = pretend.stub(
+            json=pretend.call_recorder(lambda: fake_response_data),
+            status_code=200,
+        )
+        metadata.request_server = pretend.call_recorder(
+            lambda *a, **kw: fake_response
+        )
+        metadata.send_payload = pretend.call_recorder(lambda *a: "fake-taskid")
+        metadata.task_status = pretend.call_recorder(lambda *a: "OK")
+
+        test_result = client.invoke(
+            metadata.sign,
+            input="\n".join(input_step),
+            obj=test_context,
+            catch_exceptions=False,
+        )
+        assert test_result.exit_code == 0, test_result.output
+        assert "Metadata Signed! 🔑" in test_result.output
+        assert metadata.request_server.calls == [
+            pretend.call(
+                "http://127.0.0.1",
+                "api/v1/metadata/sign/",
+                metadata.Methods.get,
+                headers={},
+            )
+        ]
+        assert metadata.send_payload.calls == [
+            pretend.call(
+                test_context["settings"],
+                URL.metadata_sign.value,
+                {
+                    "role": "root",
+                    "signature": {
+                        "keyid": "800dfb5a1982b82b7893e58035e19f414f553fc08cbb1130cfbae302a7b7fee5",  # noqa
+                        "sig": "0bb8b18a626e24b5dd7cdfb6bf6a26fc79d40b2b3737a92604d484105374f1431cebc76814cedff7179e8d5a1cec54246a7eccd509213ef33bcc12312f4d0f01",  # noqa
+                    },
+                },
+                "Metadata sign accepted.",
+                "Metadata sign",
+            )
+        ]
+        assert metadata.task_status.calls == [
+            pretend.call(
+                "fake-taskid",
+                test_context["settings"],
+                "Metadata sign status:",
+            )
+        ]
+
     def test_metadata_sign_invalid_private_key_and_abort(
         self, client, test_context, metadata_sign_input
     ):
         input_step = metadata_sign_input
-        input_step[4] = "invalid/file"  # Retry to load the key Jimi Hendrix
+        input_step[5] = "invalid/file"  # Retry to load the key Jimi Hendrix
         input_step.append("n")  # In the end abort
 
         with open("tests/files/das-root.json", "r") as f:
@@ -880,7 +948,7 @@ class TestMetadataSign:
         self, client, test_context, metadata_sign_input
     ):
         input_step = metadata_sign_input
-        input_step[4] = "invalid/file"  # Retry to load the key Jimi Hendrix
+        input_step[5] = "invalid/file"  # Retry to load the key Jimi Hendrix
         input_step.append("y")  # Try again
         input_step.append(
             ""
@@ -949,7 +1017,7 @@ class TestMetadataSign:
     ):
         input_step = metadata_sign_input
         input_step[
-            4
+            5
         ] = "tests/files/key_storage/JanisJoplin.key"  # Enter the root`s private key path  # noqa
 
         with open("tests/files/das-root.json", "r") as f:
@@ -983,7 +1051,7 @@ class TestMetadataSign:
         ]
 
     def test_metadata_sign_fails_during_signing(
-        self, client, test_context, metadata_sign_input
+        self, client, test_context, metadata_sign_input, monkeypatch
     ):
         input_step = metadata_sign_input
 
@@ -995,11 +1063,14 @@ class TestMetadataSign:
             json=pretend.call_recorder(lambda: fake_response_data),
             status_code=200,
         )
-        metadata.request_server = pretend.call_recorder(
+        fake_request_server = pretend.call_recorder(
             lambda *a, **kw: fake_response
         )
-        metadata.Metadata.sign = pretend.raiser(
-            metadata.UnsignedMetadataError("Failed to sign")
+        monkeypatch.setattr(metadata, "request_server", fake_request_server)
+        monkeypatch.setattr(
+            metadata.Metadata,
+            "sign",
+            pretend.raiser(metadata.UnsignedMetadataError("Failed to sign")),
         )
 
         test_result = client.invoke(
@@ -1015,5 +1086,73 @@ class TestMetadataSign:
                 "api/v1/metadata/sign/",
                 metadata.Methods.get,
                 headers={},
+            )
+        ]
+
+
+class TestMetadataSignOptions:
+    def test_metadata_sign_api_url_set_no_auth(self, client, test_context):
+        input_step = [
+            "root",  # Choose a metadata to sign [root]
+            "y",  # Do you still want to sign root? [y]
+            "Jimi Hendrix",  # Choose a private key to load [Jimi Hendrix]
+            "",  # Choose Jimi Hendrix key type [ed25519/ecdsa/rsa]
+            "tests/files/key_storage/JimiHendrix.key",  # Enter the Jimi Hendrix`s private key path  # noqa
+            "strongPass",  # Enter the Jimi Hendrix`s private key password
+        ]
+
+        with open("tests/files/das-root.json", "r") as f:
+            das_root = f.read()
+
+        fake_response_data = {"data": {"metadata": json.loads(das_root)}}
+        fake_response = pretend.stub(
+            json=pretend.call_recorder(lambda: fake_response_data),
+            status_code=200,
+        )
+        metadata.request_server = pretend.call_recorder(
+            lambda *a, **kw: fake_response
+        )
+        metadata.send_payload = pretend.call_recorder(lambda *a: "fake-taskid")
+        metadata.task_status = pretend.call_recorder(lambda *a: "OK")
+
+        test_result = client.invoke(
+            metadata.sign,
+            ["--api-url", "http://127.0.0.1"],
+            input="\n".join(input_step),
+            obj=test_context,
+            catch_exceptions=False,
+        )
+        assert test_result.exit_code == 0, test_result.output
+        assert "Metadata Signed! 🔑" in test_result.output
+        assert "SIGNING KEYS" in test_result.output
+        assert "PENDING KEYS" in test_result.output
+        assert metadata.request_server.calls == [
+            pretend.call(
+                "http://127.0.0.1",
+                "api/v1/metadata/sign/",
+                metadata.Methods.get,
+                headers={},
+            )
+        ]
+        assert metadata.send_payload.calls == [
+            pretend.call(
+                test_context["settings"],
+                URL.metadata_sign.value,
+                {
+                    "role": "root",
+                    "signature": {
+                        "keyid": "800dfb5a1982b82b7893e58035e19f414f553fc08cbb1130cfbae302a7b7fee5",  # noqa
+                        "sig": "0bb8b18a626e24b5dd7cdfb6bf6a26fc79d40b2b3737a92604d484105374f1431cebc76814cedff7179e8d5a1cec54246a7eccd509213ef33bcc12312f4d0f01",  # noqa
+                    },
+                },
+                "Metadata sign accepted.",
+                "Metadata sign",
+            )
+        ]
+        assert metadata.task_status.calls == [
+            pretend.call(
+                "fake-taskid",
+                test_context["settings"],
+                "Metadata sign status:",
             )
         ]

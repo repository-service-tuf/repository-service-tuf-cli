@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import copy
+import json
 import unittest.mock
 from datetime import datetime, timedelta
 from typing import Dict, List
@@ -170,6 +171,33 @@ class TestMetadataInfo:
         key = Key("123456789a", "ed25519", "", {"sha256": "abc"}, {"name": ""})
         name = MetadataInfo._get_key_name(key)
         assert name == "1234567"
+
+    def test__get_pending_and_used_keys(self):
+        with open("tests/files/das-root.json", "r") as f:
+            das_root = json.loads(f.read())
+
+        md_info = MetadataInfo(Metadata.from_dict(das_root["root"]))
+        used_keys_info, pending_keys = md_info._get_pending_and_used_keys()
+        assert len(used_keys_info) == 1
+        assert used_keys_info[0] == {
+            "keyid": "1cebe343e35f0213f6136758e6c3a8f8e1f9eeb7e47a07d5cb336462ed31dcb7",  # noqa
+            "name": "Janis Joplin",
+            "keytype": "ed25519",
+            "keyval": {
+                "public": "ad1709b3cb419b99c5cd7427d6411522e5a93aec6767453e91af921a73d22a3c",  # noqa
+            },
+            "scheme": "ed25519",
+        }
+        assert len(pending_keys) == 1
+        assert pending_keys[0] == {
+            "keyid": "800dfb5a1982b82b7893e58035e19f414f553fc08cbb1130cfbae302a7b7fee5",  # noqa
+            "name": "Jimi Hendrix",
+            "keytype": "ed25519",
+            "keyval": {
+                "public": "7098f769f6ab8502b50f3b58686b8a042d5d3bb75d8b3a48a2fcbc15a0223501",  # noqa
+            },
+            "scheme": "ed25519",
+        }
 
     def test_is_keyid_used_true(self, root: Metadata[Root]):
         root.signed.add_key(Key("id", "ed25519", "", {"sha256": "ab"}), "root")

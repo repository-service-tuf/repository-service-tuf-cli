@@ -628,6 +628,16 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     tuf_management = TUFManagement(setup, save)
     metadata = tuf_management.initialize_metadata()
 
+    # Inform user for pending signatures
+    pending_signatures: int = setup.threshold[Roles.ROOT] - len(
+        metadata[Roles.ROOT.value].signatures
+    )
+    if pending_signatures > 0:
+        console.print(
+            "Root is not trustworthy yet,"
+            f" {pending_signatures} pending signature(s) left.",
+        )
+
     json_payload: Dict[str, Any] = dict()
     json_payload["settings"] = setup.to_dict()
     json_payload["metadata"] = {

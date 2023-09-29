@@ -45,6 +45,10 @@ Requirements
 
 - Python >=3.9
 - Pipenv
+- PostgreSQL
+
+.. note::
+    Make sure python versions of pip and pipenv match, as otherwise installing the requirements from the Pipfile may fail.
 
 Getting the source code
 -----------------------
@@ -128,6 +132,11 @@ Running RSTUF CLI
 ~~~~~~~~~~~~~~~~~
 
 .. code:: shell
+    $ pip install -e .
+
+.. code:: shell
+
+    $ pip install -e .
 
     $ rstuf
 
