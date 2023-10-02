@@ -24,8 +24,6 @@ Using pip:
 
     ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
     │ --config   -c  TEXT  Repository Service for TUF config file.                                                                          │
-    │ --auth               Use of RSTUF built-in authentication.                                                                            │
-    │ --token    -t  TEXT  RSTUF API authentication token. If the `--auth` option is provided this token is not used for authentication.    │
     │ --version            Show the version and exit.                                                                                       │
     │ --help     -h        Show this message and exit.                                                                                      │
     ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
@@ -56,36 +54,6 @@ It executes administrative commands to the Repository Service for TUF.
     │ ceremony                                              Start a new Metadata Ceremony.                                                                                                                                         │
     │ import-targets                                        Import targets to RSTUF from exported CSV file.                                                                                                                        │
     ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-.. rstuf-cli-admin-login
-
-Login to Server (``login``)
----------------------------
-
-.. note::
-    requires ``--auth``
-
-This command will log in to Repository Service for TUF and give you a token to run other commands
-such as Ceremony, Token Generation, etc.
-
-.. code:: shell
-
-    ❯ rstuf --auth admin login
-    ╔══════════════════════════════════════════════════════════════════════════════════════╗
-    ║                     Login to Repository Service for TUF                              ║
-    ╚══════════════════════════════════════════════════════════════════════════════════════╝
-
-    ┌──────────────────────────────────────────────────────────────────────────────────────┐
-    │         The server and token will generate a token and it will be                    │
-    │         stored in /Users/kairoaraujo/.rstuf.ini                                      │
-    └──────────────────────────────────────────────────────────────────────────────────────┘
-
-    Server Address: http://192.168.1.199
-    Password for admin:
-    Expire (in hours): 2
-    Token stored in /Users/kairoaraujo/.repository_service_tuf.ini
-
-    Login successful.
 
 .. rstuf-cli-admin-ceremony
 
@@ -394,8 +362,6 @@ Metadata Management (``metadata``)
     ❯ rstuf admin metadata
 
     Usage: rstuf admin metadata [OPTIONS] COMMAND [ARGS]...
-
-    Token Management.
 
     ╭─ Options ───────────────────────────────────────────╮
     │  --help  -h    Show this message and exit.          │
@@ -744,103 +710,6 @@ sign (``sign``)
     Metadata Signed! 🔑
 
 
-.. rstuf-cli-admin-token
-
-Token (``token``)
------------------
-
-Token Management
-
-.. note::
-    requires ``--auth``
-
-.. code::
-
-    ❯ rstuf admin token
-
-    Usage: rstuf admin token [OPTIONS] COMMAND [ARGS]...
-
-    Token Management.
-
-    ╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │  --help  -h    Show this message and exit.                                                                             │
-    ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-    ╭─ Commands ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │  generate  Generate new token.                                                                                         │
-    │  inspect   Show token information details.                                                                             │
-    ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-.. rstuf-cli-admin-token-generate
-
-``generate``
-............
-
-Generate tokens to use in integrations.
-
-.. code::
-
-    ❯ rstuf admin token generate -h
-
-    Usage: rstuf admin token generate [OPTIONS]
-
-    Generate a new token.
-
-    ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────╮
-    │     --expires  -e  INTEGER  Expires in hours. Default: 24 [default: 24]                          │
-    │  *  --scope    -s  TEXT     Scope to grant. Multiple is accepted. Ex: -s write:targets -s        │
-    │                             read:settings                                                        │
-    │                             [required]                                                           │
-    │     --help     -h           Show this message and exit.                                          │
-    ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-Example of usage:
-
-.. code:: shell
-
-    ❯ rstuf admin token generate -s write:targets
-    {
-        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyX
-        zFfNTNiYTY4MzAwNTk3NGY2NWIxMDQ5NzczMjIiwicGFzc3dvcmQiOiJiJyQyYiQxMiRxT0
-        5NRjdRblI3NG0xbjdrZW1MdFJld05MVDN2elNFLndsRHowLzBIWTJFaGxpY05uaFgzdSci
-        LCJzY29wZXMiOlsid3JpdGU6dGFyZ2V0cyJdLCJleHAiOjE2NjIyODExMDl9.ugwibyv8H
-        -zVgGgRfliKgUgHZrZzeJDeAw9mQJrYLz8"
-    }
-
-This token can be used with GitHub Secrets, Jenkins Secrets, CircleCI, shell
-script, etc
-
-.. rstuf-cli-admin-token-inspect
-
-``inspect``
-...........
-
-Show token detailed information.
-
-.. code:: shell
-
-    ❯ rstuf admin token inspect -h
-
-    Usage: rstuf admin token inspect [OPTIONS] TOKEN
-
-    Show token information details.
-
-    ╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │  --help  -h    Show this message and exit.                                                                             │
-    ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-    ❯ rstuf admin token inspect eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1...PDwwY
-    {
-    "data": {
-        "scopes": [
-        "write:targets"
-        ],
-        "expired": false,
-        "expiration": "2022-09-04T08:42:44"
-    },
-    "message": "Token information"
-    }
-
-
 .. rstuf-cli-admin-import-targets
 
 Import Targets (``import-targets``)
@@ -894,7 +763,7 @@ See the below CSV file example:
      Import targets to RSTUF from exported CSV file.
 
     ╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ *                          --metadata-url  TEXT  RSTUF Metadata URL i.e.: http://127.0.0.1 . [required]                                                         │
+    │ *                          --api-url       TEXT  RSTUF Metadata URL i.e.: http://127.0.0.1 . [required]                                                         │
     │ *                          --db-uri        TEXT  RSTUF DB URI. i.e.: postgresql://postgres:secret@127.0.0.1:5433 [required]                                     │
     │ *                          --csv           TEXT  CSV file to import. Multiple --csv parameters are allowed. See rstuf CLI guide for more details. [required]    │
     │    --skip-publish-targets                       Skip publishing targets in TUF Metadata.                                                                        │
@@ -1028,8 +897,6 @@ Artifact Addition (``add``)
 ---------------------------
 
 This command adds the provided artifact to the TUF Metadata using the RSTUF REST API.
-If the API requires authentication/authorization the user needs to authenticate accordingly for
-the command to be carried out successfully.
 
 .. code::
 
