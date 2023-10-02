@@ -498,7 +498,7 @@ class TestCeremonyOptions:
 
         test_result = client.invoke(
             ceremony.ceremony,
-            ["--bootstrap", "--upload-server", "http://fake-api"],
+            ["--bootstrap", "--api-server", "http://fake-api"],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -545,7 +545,7 @@ class TestCeremonyOptions:
 
         test_result = client.invoke(
             ceremony.ceremony,
-            ["--bootstrap", "--upload-server", "http://fake-api"],
+            ["--bootstrap", "--api-server", "http://fake-api"],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -570,7 +570,7 @@ class TestCeremonyOptions:
 
         test_result = client.invoke(
             ceremony.ceremony,
-            ["--bootstrap", "--upload", "--upload-server", "http://fake-api"],
+            ["--bootstrap", "--upload", "--api-server", "http://fake-api"],
             input=None,
             obj=test_context,
         )
@@ -612,51 +612,7 @@ class TestCeremonyOptions:
         )
 
         assert test_result.exit_code == 1, test_result.output
-        assert "Requires '--upload-server'" in test_result.output
-
-    def test_ceremony_option_bootstrap_upload_auth(self, client, test_context):
-        ceremony.bootstrap_status = pretend.call_recorder(
-            lambda *a: {"data": {"bootstrap": False}}
-        )
-        ceremony.load_payload = pretend.call_recorder(lambda *a: {"k": "v"})
-        ceremony.send_payload = pretend.call_recorder(
-            lambda **kw: "fake_task_id"
-        )
-        ceremony.task_status = pretend.call_recorder(lambda *a: None)
-
-        test_context["settings"].AUTH = True
-        test_context["settings"].SERVER = "http://fake-api"
-
-        test_result = client.invoke(
-            ceremony.ceremony,
-            ["--bootstrap", "--upload"],
-            input=None,
-            obj=test_context,
-        )
-
-        assert test_result.exit_code == 0, test_result.output
-        assert (
-            "Bootstrap completed using `payload.json`. 🔐 🎉"
-            in test_result.output
-        )
-        assert ceremony.bootstrap_status.calls == [
-            pretend.call(test_context["settings"])
-        ]
-        assert ceremony.load_payload.calls == [pretend.call("payload.json")]
-        assert ceremony.send_payload.calls == [
-            pretend.call(
-                settings=test_context["settings"],
-                url=URL.bootstrap.value,
-                payload={"k": "v"},
-                expected_msg="Bootstrap accepted.",
-                command_name="Bootstrap",
-            )
-        ]
-        assert ceremony.task_status.calls == [
-            pretend.call(
-                "fake_task_id", test_context["settings"], "Bootstrap status: "
-            )
-        ]
+        assert "Requires '--api-server'" in test_result.output
 
     def test_ceremony_option_upload_missing_bootstrap(
         self, client, test_context, test_inputs, test_setup

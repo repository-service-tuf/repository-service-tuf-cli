@@ -1,0 +1,14 @@
+server: http://127.0.0.1
+
+repositories:
+  example:
+    artifact_base_url: http://www.example.com/downloads/
+    metadata_url: http://127.0.0.1:8080
+    trusted_root: <base64>
+  pypi:
+    artifact_base_url: https://files.pythonhosted.org
+    metadata_url: http://tuf.pypi.org
+    trusted_root: <base64>
+    hash_prefix: True
+
+current_repository: example

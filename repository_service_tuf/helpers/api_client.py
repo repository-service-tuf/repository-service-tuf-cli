@@ -85,66 +85,9 @@ def request_server(
     return response
 
 
-def token_state(settings: LazySettings):
-    token = settings.get("TOKEN")
-
-    # user doesn't use --auth and don't use --token
-    if settings.get("AUTH") is False and token is None:
-        return None
-
-    server = settings.get("SERVER")
-    headers = {"Authorization": f"Bearer {token}"}
-
-    url = f"{URL.token.value}?token={token}"
-    response = request_server(server, url, Methods.get, headers=headers)
-    if response.status_code == 401 or response.status_code == 403:
-        return Login(state=False)
-
-    elif response.status_code == 200:
-        data = response.json().get("data", {})
-        if data.get("expired") is False:
-            return Login(state=True, data=data)
-
-    else:
-        raise click.ClickException(
-            f"Error {response.status_code} {response.text}"
-        )
-
-
-def get_headers(settings: LazySettings) -> Dict[str, str]:
-    server = settings.get("SERVER")
-    token = settings.get("TOKEN")
-
-    if server and token:
-        token_access_check = token_state(settings)
-        if token_access_check.state is False:
-            if settings.AUTH is True:
-                message = "\n\nTry re-login: 'rstuf --auth admin login'"
-            else:
-                message = "\n\nToken is expired"
-
-            raise click.ClickException(
-                f"{str(token_access_check.data)}.{message}"
-            )
-
-        else:
-            headers = {"Authorization": f"Bearer {token}"}
-
-    elif settings.get("AUTH") is True:
-        raise click.ClickException(
-            "Login first. Run 'rstuf --auth admin login'"
-        )
-
-    else:
-        headers = {}
-
-    return headers
-
-
 def bootstrap_status(settings: LazySettings) -> Dict[str, Any]:
-    headers = get_headers(settings)
     response = request_server(
-        settings.SERVER, URL.bootstrap.value, Methods.get, headers=headers
+        settings.SERVER, URL.bootstrap.value, Methods.get
     )
     if response.status_code == 404:
         raise click.ClickException(
@@ -168,14 +111,12 @@ def task_status(
     title: Optional[str],
     silent: Optional[bool] = False,
 ) -> Dict[str, Any]:
-    headers = get_headers(settings)
     received_states = []
     while True:
         state_response = request_server(
             settings.SERVER,
             f"{URL.task.value}{task_id}",
             Methods.get,
-            headers=headers,
         )
 
         if state_response.status_code != 200:
@@ -226,12 +167,10 @@ def task_status(
 
 
 def publish_targets(settings: LazySettings) -> str:
-    headers = get_headers(settings)
     publish_targets = request_server(
         settings.SERVER,
         URL.publish_targets.value,
         Methods.post,
-        headers=headers,
     )
     if publish_targets.status_code != 202:
         raise click.ClickException(
@@ -264,13 +203,11 @@ def send_payload(
     Returns:
         Task id of the job sending the payload.
     """
-    headers = get_headers(settings)
     response = request_server(
         settings.SERVER,
         url,
         Methods.post,
         payload,
-        headers=headers,
     )
 
     if response.status_code != expected_status_code:

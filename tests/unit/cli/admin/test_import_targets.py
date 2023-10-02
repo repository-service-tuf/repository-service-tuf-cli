@@ -286,7 +286,7 @@ class TestImportTargetsGroupCLI:
         )
 
         options = [
-            "--api-url",
+            "--api-server",
             "http://127.0.0.1",
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
@@ -361,7 +361,7 @@ class TestImportTargetsGroupCLI:
         )
 
         options = [
-            "--api-url",
+            "--api-server",
             "http://127.0.0.1",
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
@@ -410,7 +410,7 @@ class TestImportTargetsGroupCLI:
         builtins.__import__ = fake_import
 
         test_context["settings"].SERVER = "fake-server"
-        options = ["--api-url", "", "--db-uri", "", "--csv", ""]
+        options = ["--api-server", "", "--db-uri", "", "--csv", ""]
         result = client.invoke(
             import_targets.import_targets, options, obj=test_context
         )
@@ -431,7 +431,7 @@ class TestImportTargetsGroupCLI:
         )
 
         options = [
-            "--api-url",
+            "--api-server",
             "http://127.0.0.1",
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
@@ -455,7 +455,7 @@ class TestImportTargetsGroupCLI:
         )
 
         options = [
-            "--api-url",
+            "--api-server",
             "http://127.0.0.1",
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",

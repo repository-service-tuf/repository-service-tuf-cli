@@ -18,7 +18,6 @@ from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,
-    get_headers,
     get_md_file,
     request_server,
     send_payload,
@@ -516,10 +515,9 @@ def _modify_online_key(root_info: MetadataInfo):
     is_flag=True,
 )
 @click.option(
-    "--upload-server",
-    help="[when using '--auth'] Upload to RSTUF API Server address. ",
+    "--api-server",
+    help="RSTUF API URL i.e.: http://127.0.0.1 .",
     required=False,
-    hidden=True,
 )
 @click.pass_context
 def update(
@@ -529,7 +527,7 @@ def update(
     upload: bool,
     run_ceremony: bool,
     save: bool,
-    upload_server: str,
+    api_server: str,
 ) -> None:
     """
     Start a new metadata update ceremony.
@@ -537,13 +535,13 @@ def update(
     settings = context.obj["settings"]
     if upload and not run_ceremony:
         # Sever authentication or setup
-        if settings.AUTH and not upload_server:
+        if api_server is None:
             raise click.ClickException(
-                "Requires '--upload-server' when using '--auth'. "
-                "Example: --upload-server https://rstuf-api.example.com"
+                "Requires '--api-server' when using '--upload/-u'. "
+                "Example: --api-server https://api.rstuf.example.com"
             )
-        if upload_server:
-            settings.SERVER = upload_server
+        else:
+            settings.SERVER = api_server
 
         console.print(
             f"Uploading existing metadata update payload {file} to "
@@ -628,17 +626,16 @@ def update(
 
 
 def _get_pending_roles(
-    settings: Any, api_url: Optional[str]
+    settings: Any, api_server: Optional[str]
 ) -> Dict[str, Any]:
-    if settings.AUTH is False and api_url is None:
-        api_url = prompt.Prompt.ask("\n[cyan]API[/] URL address")
-        settings.SERVER = api_url
-    elif settings.AUTH is False and api_url is not None:
-        settings.SERVER = api_url
+    if api_server is None:
+        api_server = prompt.Prompt.ask("\n[cyan]API[/] URL address")
+        settings.SERVER = api_server
+    else:
+        settings.SERVER = api_server
 
-    headers = get_headers(settings)
     response = request_server(
-        settings.SERVER, URL.metadata_sign.value, Methods.get, headers=headers
+        settings.SERVER, URL.metadata_sign.value, Methods.get
     )
     if response.status_code != 200:
         raise click.ClickException(
@@ -708,7 +705,7 @@ def _sign_metadata(role_info: MetadataInfo, rstuf_key: RSTUFKey) -> Signature:
 
 @metadata.command()
 @click.option(
-    "--api-url",
+    "--api-server",
     help="URL to an RSTUF API.",
     required=False,
 )
@@ -719,7 +716,7 @@ def _sign_metadata(role_info: MetadataInfo, rstuf_key: RSTUFKey) -> Signature:
     is_flag=True,
 )
 @click.pass_context
-def sign(context, api_url: Optional[str], delete: Optional[bool]) -> None:
+def sign(context, api_server: Optional[str], delete: Optional[bool]) -> None:
     """
     Start metadata signature.
     """
@@ -727,7 +724,7 @@ def sign(context, api_url: Optional[str], delete: Optional[bool]) -> None:
 
     settings = context.obj["settings"]
 
-    pending_roles = _get_pending_roles(settings, api_url)
+    pending_roles = _get_pending_roles(settings, api_server)
     role_info: MetadataInfo
     rolename: str
 

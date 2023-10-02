@@ -559,17 +559,6 @@ class TestMetadataUpdateOptions:
 
     path = "repository_service_tuf.cli.admin.metadata"
 
-    def test_metadata_update_auth_set_without_upload_server_ClickException(
-        self, client, test_context
-    ):
-        test_context["settings"].AUTH = True
-        test_result = client.invoke(
-            metadata.update, "--upload", obj=test_context
-        )
-        assert test_result.exit_code == 1, test_result.output
-        error_msg = "Requires '--upload-server' when using '--auth'."
-        assert error_msg in test_result.output
-
     def test_metadata_update_send_payload_to_upload_server(
         self, client, test_context
     ):
@@ -578,7 +567,11 @@ class TestMetadataUpdateOptions:
         metadata.send_payload = pretend.call_recorder(lambda **kw: "task_id")
         metadata.task_status = pretend.call_recorder(lambda *a: None)
 
-        result = client.invoke(metadata.update, "--upload", obj=test_context)
+        result = client.invoke(
+            metadata.update,
+            ["--api-server", "http://api.rstuf.example.com", "--upload"],
+            obj=test_context,
+        )
         finish_msg = "Existing payload metadata-update-payload.json sent"
         assert result.exit_code == 0
         assert finish_msg in result.output
@@ -729,7 +722,6 @@ class TestMetadataSign:
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
                 metadata.Methods.get,
-                headers={},
             )
         ]
         assert metadata.send_payload.calls == [
@@ -780,7 +772,6 @@ class TestMetadataSign:
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
                 metadata.Methods.get,
-                headers={},
             )
         ]
 
@@ -810,7 +801,6 @@ class TestMetadataSign:
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
                 metadata.Methods.get,
-                headers={},
             )
         ]
 
@@ -839,7 +829,6 @@ class TestMetadataSign:
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
                 metadata.Methods.get,
-                headers={},
             )
         ]
 
@@ -883,7 +872,6 @@ class TestMetadataSign:
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
                 metadata.Methods.get,
-                headers={},
             )
         ]
         assert metadata.send_payload.calls == [
@@ -940,7 +928,6 @@ class TestMetadataSign:
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
                 metadata.Methods.get,
-                headers={},
             )
         ]
 
@@ -986,7 +973,6 @@ class TestMetadataSign:
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
                 metadata.Methods.get,
-                headers={},
             )
         ]
         assert metadata.send_payload.calls == [
@@ -1046,7 +1032,6 @@ class TestMetadataSign:
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
                 metadata.Methods.get,
-                headers={},
             )
         ]
 
@@ -1085,13 +1070,12 @@ class TestMetadataSign:
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
                 metadata.Methods.get,
-                headers={},
             )
         ]
 
 
 class TestMetadataSignOptions:
-    def test_metadata_sign_api_url_set_no_auth(self, client, test_context):
+    def test_metadata_sign_api_server(self, client, test_context):
         input_step = [
             "root",  # Choose a metadata to sign [root]
             "y",  # Do you still want to sign root? [y]
@@ -1117,7 +1101,7 @@ class TestMetadataSignOptions:
 
         test_result = client.invoke(
             metadata.sign,
-            ["--api-url", "http://127.0.0.1"],
+            ["--api-server", "http://127.0.0.1"],
             input="\n".join(input_step),
             obj=test_context,
             catch_exceptions=False,
@@ -1131,7 +1115,6 @@ class TestMetadataSignOptions:
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
                 metadata.Methods.get,
-                headers={},
             )
         ]
         assert metadata.send_payload.calls == [
@@ -1194,6 +1177,5 @@ class TestMetadataSignOptions:
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
                 metadata.Methods.get,
-                headers={},
             ),
         ]
