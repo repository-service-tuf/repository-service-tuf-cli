@@ -54,10 +54,10 @@ jobs:
 
     steps:
       - name: Checkout RSTUF CLI source code
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
 
       - name: Checkout RSTUF Umbrella (FT)
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
         with:
             repository: repository-service-tuf/repository-service-tuf
             path: rstuf-umbrella
@@ -81,10 +81,10 @@ jobs:
 
     steps:
       - name: Checkout RSTUF CLI source code
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
 
       - name: Checkout RSTUF Umbrella (FT)
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
         with:
           repository: repository-service-tuf/repository-service-tuf
           path: rstuf-umbrella
