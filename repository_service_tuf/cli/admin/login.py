@@ -82,7 +82,6 @@ def _run_login(context, server_, password_, expires_):
             "read:tasks "
             "write:token "
             "write:metadata "
-            "read:metadata "
             "write:metadata_sign "
             "read:metadata_sign "
             "delete:metadata_sign "
