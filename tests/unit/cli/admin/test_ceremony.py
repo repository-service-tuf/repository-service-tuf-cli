@@ -601,7 +601,7 @@ class TestCeremonyOptions:
         # test regression https://github.com/repository-service-tuf/repository-service-tuf-cli/pull/259  # noqa
         assert test_context["settings"].SERVER is not None
 
-    def test_ceremony_option_bootstrap_upload_missing_upload_server(
+    def test_ceremony_option_bootstrap_upload_missing_api_server(
         self, client, test_context
     ):
         test_result = client.invoke(

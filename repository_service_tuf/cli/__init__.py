@@ -32,7 +32,7 @@ try:
                 prog_name = line.split("=")[0].strip()
                 break
 
-except FileNotFoundError:
+except FileNotFoundError:  # pragma: no cover the tests will fail in general
     pass
 
 
@@ -55,11 +55,12 @@ def rstuf(
     config: Optional[str],
 ):
     """Repository Service for TUF Command Line Interface (CLI)."""
-
-    context.obj = {
-        "settings": Dynaconf(settings_files=[config]),
-        "config": config,
-    }
+    context.obj = (
+        {  # pragma: no cover -- it is just the context without logic.
+            "settings": Dynaconf(settings_files=[config]),
+            "config": config,
+        }
+    )
 
 
 # Register all command groups
