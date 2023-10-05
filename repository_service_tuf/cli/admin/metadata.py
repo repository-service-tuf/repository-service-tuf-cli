@@ -718,8 +718,8 @@ def _delete_signing_process(
     headers = get_headers(settings)
     response = request_server(
         settings.SERVER,
-        URL.metadata_sign.value,
-        Methods.delete,
+        URL.metadata_sign_delete.value,
+        Methods.post,
         headers=headers,
     )
     if response.status_code != 200:

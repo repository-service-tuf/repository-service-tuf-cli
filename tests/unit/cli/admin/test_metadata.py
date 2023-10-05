@@ -1198,8 +1198,8 @@ class TestMetadataSignOptions:
             ),
             pretend.call(
                 "http://127.0.0.1",
-                "api/v1/metadata/sign/",
-                metadata.Methods.delete,
+                "api/v1/metadata/sign/delete",
+                metadata.Methods.post,
                 headers={},
             ),
         ]
@@ -1245,8 +1245,8 @@ class TestMetadataSignOptions:
             ),
             pretend.call(
                 "http://127.0.0.1",
-                "api/v1/metadata/sign/",
-                metadata.Methods.delete,
+                "api/v1/metadata/sign/delete",
+                metadata.Methods.post,
                 headers={},
             ),
         ]
