@@ -68,7 +68,7 @@ sphinxcontrib-serializinghtml==1.1.9; python_version >= '3.9'
 stevedore==5.1.0; python_version >= '3.8'
 tomli==2.0.1; python_version >= '3.1'
 tox==4.11.3; python_version >= '3.8'
-types-requests==2.31.0.7; python_version >= '3.7'
+types-requests==2.31.0.8; python_version >= '3.7'
 typing-extensions==4.8.0; python_version >= '3.8'
 urllib3==2.0.6; python_version >= '3.7'
 virtualenv==20.24.5; python_version >= '3.7'
@@ -79,7 +79,7 @@ configobj==5.0.8
 cryptography==41.0.4
 dynaconf[ini]==3.2.3; python_version >= '3.8'
 greenlet==3.0.0; platform_machine == 'aarch64' or (platform_machine == 'ppc64le' or (platform_machine == 'x86_64' or (platform_machine == 'amd64' or (platform_machine == 'AMD64' or (platform_machine == 'win32' or platform_machine == 'WIN32')))))
-psycopg2==2.9.8; python_version >= '3.6'
+psycopg2==2.9.9; python_version >= '3.7'
 pycparser==2.21
 pynacl==1.5.0; python_version >= '3.6'
 rich-click==1.6.1; python_version >= '3.7'
