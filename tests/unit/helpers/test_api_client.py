@@ -399,7 +399,13 @@ class TestAPIClient:
             {"data": {"state": "STARTED", "k": "v"}},
             {"data": {"state": "RUNNING", "k": "v"}},
             {"data": {"state": "RUNNING", "k": "v"}},
-            {"data": {"state": "SUCCESS", "k": "v"}},
+            {
+                "data": {
+                    "state": "SUCCESS",
+                    "result": {"status": True},
+                    "k": "v",
+                }
+            },
         ]
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(status_code=200, json=fake_json)
@@ -411,7 +417,11 @@ class TestAPIClient:
             "task_id", test_context["settings"], "Test task: "
         )
 
-        assert result == {"state": "SUCCESS", "k": "v"}
+        assert result == {
+            "state": "SUCCESS",
+            "result": {"status": True},
+            "k": "v",
+        }
         assert api_client.get_headers.calls == [
             pretend.call(test_context["settings"])
         ]
@@ -468,7 +478,7 @@ class TestAPIClient:
             )
         )
 
-    def test_task_status_failure(self, test_context):
+    def test_task_status_state_failure(self, test_context):
         test_context["settings"].SERVER = "http://server"
         fake_json = Mock()
         fake_json.side_effect = [
@@ -577,6 +587,95 @@ class TestAPIClient:
         ]
         assert api_client.get_headers.calls == [
             pretend.call(test_context["settings"])
+        ]
+
+    def test_task_status_without_result(self, test_context):
+        test_context["settings"].SERVER = "http://server"
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=200,
+                json=lambda: {"data": {"state": "SUCCESS", "k": "v"}},
+                text="",
+            )
+        )
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"Auth": "Token"}
+        )
+
+        with pytest.raises(api_client.click.ClickException) as err:
+            api_client.task_status(
+                "task_id", test_context["settings"], "Test task: "
+            )
+
+        assert "No result received in data " in str(err)
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        assert api_client.request_server.calls == [
+            pretend.call(
+                "http://server",
+                "api/v1/task/?task_id=task_id",
+                api_client.Methods.get,
+                headers={"Auth": "Token"},
+            ),
+        ]
+
+    def test_task_status_status_failure(self, test_context):
+        test_context["settings"].SERVER = "http://server"
+        fake_json = Mock()
+        fake_json.side_effect = [
+            {"data": {"state": "STARTED", "k": "v"}},
+            {"data": {"state": "RUNNING", "k": "v"}},
+            {
+                "data": {
+                    "state": "SUCCESS",
+                    "result": {"status": False},
+                    "k": "v",
+                }
+            },
+        ]
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=200,
+                json=fake_json,
+                text=(
+                    "{'data': {'state': 'SUCCESS', "
+                    "'result': {'status': False}, 'k': 'v'}"
+                ),
+            )
+        )
+        api_client.get_headers = pretend.call_recorder(
+            lambda *a: {"Auth": "Token"}
+        )
+
+        with pytest.raises(api_client.click.ClickException) as err:
+            api_client.task_status(
+                "task_id", test_context["settings"], "Test task: "
+            )
+
+        assert "Task status is not successful: " in str(err)
+        assert api_client.get_headers.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        assert api_client.request_server.calls == [
+            pretend.call(
+                "http://server",
+                "api/v1/task/?task_id=task_id",
+                api_client.Methods.get,
+                headers={"Auth": "Token"},
+            ),
+            pretend.call(
+                "http://server",
+                "api/v1/task/?task_id=task_id",
+                api_client.Methods.get,
+                headers={"Auth": "Token"},
+            ),
+            pretend.call(
+                "http://server",
+                "api/v1/task/?task_id=task_id",
+                api_client.Methods.get,
+                headers={"Auth": "Token"},
+            ),
         ]
 
     def test_publish_targets(self, test_context):

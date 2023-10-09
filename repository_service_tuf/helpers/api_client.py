@@ -177,7 +177,18 @@ def task_status(
                         console.print(".", end="")
 
                 if state == "SUCCESS":
-                    return data
+                    if result := data.get("result"):
+                        if result.get("status") is True:
+                            return data
+                        else:
+                            raise click.ClickException(
+                                "Task status is not successful: "
+                                f"{state_response.text}"
+                            )
+                    else:
+                        raise click.ClickException(
+                            f"No result received in data {state_response.text}"
+                        )
 
                 elif state == "FAILURE":
                     raise click.ClickException(
