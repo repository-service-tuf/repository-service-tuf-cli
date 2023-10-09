@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: MIT
 import time
-from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
 
@@ -17,7 +16,6 @@ console = Console()
 
 
 class URL(Enum):
-    token = "api/v1/token/"  # nosec bandit: not hard coded password.
     bootstrap = "api/v1/bootstrap/"
     config = "api/v1/config/"
     metadata = "api/v1/metadata/"
@@ -32,12 +30,6 @@ class Methods(Enum):
     get = "get"
     post = "post"
     delete = "delete"
-
-
-@dataclass
-class Login:
-    state: bool
-    data: Optional[Dict[str, Any]] = None
 
 
 def request_server(
