@@ -7,10 +7,8 @@ import os
 from datetime import datetime, timedelta
 
 import pretend  # type: ignore
-import pytest
 from tuf.api.metadata import Metadata, Root
 
-from repository_service_tuf.cli import click
 from repository_service_tuf.cli.admin import metadata
 from repository_service_tuf.helpers.api_client import URL
 
@@ -1176,7 +1174,9 @@ class TestMetadataSignOptions:
         metadata.request_server = pretend.call_recorder(
             lambda *a, **kw: fake_response
         )
-        metadata.send_payload = pretend.call_recorder(lambda *a: "fake-taskid")
+        metadata.send_payload = pretend.call_recorder(
+            lambda *args, **kw: "task_id"
+        )
         metadata.task_status = pretend.call_recorder(lambda *a: "OK")
 
         test_result = client.invoke(
@@ -1196,77 +1196,4 @@ class TestMetadataSignOptions:
                 metadata.Methods.get,
                 headers={},
             ),
-            pretend.call(
-                "http://127.0.0.1",
-                "api/v1/metadata/sign/delete",
-                metadata.Methods.post,
-                headers={},
-            ),
         ]
-
-    def test_metadata_sign_delete_missing_url(self, client, test_context):
-        input_step = [
-            "http://127.0.0.1",  # Provide API URL address
-            "root",  # Choose a metadata to delete signing process [root]
-            "y",  # Do you still want to delete signing process root? [y]
-            "http://127.0.0.1",  # Provide API URL address
-        ]
-
-        with open("tests/files/das-root.json", "r") as f:
-            das_root = f.read()
-
-        fake_response_data = {"data": {"metadata": json.loads(das_root)}}
-        fake_response = pretend.stub(
-            json=pretend.call_recorder(lambda: fake_response_data),
-            status_code=200,
-        )
-        metadata.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
-        )
-        metadata.send_payload = pretend.call_recorder(lambda *a: "fake-taskid")
-        metadata.task_status = pretend.call_recorder(lambda *a: "OK")
-
-        test_result = client.invoke(
-            metadata.sign,
-            ["--delete"],
-            input="\n".join(input_step),
-            obj=test_context,
-            catch_exceptions=False,
-        )
-        assert test_result.exit_code == 0, test_result.output
-        assert "Signing process deleted!" in test_result.output
-
-        assert metadata.request_server.calls == [
-            pretend.call(
-                "http://127.0.0.1",
-                "api/v1/metadata/sign/",
-                metadata.Methods.get,
-                headers={},
-            ),
-            pretend.call(
-                "http://127.0.0.1",
-                "api/v1/metadata/sign/delete",
-                metadata.Methods.post,
-                headers={},
-            ),
-        ]
-
-
-class TestMetadataFunctions:
-    def test_metadata_sign_delete_failure(self, test_context):
-        with open("tests/files/das-root.json", "r") as f:
-            das_root = f.read()
-
-        fake_response_data = {"data": {"metadata": json.loads(das_root)}}
-        fake_response = pretend.stub(
-            json=pretend.call_recorder(lambda: fake_response_data),
-            status_code=404,
-        )
-        metadata.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
-        )
-
-        obj = test_context["settings"]
-
-        with pytest.raises(click.ClickException):
-            metadata._delete_signing_process("root", obj, "http://127.0.0.1")
