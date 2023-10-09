@@ -12,9 +12,9 @@ Repository Service for TUF Command Line Interface
 The Repository Service for TUF Command Line Interface (CLI) is a CLI Python
 application to manage the Repository Service for TUF.
 
-The CLI supports the initial setup, termed a ceremony, where the first repository
-metadata are signed and the service is configured, generating tokens to be used
-by integration (i.e., CI/CD tools).
+The CLI supports the initial setup, termed a ceremony, where the first
+repository metadata are signed and the service is configured, update metadata,
+sign metadata, etc.
 
 This CLI is part of the Repository Service for TUF (RSTUF).
 
