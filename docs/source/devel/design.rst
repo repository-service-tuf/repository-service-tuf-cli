@@ -16,8 +16,8 @@ Container level
 The ``repository-service-tuf``, in the container perspective, is a command line tool that
 interacts to the ``repository-service-tuf-api``.
 
-``repository-service-tuf`` reads settings configuration in the file
-``$HOME/.rstuf.ini``.
+``repository-service-tuf`` reads the settings configuration from config file
+See: ``--config/-c``, default: ``$HOME/.rstuf.ini``.
 
 ``repository-service-tuf`` writes the ``payload.json`` or the specified file
 with option ``-f/--file`` with ``ceremony`` subcommand.

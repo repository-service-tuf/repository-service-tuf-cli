@@ -45,6 +45,7 @@ except FileNotFoundError:  # pragma: no cover the tests will fail in general
     "config",
     default=os.path.join(HOME, ".rstuf.ini"),
     help="Repository Service for TUF config file.",
+    show_default=True,
     required=False,
 )
 # adds the --version parameter
