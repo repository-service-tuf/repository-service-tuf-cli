@@ -323,6 +323,23 @@ class TestImportTargetsGroupCLI:
             )
         ]
 
+    def test_import_targets_no_api_server_config_no_param(
+        self, client, test_context
+    ):
+        options = [
+            "--db-uri",
+            "postgresql://postgres:secret@127.0.0.1:5433",
+            "--csv",
+            "targets1of2.csv",
+            "--csv",
+            "targets2of2.csv",
+        ]
+        result = client.invoke(
+            import_targets.import_targets, options, obj=test_context
+        )
+        assert result.exit_code == 1, result.output
+        assert "Requires '--api-server' " in result.output
+
     def test_import_targets_skip_publish_targets(self, client, test_context):
         # Required to properly mock functions imported inside import_targets
         import sqlalchemy

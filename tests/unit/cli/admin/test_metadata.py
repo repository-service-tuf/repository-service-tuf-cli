@@ -559,7 +559,7 @@ class TestMetadataUpdateOptions:
 
     path = "repository_service_tuf.cli.admin.metadata"
 
-    def test_metadata_update_send_payload_to_upload_server(
+    def test_metadata_update_send_payload_to_api_server(
         self, client, test_context
     ):
         test_context["settings"].SERVER = "foo"
@@ -593,6 +593,18 @@ class TestMetadataUpdateOptions:
                 "task_id", test_context["settings"], "Metadata Update status: "
             )
         ]
+
+    def test_metadata_update_send_payload_to_no_api_server_missing_param(
+        self, client, test_context
+    ):
+        result = client.invoke(
+            metadata.update,
+            ["--upload"],
+            obj=test_context,
+        )
+        finish_msg = "Requires '--api-server' when using '--upload/-u'."
+        assert result.exit_code == 1
+        assert finish_msg in result.output
 
     def test_metadata_update_passing_current_root(
         self, client, test_context, md_update_input
