@@ -706,28 +706,6 @@ def _sign_metadata(role_info: MetadataInfo, rstuf_key: RSTUFKey) -> Signature:
     return signature
 
 
-def _delete_signing_process(
-    role: str, settings: Any, api_url: Optional[str]
-) -> None:
-    if settings.AUTH is False and api_url is None:
-        api_url = prompt.Prompt.ask("\n[cyan]API[/] URL address")
-        settings.SERVER = api_url
-    elif settings.AUTH is False and api_url is not None:
-        settings.SERVER = api_url
-
-    headers = get_headers(settings)
-    response = request_server(
-        settings.SERVER,
-        URL.metadata_sign_delete.value,
-        Methods.post,
-        headers=headers,
-    )
-    if response.status_code != 200:
-        raise click.ClickException(
-            f"Failed to delete signing process. Error: {response}"
-        )
-
-
 @metadata.command()
 @click.option(
     "--api-url",
@@ -775,14 +753,13 @@ def sign(context, api_url: Optional[str], delete: Optional[bool]) -> None:
             break
 
     if delete:
-        _delete_signing_process(role_info.type, settings, api_url)
         payload = {"role": rolename}
         task_id = send_payload(
             settings,
-            URL.metadata_sign.value,
+            URL.metadata_sign_delete.value,
             payload,
             "Metadata delete sign accepted.",
-            "Metadata sign",
+            "Metadata delete sign",
         )
         task_status(task_id, settings, "Signing process status: ")
         console.print("\nSigning process deleted!\n")
