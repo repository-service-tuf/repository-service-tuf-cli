@@ -1164,7 +1164,7 @@ class TestMetadataSignOptions:
 
         test_result = client.invoke(
             metadata.sign,
-            ["--api-url", "http://127.0.0.1", "--delete"],
+            ["--api-server", "http://127.0.0.1", "--delete"],
             input="\n".join(input_step),
             obj=test_context,
             catch_exceptions=False,

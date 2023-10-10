@@ -534,14 +534,15 @@ def update(
     """
     settings = context.obj["settings"]
     if upload and not run_ceremony:
-        # Sever authentication or setup
-        if api_server is None:
+        # Server configured
+        if api_server:
+            settings.SERVER = api_server
+
+        if settings.get("SERVER") is None:
             raise click.ClickException(
                 "Requires '--api-server' when using '--upload/-u'. "
                 "Example: --api-server https://api.rstuf.example.com"
             )
-        else:
-            settings.SERVER = api_server
 
         console.print(
             f"Uploading existing metadata update payload {file} to "
@@ -628,10 +629,11 @@ def update(
 def _get_pending_roles(
     settings: Any, api_server: Optional[str]
 ) -> Dict[str, Any]:
-    if api_server is None:
-        api_server = prompt.Prompt.ask("\n[cyan]API[/] URL address")
+    if api_server:
         settings.SERVER = api_server
-    else:
+
+    if settings.get("SERVER") is None:
+        api_server = prompt.Prompt.ask("\n[cyan]API[/] URL address")
         settings.SERVER = api_server
 
     response = request_server(

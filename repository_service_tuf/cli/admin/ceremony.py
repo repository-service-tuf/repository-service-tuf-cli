@@ -723,13 +723,14 @@ def ceremony(
 
     # option bootstrap: checks if the server accepts it beforehand
     if bootstrap:
-        if api_server is None:
+        if api_server:
+            settings.SERVER = api_server
+
+        if settings.get("SERVER") is None:
             raise click.ClickException(
                 "Requires '--api-server' "
                 "Example: --api-server https://api.rstuf.example.com"
             )
-        else:
-            settings.SERVER = api_server
 
         bs_status = bootstrap_status(settings)
         if bs_status.get("data", {}).get("bootstrap") is True:
