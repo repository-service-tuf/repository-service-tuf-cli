@@ -29,7 +29,11 @@ class TestAPIClient:
         assert result == fake_response
         assert api_client.requests.get.calls == [
             pretend.call(
-                "http://server/url", json=None, data=None, headers=None
+                "http://server/url",
+                json=None,
+                data=None,
+                headers=None,
+                timeout=300,
             )
         ]
 
@@ -49,7 +53,35 @@ class TestAPIClient:
         assert result == fake_response
         assert api_client.requests.post.calls == [
             pretend.call(
-                "http://server/url", json={"k": "v"}, data=None, headers=None
+                "http://server/url",
+                json={"k": "v"},
+                data=None,
+                headers=None,
+                timeout=300,
+            )
+        ]
+
+    def test_request_server_delete(self):
+        fake_response = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(lambda: {"key": "value"}),
+        )
+        api_client.requests = pretend.stub(
+            delete=pretend.call_recorder(lambda *a, **kw: fake_response)
+        )
+
+        result = api_client.request_server(
+            "http://server", "url", api_client.Methods.delete, {"k": "v"}
+        )
+
+        assert result == fake_response
+        assert api_client.requests.delete.calls == [
+            pretend.call(
+                "http://server/url",
+                json={"k": "v"},
+                data=None,
+                headers=None,
+                timeout=300,
             )
         ]
 
@@ -948,7 +980,7 @@ class TestAPIClient:
     def test_get_md_file_url(self, monkeypatch):
         api_client.console.print = pretend.call_recorder(lambda *a: None)
         api_client.requests.get = pretend.call_recorder(
-            lambda *a: pretend.stub(
+            lambda *a, **kw: pretend.stub(
                 status_code=200, content='{"metadata": "root"}'
             )
         )
@@ -966,14 +998,14 @@ class TestAPIClient:
             pretend.call(f"Fetching file {url}"),
         ]
         assert api_client.requests.get.calls == [
-            pretend.call(url),
+            pretend.call(url, timeout=300),
         ]
         assert fake_from_bytes.calls == [pretend.call('{"metadata": "root"}')]
 
     def test_get_md_file_url_response_not_200(self):
         api_client.console.print = pretend.call_recorder(lambda *a: None)
         api_client.requests.get = pretend.call_recorder(
-            lambda *a: pretend.stub(
+            lambda *a, **kw: pretend.stub(
                 status_code=404,
             )
         )
@@ -988,5 +1020,5 @@ class TestAPIClient:
             pretend.call(f"Fetching file {url}"),
         ]
         assert api_client.requests.get.calls == [
-            pretend.call(url),
+            pretend.call(url, timeout=300),
         ]

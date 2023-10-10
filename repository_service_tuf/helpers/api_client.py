@@ -24,12 +24,14 @@ class URL(Enum):
     task = "api/v1/task/?task_id="
     publish_targets = "api/v1/targets/publish/"
     metadata_sign = "api/v1/metadata/sign/"
+    metadata_sign_delete = "api/v1/metadata/sign/delete"
     artifacts = "api/v1/artifacts/"
 
 
 class Methods(Enum):
     get = "get"
     post = "post"
+    delete = "delete"
 
 
 @dataclass
@@ -49,12 +51,29 @@ def request_server(
     try:
         if method == Methods.get:
             response = requests.get(
-                f"{server}/{url}", json=payload, data=data, headers=headers
+                f"{server}/{url}",
+                json=payload,
+                data=data,
+                headers=headers,
+                timeout=300,
             )
 
         elif method == Methods.post:
             response = requests.post(
-                f"{server}/{url}", json=payload, data=data, headers=headers
+                f"{server}/{url}",
+                json=payload,
+                data=data,
+                headers=headers,
+                timeout=300,
+            )
+
+        elif method == Methods.delete:
+            response = requests.delete(
+                f"{server}/{url}",
+                json=payload,
+                data=data,
+                headers=headers,
+                timeout=300,
             )
 
         else:
@@ -284,7 +303,7 @@ def send_payload(
 def get_md_file(file_uri: str) -> Metadata:
     if file_uri.startswith("http"):
         console.print(f"Fetching file {file_uri}")
-        response = requests.get(file_uri)
+        response = requests.get(file_uri, timeout=300)
         if response.status_code != 200:
             raise click.ClickException(f"Cannot fetch {file_uri}")
 

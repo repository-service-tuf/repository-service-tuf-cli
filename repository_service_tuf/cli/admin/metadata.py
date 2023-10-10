@@ -712,8 +712,14 @@ def _sign_metadata(role_info: MetadataInfo, rstuf_key: RSTUFKey) -> Signature:
     help="URL to an RSTUF API.",
     required=False,
 )
+@click.option(
+    "--delete",
+    help="Delete signing process.",
+    required=False,
+    is_flag=True,
+)
 @click.pass_context
-def sign(context, api_url: Optional[str]) -> None:
+def sign(context, api_url: Optional[str], delete: Optional[bool]) -> None:
     """
     Start metadata signature.
     """
@@ -724,9 +730,16 @@ def sign(context, api_url: Optional[str]) -> None:
     pending_roles = _get_pending_roles(settings, api_url)
     role_info: MetadataInfo
     rolename: str
+
+    msg: str
+    if not delete:
+        msg = "sign"
+    else:
+        msg = "delete signing process"
+
     while True:
         rolename = prompt.Prompt.ask(
-            "\nChoose a metadata to sign",
+            f"\nChoose a metadata to {msg}",
             choices=[role for role in pending_roles],
         )
         role_info = MetadataInfo(
@@ -734,10 +747,23 @@ def sign(context, api_url: Optional[str]) -> None:
         )
         _print_md_info(role_info, False)
         confirmation = prompt.Confirm.ask(
-            f"\nDo you still want to sign {rolename}?"
+            f"\nDo you still want to {msg} {rolename}?"
         )
         if confirmation:
             break
+
+    if delete:
+        payload = {"role": rolename}
+        task_id = send_payload(
+            settings,
+            URL.metadata_sign_delete.value,
+            payload,
+            "Metadata delete sign accepted.",
+            "Metadata delete sign",
+        )
+        task_status(task_id, settings, "Signing process status: ")
+        console.print("\nSigning process deleted!\n")
+        sys.exit()
 
     console.print(
         f"Signing [cyan]{rolename}[/] version "

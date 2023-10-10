@@ -1,0 +1,103 @@
+name: Functional Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      docker_compose:
+        description: "Docker Compose File"
+        default: "docker-compose.yml"
+        type: string
+        required: False
+      umbrella_branch:
+        description: "Umbrella Branch (Functional Tests)"
+        default: "main"
+        type: string
+        required: False
+      api_version:
+        description: "API Version"
+        default: "latest"
+        type: string
+        required: False
+      worker_version:
+        description: "Worker Version"
+        default: "latest"
+        type: string
+        required: False
+
+  workflow_call:
+    inputs:
+      docker_compose:
+        description: "Docker Compose File"
+        default: "docker-compose.yml"
+        type: string
+        required: False
+      umbrella_branch:
+        description: "Umbrella Branch (Functional Tests)"
+        default: "main"
+        type: string
+        required: False
+      api_version:
+        description: "API Version"
+        default: "latest"
+        type: string
+        required: False
+      worker_version:
+        description: "Worker Version"
+        default: "latest"
+        type: string
+        required: False
+
+jobs:
+  functional-das:
+    name: "DAS"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout RSTUF CLI source code
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
+
+      - name: Checkout RSTUF Umbrella (FT)
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
+        with:
+            repository: repository-service-tuf/repository-service-tuf
+            path: rstuf-umbrella
+            ref: ${{ inputs.umbrella_branch }}
+
+      - name: Deploy RSTUF
+        uses: isbang/compose-action@178aeba5c9dbeed89ffffbb3e6548ec08e9839cf
+        with:
+          compose-file: ${{ inputs.docker_compose }}
+        env:
+          API_VERSION: ${{ inputs.api_version }}
+          WORKER_VERSION: ${{ inputs.worker_version }}
+
+      - name: Bootstrap/Setup RSTUF DAS and run Functional Tests
+        run: |
+          make ft-das CLI_VERSION=source
+
+  functional-signed:
+    name: "Signed"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout RSTUF CLI source code
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
+
+      - name: Checkout RSTUF Umbrella (FT)
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
+        with:
+          repository: repository-service-tuf/repository-service-tuf
+          path: rstuf-umbrella
+          ref: ${{ inputs.umbrella_branch }}
+
+      - name: Deploy RSTUF
+        uses: isbang/compose-action@178aeba5c9dbeed89ffffbb3e6548ec08e9839cf
+        with:
+          compose-file: ${{ inputs.docker_compose }}
+        env:
+          API_VERSION: ${{ inputs.api_version }}
+          WORKER_VERSION: ${{ inputs.worker_version }}
+
+      - name: Bootstrap/Setup RSTUF full Signed and run Functional Tests
+        run: |
+          make ft-signed CLI_VERSION=source

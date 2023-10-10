@@ -1156,3 +1156,44 @@ class TestMetadataSignOptions:
                 "Metadata sign status:",
             )
         ]
+
+    def test_metadata_sign_delete(self, client, test_context):
+        input_step = [
+            "root",  # Choose a metadata to delete signing process [root]
+            "y",  # Do you still want to delete signing process root? [y]
+        ]
+
+        with open("tests/files/das-root.json", "r") as f:
+            das_root = f.read()
+
+        fake_response_data = {"data": {"metadata": json.loads(das_root)}}
+        fake_response = pretend.stub(
+            json=pretend.call_recorder(lambda: fake_response_data),
+            status_code=200,
+        )
+        metadata.request_server = pretend.call_recorder(
+            lambda *a, **kw: fake_response
+        )
+        metadata.send_payload = pretend.call_recorder(
+            lambda *args, **kw: "task_id"
+        )
+        metadata.task_status = pretend.call_recorder(lambda *a: "OK")
+
+        test_result = client.invoke(
+            metadata.sign,
+            ["--api-url", "http://127.0.0.1", "--delete"],
+            input="\n".join(input_step),
+            obj=test_context,
+            catch_exceptions=False,
+        )
+        assert test_result.exit_code == 0, test_result.output
+        assert "Signing process deleted!" in test_result.output
+
+        assert metadata.request_server.calls == [
+            pretend.call(
+                "http://127.0.0.1",
+                "api/v1/metadata/sign/",
+                metadata.Methods.get,
+                headers={},
+            ),
+        ]

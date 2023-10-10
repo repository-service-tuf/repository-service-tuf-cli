@@ -11,13 +11,10 @@ permissions:
 
 jobs:
   functional-latest:
-    uses: repository-service-tuf/repository-service-tuf/.github/workflows/functional.yml@main
+    uses: ./.github/workflows/functional-tests.yml
     with:
       worker_version: latest
       api_version: latest
-      cli_version: dev
-    secrets:
-      RSTUF_ONLINE_KEY: ${{ secrets.RSTUF_ONLINE_KEY }}
 
   build:
     name: Build
@@ -32,7 +29,7 @@ jobs:
           ref: ${{ github.event.workflow_run.head_branch }}
 
       - name: Set up Python
-        uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1
+        uses: actions/setup-python@65d7f2d534ac1bc67fcd62888c5f4f3d2cb2b236
         with:
           python-version: '3.x'
 
