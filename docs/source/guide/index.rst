@@ -913,6 +913,28 @@ This command adds the provided artifact to the TUF Metadata using the RSTUF REST
     │ --help          -h    Show this message and exit.                                                │
     ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 
+.. rstuf-cli-artifact-download
+
+Artifact Download (``download``)
+
+This command allows downloading an artifact from a provided repository using the RSTUF REST API.
+
+.. code::
+
+    > rstuf artifact download --help
+
+    Usage: rstuf artifact download [OPTIONS] ARTIFACT_NAME
+
+    Downloads artifacts to the TUF metadata.
+
+    ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --root              -r  TEXT  A metadata URL to the initial trusted root or a local file.        │
+    │ --metadata-url      -m  TEXT  TUF Metadata repository URL.                                       │
+    │ --artifacts-url     -a  TEXT  An artifacts base URL to fetch from.                               │
+    │ --hash-prefix       -p        A hash prefix.                                                     │
+    │ --directory-prefix  -P  TEXT  A prefix for the download dir.                                     │
+    │ --help              -h        Show this message and exit.                                        │
+    ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 .. rstuf-cli-task
 
