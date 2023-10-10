@@ -121,7 +121,7 @@ def _get_succinct_roles(api_server: str) -> SuccinctRoles:
 @admin.command()  # type: ignore
 @click.option(
     "--api-server",
-    required=True,
+    required=False,
     help="RSTUF API URL i.e.: http://127.0.0.1 .",
 )
 @click.option(
@@ -167,7 +167,14 @@ def import_targets(
             "pip install repository-service-tuf[sqlalchemy,psycopg2]"
         )
     settings = context.obj["settings"]
-    settings.SERVER = api_server
+    if api_server:
+        settings.SERVER = api_server
+
+    if settings.get("SERVER") is None:
+        raise click.ClickException(
+            "Requires '--api-server' "
+            "Example: --api-server https://api.rstuf.example.com"
+        )
 
     bs_status = bootstrap_status(settings)
     if bs_status.get("data", {}).get("bootstrap") is False:
