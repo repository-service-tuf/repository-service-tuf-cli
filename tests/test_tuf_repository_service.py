@@ -18,19 +18,3 @@ class TestRSTUFCLI:
 
         assert result.exit_code == 0
         assert result.output == f"rstuf, version {version}\n"
-
-    def test_auth_and_token(self, client):
-        result = client.invoke(
-            rstuf, ["--auth", "--token", "fake_token", "admin"]
-        )
-
-        assert result.exit_code == 0
-        assert "Using RSTUF built-in authentication (--auth)" in result.output
-
-    def test_no_auth_and_token(self, client):
-        result = client.invoke(rstuf, ["--token", "fake_token", "admin"])
-
-        assert result.exit_code == 0
-        assert (
-            "Using RSTUF built-in authentication (--auth)" not in result.output
-        )

@@ -104,226 +104,9 @@ class TestAPIClient:
 
         assert "Failed to connect to http://server" in str(err.value)
 
-    def test_token_state(self, test_context):
-        fake_response = pretend.stub(
-            status_code=200,
-            json=pretend.call_recorder(lambda: {"data": {"expired": False}}),
-        )
-        api_client.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
-        )
-
-        test_context["settings"].SERVER = "http://server"
-        test_context["settings"].TOKEN = "fake_token"
-        test_context["settings"].AUTH = True
-
-        result = api_client.token_state(test_context["settings"])
-        assert result == api_client.Login(state=True, data={"expired": False})
-        assert api_client.request_server.calls == [
-            pretend.call(
-                "http://server",
-                "api/v1/token/?token=fake_token",
-                api_client.Methods.get,
-                headers={"Authorization": "Bearer fake_token"},
-            )
-        ]
-
-    def test_token_state_no_auth(self, test_context):
-        test_context["settings"].AUTH = False
-
-        result = api_client.token_state(test_context["settings"])
-        assert result is None
-
-    def test_token_state_401(self, test_context):
-        fake_response = pretend.stub(
-            status_code=401,
-        )
-        api_client.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
-        )
-
-        test_context["settings"].SERVER = "http://server"
-        test_context["settings"].TOKEN = "fake_token"
-        test_context["settings"].AUTH = True
-
-        result = api_client.token_state(test_context["settings"])
-        assert result == api_client.Login(state=False, data=None)
-        assert api_client.request_server.calls == [
-            pretend.call(
-                "http://server",
-                "api/v1/token/?token=fake_token",
-                api_client.Methods.get,
-                headers={"Authorization": "Bearer fake_token"},
-            )
-        ]
-
-    def test_token_state_500(self, test_context):
-        fake_response = pretend.stub(
-            status_code=500,
-            text="body",
-        )
-        api_client.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
-        )
-
-        test_context["settings"].SERVER = "http://server"
-        test_context["settings"].TOKEN = "fake_token"
-        test_context["settings"].AUTH = True
-
-        with pytest.raises(api_client.click.ClickException) as err:
-            api_client.token_state(test_context["settings"])
-
-        assert "Error 500 body" in str(err)
-        assert api_client.request_server.calls == [
-            pretend.call(
-                "http://server",
-                "api/v1/token/?token=fake_token",
-                api_client.Methods.get,
-                headers={"Authorization": "Bearer fake_token"},
-            )
-        ]
-
-    def test_get_headers_no_auth_no_token(self, test_context):
-        result = api_client.get_headers(test_context["settings"])
-
-        assert result == {}
-
-    def test_get_headers_auth(self, test_context):
-        api_client.token_state = pretend.call_recorder(
-            lambda *a: api_client.Login(
-                state=True, data={"data": {"expired": False}}
-            )
-        )
-        api_client.request_server = pretend.call_recorder(
-            lambda *a, **kw: pretend.stub(status_code=200)
-        )
-
-        test_context["settings"].SERVER = "http://server"
-        test_context["settings"].TOKEN = "fake_token"
-        test_context["settings"].AUTH = True
-
-        result = api_client.get_headers(test_context["settings"])
-
-        assert result == {"Authorization": "Bearer fake_token"}
-        assert api_client.token_state.calls == [
-            pretend.call(test_context["settings"])
-        ]
-
-    def test_get_headers_auth_token_expired(self, test_context):
-        api_client.token_state = pretend.call_recorder(
-            lambda *a: api_client.Login(
-                state=False, data={"data": {"expired": False}}
-            )
-        )
-        api_client.request_server = pretend.call_recorder(
-            lambda *a, **kw: pretend.stub(status_code=200)
-        )
-
-        test_context["settings"].SERVER = "http://server"
-        test_context["settings"].TOKEN = "fake_token"
-        test_context["settings"].AUTH = True
-
-        with pytest.raises(api_client.click.ClickException) as err:
-            api_client.get_headers(test_context["settings"])
-
-        assert "Try re-login: 'rstuf --auth admin login'" in str(err)
-        assert api_client.token_state.calls == [
-            pretend.call(test_context["settings"])
-        ]
-
-    def test_get_headers_auth_missing_server(self, test_context):
-        api_client.token_state = pretend.call_recorder(
-            lambda *a: api_client.Login(
-                state=True, data={"data": {"expired": False}}
-            )
-        )
-        api_client.request_server = pretend.call_recorder(
-            lambda *a, **kw: pretend.stub(status_code=200)
-        )
-
-        test_context["settings"].SERVER = None
-        test_context["settings"].TOKEN = "fake_token"
-        test_context["settings"].AUTH = True
-
-        with pytest.raises(api_client.click.ClickException) as err:
-            api_client.get_headers(test_context["settings"])
-
-        assert "Login first. Run 'rstuf --auth admin login'" in str(err)
-        assert api_client.token_state.calls == []
-
-    def test_get_headers_auth_missing_token(self, test_context):
-        """Get headers --auth with server and token"""
-        api_client.token_state = pretend.call_recorder(
-            lambda *a: api_client.Login(
-                state=True, data={"data": {"expired": False}}
-            )
-        )
-        api_client.request_server = pretend.call_recorder(
-            lambda *a, **kw: pretend.stub(status_code=200)
-        )
-
-        test_context["settings"].SERVER = "fake_server"
-        test_context["settings"].TOKEN = None
-        test_context["settings"].AUTH = True
-
-        with pytest.raises(api_client.click.ClickException) as err:
-            api_client.get_headers(test_context["settings"])
-
-        assert "Login first. Run 'rstuf --auth admin login'" in str(err)
-        assert api_client.token_state.calls == []
-
-    def test_get_headers_token(self, test_context):
-        api_client.token_state = pretend.call_recorder(
-            lambda *a: api_client.Login(
-                state=True, data={"data": {"expired": False}}
-            )
-        )
-        api_client.request_server = pretend.call_recorder(
-            lambda *a, **kw: pretend.stub(status_code=200)
-        )
-
-        test_context["settings"].SERVER = "http://server"
-        test_context["settings"].TOKEN = "fake_token"
-        test_context["settings"].AUTH = False
-
-        result = api_client.get_headers(test_context["settings"])
-
-        assert result == {"Authorization": "Bearer fake_token"}
-        assert api_client.token_state.calls == [
-            pretend.call(test_context["settings"])
-        ]
-
-    def test_get_headers_token_missing_server(self, test_context):
-        test_context["settings"].SERVER = None
-        test_context["settings"].TOKEN = "fake_token"
-        test_context["settings"].AUTH = False
-
-        result = api_client.get_headers(test_context["settings"])
-
-        assert result == {}
-
-    def test_get_headers_token_expired_false(self, test_context):
-        api_client.token_state = pretend.call_recorder(
-            lambda *a: api_client.Login(state=False, data={"expired": False})
-        )
-
-        test_context["settings"].SERVER = "http://server"
-        test_context["settings"].TOKEN = "fake_token"
-        test_context["settings"].AUTH = False
-
-        with pytest.raises(api_client.click.ClickException) as err:
-            api_client.get_headers(test_context["settings"])
-
-        assert "Token is expired" in str(err)
-        assert api_client.token_state.calls == [
-            pretend.call(test_context["settings"])
-        ]
-
     def test_bootstrap_status(self, test_context):
         test_context["settings"].SERVER = "http://server"
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"auth": "token"}
-        )
+
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
                 status_code=200,
@@ -332,23 +115,17 @@ class TestAPIClient:
         )
         result = api_client.bootstrap_status(test_context["settings"])
         assert result == {"data": {"bootstrap": True}, "message": "text"}
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
                 api_client.URL.bootstrap.value,
                 api_client.Methods.get,
-                headers={"auth": "token"},
             )
         ]
 
     def test_bootstrap_status_404_disabled(self, test_context):
         test_context["settings"].SERVER = "http://server"
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"auth": "token"}
-        )
+
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
                 status_code=404,
@@ -359,23 +136,18 @@ class TestAPIClient:
             api_client.bootstrap_status(test_context["settings"])
 
         assert "Server http://server does not allow bootstrap" in str(err)
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
+
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
                 api_client.URL.bootstrap.value,
                 api_client.Methods.get,
-                headers={"auth": "token"},
             )
         ]
 
     def test_bootstrap_status_not_200(self, test_context):
         test_context["settings"].SERVER = "http://server"
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"auth": "token"}
-        )
+
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
                 status_code=500,
@@ -386,23 +158,18 @@ class TestAPIClient:
             api_client.bootstrap_status(test_context["settings"])
 
         assert "Internal Server Error :P" in str(err)
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
+
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
                 api_client.URL.bootstrap.value,
                 api_client.Methods.get,
-                headers={"auth": "token"},
             )
         ]
 
     def test_bootstrap_status_not_json_body(self, test_context):
         test_context["settings"].SERVER = "http://server"
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"auth": "token"}
-        )
+
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
                 status_code=200, json=lambda: None, text="No json for you"
@@ -412,15 +179,12 @@ class TestAPIClient:
             api_client.bootstrap_status(test_context["settings"])
 
         assert "Unexpected error No json for you" in str(err)
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
+
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
                 api_client.URL.bootstrap.value,
                 api_client.Methods.get,
-                headers={"auth": "token"},
             )
         ]
 
@@ -442,9 +206,7 @@ class TestAPIClient:
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(status_code=200, json=fake_json)
         )
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"Auth": "Token"}
-        )
+
         result = api_client.task_status(
             "task_id", test_context["settings"], "Test task: "
         )
@@ -454,33 +216,26 @@ class TestAPIClient:
             "result": {"status": True},
             "k": "v",
         }
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
         assert api_client.request_server.calls == [
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.get,
-                headers={"Auth": "Token"},
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.get,
-                headers={"Auth": "Token"},
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.get,
-                headers={"Auth": "Token"},
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.get,
-                headers={"Auth": "Token"},
             ),
         ]
 
@@ -489,9 +244,6 @@ class TestAPIClient:
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(status_code=500, text="body error")
         )
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"Auth": "Token"}
-        )
 
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.task_status(
@@ -499,9 +251,7 @@ class TestAPIClient:
             )
 
         assert "Unexpected response body error" in str(err)
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
+
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
                 status_code=200,
@@ -525,9 +275,6 @@ class TestAPIClient:
                 text="{'data': {'state': 'FAILURE', 'k': 'v'}",
             )
         )
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"Auth": "Token"}
-        )
 
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.task_status(
@@ -535,27 +282,22 @@ class TestAPIClient:
             )
 
         assert "Failed: " in str(err)
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
+
         assert api_client.request_server.calls == [
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.get,
-                headers={"Auth": "Token"},
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.get,
-                headers={"Auth": "Token"},
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.get,
-                headers={"Auth": "Token"},
             ),
         ]
 
@@ -568,9 +310,6 @@ class TestAPIClient:
                 text="",
             )
         )
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"Auth": "Token"}
-        )
 
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.task_status(
@@ -578,15 +317,12 @@ class TestAPIClient:
             )
 
         assert "No state in data received " in str(err)
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
+
         assert api_client.request_server.calls == [
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.get,
-                headers={"Auth": "Token"},
             ),
         ]
 
@@ -598,9 +334,6 @@ class TestAPIClient:
                 json=lambda: {},
                 text="",
             )
-        )
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"Auth": "Token"}
         )
 
         with pytest.raises(api_client.click.ClickException) as err:
@@ -614,11 +347,7 @@ class TestAPIClient:
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.get,
-                headers={"Auth": "Token"},
             ),
-        ]
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
         ]
 
     def test_task_status_without_result(self, test_context):
@@ -630,9 +359,6 @@ class TestAPIClient:
                 text="",
             )
         )
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"Auth": "Token"}
-        )
 
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.task_status(
@@ -640,15 +366,11 @@ class TestAPIClient:
             )
 
         assert "No result received in data " in str(err)
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
         assert api_client.request_server.calls == [
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.get,
-                headers={"Auth": "Token"},
             ),
         ]
 
@@ -676,9 +398,6 @@ class TestAPIClient:
                 ),
             )
         )
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"Auth": "Token"}
-        )
 
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.task_status(
@@ -686,27 +405,21 @@ class TestAPIClient:
             )
 
         assert "Task status is not successful: " in str(err)
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
         assert api_client.request_server.calls == [
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.get,
-                headers={"Auth": "Token"},
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.get,
-                headers={"Auth": "Token"},
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.get,
-                headers={"Auth": "Token"},
             ),
         ]
 
@@ -720,9 +433,6 @@ class TestAPIClient:
                 ),
             )
         )
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"Auth": "Token"}
-        )
 
         result = api_client.publish_targets(test_context["settings"])
 
@@ -732,11 +442,7 @@ class TestAPIClient:
                 test_context["settings"].SERVER,
                 api_client.URL.publish_targets.value,
                 api_client.Methods.post,
-                headers={"Auth": "Token"},
             )
-        ]
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
         ]
 
     def test_publish_targets_unexpected_error(self, test_context):
@@ -747,31 +453,23 @@ class TestAPIClient:
                 status_code=500, text="Internal Error"
             )
         )
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"Auth": "Token"}
-        )
 
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.publish_targets(test_context["settings"])
 
         assert "Failed to publish targets. 500 Internal Error" in str(err)
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
+
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
                 api_client.URL.publish_targets.value,
                 api_client.Methods.post,
-                headers={"Auth": "Token"},
             )
         ]
 
     def test_send_payload(self, test_context):
         test_context["settings"].SERVER = "http://fake-rstuf"
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"auth": "token"}
-        )
+
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
                 status_code=202,
@@ -791,24 +489,19 @@ class TestAPIClient:
             command_name="Bootstrap",
         )
         assert result == "task_id_123"
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
+
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
                 api_client.URL.bootstrap.value,
                 api_client.Methods.post,
                 {"payload": "data"},
-                headers={"auth": "token"},
             )
         ]
 
     def test_send_payload_not_202(self, test_context):
         test_context["settings"].SERVER = "http://fake-rstuf"
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"auth": "token"}
-        )
+
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
                 status_code=200,
@@ -832,24 +525,19 @@ class TestAPIClient:
             )
 
         assert "Error 200" in str(err)
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
+
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
                 api_client.URL.bootstrap.value,
                 api_client.Methods.post,
                 {"payload": "data"},
-                headers={"auth": "token"},
             )
         ]
 
     def test_send_payload_no_message(self, test_context):
         test_context["settings"].SERVER = "http://fake-rstuf"
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"auth": "token"}
-        )
+
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
                 status_code=202,
@@ -872,24 +560,19 @@ class TestAPIClient:
             )
 
         assert "No message available." in str(err)
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
+
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
                 api_client.URL.bootstrap.value,
                 api_client.Methods.post,
                 {"payload": "data"},
-                headers={"auth": "token"},
             )
         ]
 
     def test_send_payload_no_task_id(self, test_context):
         test_context["settings"].SERVER = "http://fake-rstuf"
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"auth": "token"}
-        )
+
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
                 status_code=202,
@@ -913,24 +596,19 @@ class TestAPIClient:
             )
 
         assert "Failed to get `task id`" in str(err)
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
+
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
                 api_client.URL.bootstrap.value,
                 api_client.Methods.post,
                 {"payload": "data"},
-                headers={"auth": "token"},
             )
         ]
 
     def test_send_payload_no_data(self, test_context):
         test_context["settings"].SERVER = "http://fake-rstuf"
-        api_client.get_headers = pretend.call_recorder(
-            lambda *a: {"auth": "token"}
-        )
+
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
                 status_code=202,
@@ -954,16 +632,13 @@ class TestAPIClient:
             )
 
         assert "Failed to get task response data" in str(err)
-        assert api_client.get_headers.calls == [
-            pretend.call(test_context["settings"])
-        ]
+
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
                 api_client.URL.bootstrap.value,
                 api_client.Methods.post,
                 {"payload": "data"},
-                headers={"auth": "token"},
             )
         ]
 

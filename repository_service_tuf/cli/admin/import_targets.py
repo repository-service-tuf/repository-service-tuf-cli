@@ -92,8 +92,8 @@ def _import_csv_to_rstuf(
         console.print(f"Import status: {csv_file} imported")
 
 
-def _get_succinct_roles(api_url: str) -> SuccinctRoles:
-    response = request_server(api_url, URL.config.value, Methods.get)
+def _get_succinct_roles(api_server: str) -> SuccinctRoles:
+    response = request_server(api_server, URL.config.value, Methods.get)
     if response.status_code != 200:
         raise click.ClickException(
             f"Failed to retrieve RSTUF config {response.text}"
@@ -120,8 +120,8 @@ def _get_succinct_roles(api_url: str) -> SuccinctRoles:
 
 @admin.command()  # type: ignore
 @click.option(
-    "--api-url",
-    required=True,
+    "--api-server",
+    required=False,
     help="RSTUF API URL i.e.: http://127.0.0.1 .",
 )
 @click.option(
@@ -146,7 +146,7 @@ def _get_succinct_roles(api_url: str) -> SuccinctRoles:
 @click.pass_context
 def import_targets(
     context: Any,
-    api_url: str,
+    api_server: str,
     db_uri: str,
     csv: List[str],
     skip_publish_targets: bool,
@@ -167,7 +167,14 @@ def import_targets(
             "pip install repository-service-tuf[sqlalchemy,psycopg2]"
         )
     settings = context.obj["settings"]
-    settings.SERVER = api_url
+    if api_server:
+        settings.SERVER = api_server
+
+    if settings.get("SERVER") is None:
+        raise click.ClickException(
+            "Requires '--api-server' "
+            "Example: --api-server https://api.rstuf.example.com"
+        )
 
     bs_status = bootstrap_status(settings)
     if bs_status.get("data", {}).get("bootstrap") is False:
@@ -177,7 +184,7 @@ def import_targets(
         )
 
     # load all required infrastructure
-    succinct_roles = _get_succinct_roles(api_url)
+    succinct_roles = _get_succinct_roles(api_server)
     engine = create_engine(f"{db_uri}")
     db_metadata = MetaData()
     db_client: Connection = engine.connect()

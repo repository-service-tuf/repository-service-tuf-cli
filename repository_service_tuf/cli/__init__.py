@@ -6,7 +6,6 @@ import importlib
 import os
 import pkgutil
 import re
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -15,7 +14,6 @@ from auto_click_auto import enable_click_shell_completion
 from auto_click_auto.constants import ShellType
 from click import Context
 from rich.console import Console
-from rich.panel import Panel
 
 from repository_service_tuf import Dynaconf
 from repository_service_tuf.__version__ import version
@@ -34,7 +32,7 @@ try:
                 prog_name = line.split("=")[0].strip()
                 break
 
-except FileNotFoundError:
+except FileNotFoundError:  # pragma: no cover the tests will fail in general
     pass
 
 
@@ -47,25 +45,8 @@ except FileNotFoundError:
     "config",
     default=os.path.join(HOME, ".rstuf.ini"),
     help="Repository Service for TUF config file.",
+    show_default=True,
     required=False,
-)
-@click.option(
-    "--auth",
-    "auth",
-    help="Use of RSTUF built-in authentication.",
-    is_flag=True,
-    default=False,
-    required=False,
-)
-@click.option(
-    "-t",
-    "--token",
-    help=(
-        "RSTUF API authentication token. If the `--auth` option is provided "
-        "this token is not used for authentication."
-    ),
-    required=False,
-    default=None,
 )
 # adds the --version parameter
 @click.version_option(prog_name=prog_name, version=version)
@@ -73,46 +54,22 @@ except FileNotFoundError:
 def rstuf(
     context: Context,
     config: Optional[str],
-    auth: Optional[str],
-    token: Optional[str],
 ):
     """Repository Service for TUF Command Line Interface (CLI)."""
-
-    context.obj = {
-        "settings": Dynaconf(settings_files=[config]),
-        "config": config,
-        "auth": auth,
-    }
-    settings = context.obj["settings"]
-    if auth is True:
-        console.print(
-            Panel(
-                "[white]Using RSTUF built-in authentication (--auth)[/]",
-                title="[green]Info[/]",
-                title_align="left",
-                style="green",
-            )
-        )
-
-    # no `--auth` but `--token`, so we write the token in the settings
-    elif auth is False and token:
-        settings.TOKEN = token
-
-    settings.AUTH = auth
+    context.obj = (
+        {  # pragma: no cover -- it is just the context without logic.
+            "settings": Dynaconf(settings_files=[config]),
+            "config": config,
+        }
+    )
 
 
 # Register all command groups
-groups_required_auth = [
-    "repository_service_tuf.cli.admin.token",
-    "repository_service_tuf.cli.admin.login",
-]
+
 for _, name, _ in pkgutil.walk_packages(  # type: ignore
     __path__, prefix=__name__ + "."
 ):
-    if name in groups_required_auth and "--auth" not in sys.argv:
-        continue
-    else:
-        importlib.import_module(name)
+    importlib.import_module(name)
 
 # Enable tab completion for all available supported shells
 supported_shell_types = {

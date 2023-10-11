@@ -682,10 +682,9 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     is_flag=True,
 )
 @click.option(
-    "--upload-server",
-    help="[when using '--auth'] Upload to RSTUF API Server address. ",
+    "--api-server",
+    help="RSTUF API Server address. ",
     required=False,
-    hidden=True,
 )
 @click.option(
     "-s",
@@ -705,7 +704,7 @@ def ceremony(
     file: str,
     upload: bool,
     save: bool,
-    upload_server: str,
+    api_server: str,
 ) -> None:
     """
     Start a new Metadata Ceremony.
@@ -724,13 +723,14 @@ def ceremony(
 
     # option bootstrap: checks if the server accepts it beforehand
     if bootstrap:
-        if settings.AUTH is False and upload_server is None:
+        if api_server:
+            settings.SERVER = api_server
+
+        if settings.get("SERVER") is None:
             raise click.ClickException(
-                "Requires '--upload-server' "
-                "Example: --upload-server https://rstuf-api.example.com"
+                "Requires '--api-server' "
+                "Example: --api-server https://api.rstuf.example.com"
             )
-        elif upload_server:
-            settings.SERVER = upload_server
 
         bs_status = bootstrap_status(settings)
         if bs_status.get("data", {}).get("bootstrap") is True:
