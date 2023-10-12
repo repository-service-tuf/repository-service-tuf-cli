@@ -25,7 +25,7 @@ from repository_service_tuf.helpers.tuf import (
 
 @pytest.fixture
 def test_context() -> Dict[str, Any]:
-    setting_file = os.path.join(TemporaryDirectory().name, "test_settings.ini")
+    setting_file = os.path.join(TemporaryDirectory().name, "test_settings.yml")
     test_settings = Dynaconf(settings_files=[setting_file])
     return {"settings": test_settings, "config": setting_file}
 

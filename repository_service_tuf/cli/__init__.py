@@ -43,7 +43,7 @@ except FileNotFoundError:  # pragma: no cover the tests will fail in general
     "-c",
     "--config",
     "config",
-    default=os.path.join(HOME, ".rstuf.ini"),
+    default=os.path.join(HOME, ".rstuf.yml"),
     help="Repository Service for TUF config file.",
     show_default=True,
     required=False,
