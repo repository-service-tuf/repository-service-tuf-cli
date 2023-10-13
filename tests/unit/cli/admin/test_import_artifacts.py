@@ -3,36 +3,36 @@ import datetime
 import pretend
 import pytest
 
-from repository_service_tuf.cli.admin import import_targets
+from repository_service_tuf.cli.admin import import_artifacts
 
 
-class TestImportTargetsFunctions:
+class TestImportArtifactsFunctions:
     def test__check_csv_files(self, monkeypatch):
         monkeypatch.setattr(
-            import_targets.os.path,
+            import_artifacts.os.path,
             "isfile",
             pretend.call_recorder(lambda *a: True),
         )
 
-        result = import_targets._check_csv_files(["1of2.csv", "2of2.csv"])
+        result = import_artifacts._check_csv_files(["1of2.csv", "2of2.csv"])
         assert result is None
-        assert import_targets.os.path.isfile.calls == [
+        assert import_artifacts.os.path.isfile.calls == [
             pretend.call("1of2.csv"),
             pretend.call("2of2.csv"),
         ]
 
     def test__check_csv_files_file_not_found(self, monkeypatch):
         monkeypatch.setattr(
-            import_targets.os.path,
+            import_artifacts.os.path,
             "isfile",
             pretend.call_recorder(lambda *a: False),
         )
 
-        with pytest.raises(import_targets.click.ClickException) as err:
-            import_targets._check_csv_files(["1of2.csv", "2of2.csv"])
+        with pytest.raises(import_artifacts.click.ClickException) as err:
+            import_artifacts._check_csv_files(["1of2.csv", "2of2.csv"])
 
         assert "CSV file(s) not found: 1of2.csv, 2of2.csv" in str(err)
-        assert import_targets.os.path.isfile.calls == [
+        assert import_artifacts.os.path.isfile.calls == [
             pretend.call("1of2.csv"),
             pretend.call("2of2.csv"),
         ]
@@ -67,7 +67,7 @@ class TestImportTargetsFunctions:
             read=pretend.call_recorder(lambda: fake_data),
         )
         monkeypatch.setitem(
-            import_targets.__builtins__, "open", lambda *a: fake_file_obj
+            import_artifacts.__builtins__, "open", lambda *a: fake_file_obj
         )
 
         fake_time = datetime.datetime(2019, 6, 16, 9, 5, 1)
@@ -75,14 +75,14 @@ class TestImportTargetsFunctions:
             now=pretend.call_recorder(lambda: fake_time)
         )
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.import_targets.datetime",
+            "repository_service_tuf.cli.admin.import_artifacts.datetime",
             fake_datetime,
         )
         succinct_roles = pretend.stub(
             get_role_for_target=pretend.call_recorder(lambda *a: "bins-a")
         )
 
-        result = import_targets._parse_csv_data(
+        result = import_artifacts._parse_csv_data(
             db, rstuf_target_roles, succinct_roles, "fake_file"
         )
 
@@ -117,11 +117,11 @@ class TestImportTargetsFunctions:
         fake_db_client = pretend.stub(
             execute=pretend.call_recorder(lambda *a: None)
         )
-        import_targets._parse_csv_data = pretend.call_recorder(
+        import_artifacts._parse_csv_data = pretend.call_recorder(
             lambda *a: [{"k1": "v1", "k2": "v2"}]
         )
 
-        result = import_targets._import_csv_to_rstuf(
+        result = import_artifacts._import_csv_to_rstuf(
             fake_db_client,
             fake_rstuf_files,
             "fake_rstuf_roles",
@@ -130,7 +130,7 @@ class TestImportTargetsFunctions:
         )
 
         assert result is None
-        assert import_targets._parse_csv_data.calls == [
+        assert import_artifacts._parse_csv_data.calls == [
             pretend.call(
                 fake_db_client,
                 "fake_rstuf_roles",
@@ -153,7 +153,7 @@ class TestImportTargetsFunctions:
             pretend.call(),
         ]
 
-    def test__import_csv_to_rstuf_duplicate_targets(self):
+    def test__import_csv_to_rstuf_duplicate_artifacts(self):
         # Required to raise an exception type from import inside a function
         from sqlalchemy.exc import IntegrityError
 
@@ -163,20 +163,20 @@ class TestImportTargetsFunctions:
         fake_db_client = pretend.stub(
             execute=pretend.call_recorder(lambda *a: None)
         )
-        import_targets._parse_csv_data = pretend.call_recorder(
+        import_artifacts._parse_csv_data = pretend.call_recorder(
             lambda *a: [{"k1": "v1", "k2": "v2"}]
         )
 
-        with pytest.raises(import_targets.click.ClickException) as err:
-            import_targets._import_csv_to_rstuf(
+        with pytest.raises(import_artifacts.click.ClickException) as err:
+            import_artifacts._import_csv_to_rstuf(
                 fake_db_client,
                 fake_rstuf_files,
                 "fake_rstuf_roles",
                 ["csv1", "csv2"],
                 "fake_succinct_roles",
             )
-        assert "ABORTED due duplicated targets." in str(err)
-        assert import_targets._parse_csv_data.calls == [
+        assert "ABORTED due duplicated artifacts." in str(err)
+        assert import_artifacts._parse_csv_data.calls == [
             pretend.call(
                 fake_db_client,
                 "fake_rstuf_roles",
@@ -192,23 +192,23 @@ class TestImportTargetsFunctions:
                 lambda: {"data": {"number_of_delegated_bins": 16}}
             ),
         )
-        import_targets.request_server = pretend.call_recorder(
+        import_artifacts.request_server = pretend.call_recorder(
             lambda *a: fake_response
         )
-        import_targets.SuccinctRoles = pretend.call_recorder(
+        import_artifacts.SuccinctRoles = pretend.call_recorder(
             lambda **kw: "fake_succinct_roles"
         )
 
-        result = import_targets._get_succinct_roles("http://127.0.0.1")
+        result = import_artifacts._get_succinct_roles("http://127.0.0.1")
         assert result == "fake_succinct_roles"
-        assert import_targets.request_server.calls == [
+        assert import_artifacts.request_server.calls == [
             pretend.call(
                 "http://127.0.0.1",
-                import_targets.URL.config.value,
-                import_targets.Methods.get,
+                import_artifacts.URL.config.value,
+                import_artifacts.Methods.get,
             )
         ]
-        assert import_targets.SuccinctRoles.calls == [
+        assert import_artifacts.SuccinctRoles.calls == [
             pretend.call(
                 keyids=[], threshold=1, bit_length=4, name_prefix="bins"
             )
@@ -216,12 +216,12 @@ class TestImportTargetsFunctions:
         assert fake_response.json.calls == [pretend.call()]
 
     def test__get_succinct_roles_failed_retrieve_config(self):
-        import_targets.request_server = pretend.call_recorder(
+        import_artifacts.request_server = pretend.call_recorder(
             lambda *a: pretend.stub(status_code=404, text="Not found")
         )
 
-        with pytest.raises(import_targets.click.ClickException) as err:
-            import_targets._get_succinct_roles("http://127.0.0.1/metadata")
+        with pytest.raises(import_artifacts.click.ClickException) as err:
+            import_artifacts._get_succinct_roles("http://127.0.0.1/metadata")
         assert "Failed to retrieve RSTUF config" in str(err)
 
     def test__get_succinct_roles_failed_parsing(self, monkeypatch):
@@ -230,34 +230,34 @@ class TestImportTargetsFunctions:
             json=pretend.call_recorder(lambda: {"data": {}}),
             text="{'data': {}}",
         )
-        import_targets.request_server = pretend.call_recorder(
+        import_artifacts.request_server = pretend.call_recorder(
             lambda *a: fake_response
         )
 
-        with pytest.raises(import_targets.click.ClickException) as err:
-            import_targets._get_succinct_roles("http://127.0.0.1")
+        with pytest.raises(import_artifacts.click.ClickException) as err:
+            import_artifacts._get_succinct_roles("http://127.0.0.1")
         assert "Failed to parse 'data', 'number_of_delegated_bins'" in str(err)
-        assert import_targets.request_server.calls == [
+        assert import_artifacts.request_server.calls == [
             pretend.call(
                 "http://127.0.0.1",
-                import_targets.URL.config.value,
-                import_targets.Methods.get,
+                import_artifacts.URL.config.value,
+                import_artifacts.Methods.get,
             )
         ]
         assert fake_response.json.calls == [pretend.call()]
 
 
-class TestImportTargetsGroupCLI:
-    def test_import_targets(self, client, test_context):
-        # Required to properly mock functions imported inside import_targets
+class TestImportArtifactsGroupCLI:
+    def test_import_artifacts(self, client, test_context):
+        # Required to properly mock functions imported inside import_artifacts
         import sqlalchemy
 
         test_context["settings"].SERVER = "fake-server"
 
-        import_targets.bootstrap_status = pretend.call_recorder(
+        import_artifacts.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": True}, "message": "some msg"}
         )
-        import_targets._get_succinct_roles = pretend.call_recorder(
+        import_artifacts._get_succinct_roles = pretend.call_recorder(
             lambda *a: "fake_succinct_roles"
         )
         sqlalchemy.create_engine = pretend.call_recorder(
@@ -272,16 +272,16 @@ class TestImportTargetsGroupCLI:
         sqlalchemy.Table = pretend.call_recorder(
             lambda *a, **kw: "rstuf_table"
         )
-        import_targets._check_csv_files = pretend.call_recorder(
+        import_artifacts._check_csv_files = pretend.call_recorder(
             lambda **kw: None
         )
-        import_targets._import_csv_to_rstuf = pretend.call_recorder(
+        import_artifacts._import_csv_to_rstuf = pretend.call_recorder(
             lambda *a: None
         )
-        import_targets.publish_targets = pretend.call_recorder(
+        import_artifacts.publish_targets = pretend.call_recorder(
             lambda *a: "fake_task_id"
         )
-        import_targets.task_status = pretend.call_recorder(
+        import_artifacts.task_status = pretend.call_recorder(
             lambda *a: {"status": "SUCCESS"}
         )
 
@@ -291,31 +291,31 @@ class TestImportTargetsGroupCLI:
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
             "--csv",
-            "targets1of2.csv",
+            "artifacts1of2.csv",
             "--csv",
-            "targets2of2.csv",
+            "artifacts2of2.csv",
         ]
         result = client.invoke(
-            import_targets.import_targets, options, obj=test_context
+            import_artifacts.import_artifacts, options, obj=test_context
         )
         assert result.exit_code == 0, result.output
         assert "Finished." in result.output
-        assert import_targets.bootstrap_status.calls == [
+        assert import_artifacts.bootstrap_status.calls == [
             pretend.call(test_context["settings"])
         ]
-        assert import_targets._get_succinct_roles.calls == [
+        assert import_artifacts._get_succinct_roles.calls == [
             pretend.call("http://127.0.0.1")
         ]
         assert sqlalchemy.create_engine.calls == [
             pretend.call("postgresql://postgres:secret@127.0.0.1:5433")
         ]
-        assert import_targets._check_csv_files.calls == [
-            pretend.call(csv_files=("targets1of2.csv", "targets2of2.csv"))
+        assert import_artifacts._check_csv_files.calls == [
+            pretend.call(csv_files=("artifacts1of2.csv", "artifacts2of2.csv"))
         ]
-        assert import_targets.publish_targets.calls == [
+        assert import_artifacts.publish_targets.calls == [
             pretend.call(test_context["settings"])
         ]
-        assert import_targets.task_status.calls == [
+        assert import_artifacts.task_status.calls == [
             pretend.call(
                 "fake_task_id",
                 test_context["settings"],
@@ -323,33 +323,33 @@ class TestImportTargetsGroupCLI:
             )
         ]
 
-    def test_import_targets_no_api_server_config_no_param(
+    def test_import_artifacts_no_api_server_config_no_param(
         self, client, test_context
     ):
         options = [
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
             "--csv",
-            "targets1of2.csv",
+            "artifacts1of2.csv",
             "--csv",
-            "targets2of2.csv",
+            "artifacts2of2.csv",
         ]
         result = client.invoke(
-            import_targets.import_targets, options, obj=test_context
+            import_artifacts.import_artifacts, options, obj=test_context
         )
         assert result.exit_code == 1, result.output
         assert "Requires '--api-server' " in result.output
 
-    def test_import_targets_skip_publish_targets(self, client, test_context):
-        # Required to properly mock functions imported inside import_targets
+    def test_import_artifacts_skip_publish_targets(self, client, test_context):
+        # Required to properly mock functions imported inside import_artifacts
         import sqlalchemy
 
         test_context["settings"].SERVER = "fake-server"
 
-        import_targets.bootstrap_status = pretend.call_recorder(
+        import_artifacts.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": True}, "message": "some msg"}
         )
-        import_targets._get_succinct_roles = pretend.call_recorder(
+        import_artifacts._get_succinct_roles = pretend.call_recorder(
             lambda *a: "fake_succinct_roles"
         )
         sqlalchemy.create_engine = pretend.call_recorder(
@@ -364,16 +364,16 @@ class TestImportTargetsGroupCLI:
         sqlalchemy.Table = pretend.call_recorder(
             lambda *a, **kw: "rstuf_table"
         )
-        import_targets._check_csv_files = pretend.call_recorder(
+        import_artifacts._check_csv_files = pretend.call_recorder(
             lambda **kw: None
         )
-        import_targets._import_csv_to_rstuf = pretend.call_recorder(
+        import_artifacts._import_csv_to_rstuf = pretend.call_recorder(
             lambda *a: None
         )
-        import_targets.publish_targets = pretend.call_recorder(
+        import_artifacts.publish_targets = pretend.call_recorder(
             lambda *a: "fake_task_id"
         )
-        import_targets.task_status = pretend.call_recorder(
+        import_artifacts.task_status = pretend.call_recorder(
             lambda *a: {"status": "SUCCESS"}
         )
 
@@ -383,33 +383,33 @@ class TestImportTargetsGroupCLI:
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
             "--csv",
-            "targets1of2.csv",
+            "artifacts1of2.csv",
             "--csv",
-            "targets2of2.csv",
-            "--skip-publish-targets",
+            "artifacts2of2.csv",
+            "--skip-publish-artifacts",
         ]
         result = client.invoke(
-            import_targets.import_targets, options, obj=test_context
+            import_artifacts.import_artifacts, options, obj=test_context
         )
         assert result.exit_code == 0, result.output
         assert "Finished." in result.output
-        assert "Not targets published" in result.output
-        assert import_targets.bootstrap_status.calls == [
+        assert "No artifacts published" in result.output
+        assert import_artifacts.bootstrap_status.calls == [
             pretend.call(test_context["settings"])
         ]
-        assert import_targets._get_succinct_roles.calls == [
+        assert import_artifacts._get_succinct_roles.calls == [
             pretend.call("http://127.0.0.1")
         ]
         assert sqlalchemy.create_engine.calls == [
             pretend.call("postgresql://postgres:secret@127.0.0.1:5433")
         ]
-        assert import_targets._check_csv_files.calls == [
-            pretend.call(csv_files=("targets1of2.csv", "targets2of2.csv"))
+        assert import_artifacts._check_csv_files.calls == [
+            pretend.call(csv_files=("artifacts1of2.csv", "artifacts2of2.csv"))
         ]
-        assert import_targets.publish_targets.calls == []
-        assert import_targets.task_status.calls == []
+        assert import_artifacts.publish_targets.calls == []
+        assert import_artifacts.task_status.calls == []
 
-    def test_import_targets_sqlalchemy_import_fails(
+    def test_import_artifacts_sqlalchemy_import_fails(
         self, client, test_context
     ):
         import builtins
@@ -429,7 +429,7 @@ class TestImportTargetsGroupCLI:
         test_context["settings"].SERVER = "fake-server"
         options = ["--api-server", "", "--db-uri", "", "--csv", ""]
         result = client.invoke(
-            import_targets.import_targets, options, obj=test_context
+            import_artifacts.import_artifacts, options, obj=test_context
         )
 
         # Return the original import to not cause other exceptions.
@@ -440,11 +440,13 @@ class TestImportTargetsGroupCLI:
         exc_msg = result.exception.msg
         assert "pip install repository-service-tuf[sqlalchemy" in exc_msg
 
-    def test_import_targets_bootstrap_check_failed(self, client, test_context):
+    def test_import_artifacts_bootstrap_check_failed(
+        self, client, test_context
+    ):
         test_context["settings"].SERVER = "fake-server"
 
-        import_targets.bootstrap_status = pretend.raiser(
-            import_targets.click.ClickException("Server ERROR")
+        import_artifacts.bootstrap_status = pretend.raiser(
+            import_artifacts.click.ClickException("Server ERROR")
         )
 
         options = [
@@ -453,21 +455,21 @@ class TestImportTargetsGroupCLI:
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
             "--csv",
-            "targets1of2.csv",
+            "artifacts1of2.csv",
             "--csv",
-            "targets2of2.csv",
+            "artifacts2of2.csv",
         ]
 
         result = client.invoke(
-            import_targets.import_targets, options, obj=test_context
+            import_artifacts.import_artifacts, options, obj=test_context
         )
         assert result.exit_code == 1
         assert "Server ERROR" in result.output, result.output
 
-    def test_import_targets_without_bootstrap(self, client, test_context):
+    def test_import_artifacts_without_bootstrap(self, client, test_context):
         test_context["settings"].SERVER = "fake-server"
 
-        import_targets.bootstrap_status = pretend.call_recorder(
+        import_artifacts.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": False}, "message": "some msg"}
         )
 
@@ -477,17 +479,18 @@ class TestImportTargetsGroupCLI:
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
             "--csv",
-            "targets1of2.csv",
+            "artifacts1of2.csv",
             "--csv",
-            "targets2of2.csv",
+            "artifacts2of2.csv",
         ]
         result = client.invoke(
-            import_targets.import_targets, options, obj=test_context
+            import_artifacts.import_artifacts, options, obj=test_context
         )
         assert result.exit_code == 1, result.output
         assert (
-            "import-targets` requires bootstrap process done." in result.output
+            "import-artifacts` requires bootstrap process done."
+            in result.output
         )
-        assert import_targets.bootstrap_status.calls == [
+        assert import_artifacts.bootstrap_status.calls == [
             pretend.call(test_context["settings"])
         ]

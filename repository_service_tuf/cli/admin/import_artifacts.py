@@ -85,8 +85,8 @@ def _import_csv_to_rstuf(
             db_client.execute(rstuf_target_files.insert(), rstuf_db_data)
         except IntegrityError:
             raise click.ClickException(
-                "Import status: ABORTED due duplicated targets. "
-                "CSV files must to have unique targets (path). "
+                "Import status: ABORTED due duplicated artifacts. "
+                "CSV files must to have unique artifacts (path). "
                 "No data added to RSTUF DB."
             )
         console.print(f"Import status: {csv_file} imported")
@@ -139,31 +139,31 @@ def _get_succinct_roles(api_server: str) -> SuccinctRoles:
     ),
 )
 @click.option(
-    "--skip-publish-targets",
+    "--skip-publish-artifacts",
     is_flag=True,
-    help="Skip publishing targets in TUF Metadata.",
+    help="Skip publishing artifacts in TUF Metadata.",
 )
 @click.pass_context
-def import_targets(
+def import_artifacts(
     context: Any,
     api_server: str,
     db_uri: str,
     csv: List[str],
-    skip_publish_targets: bool,
+    skip_publish_artifacts: bool,
 ):
     """
-    Import targets to RSTUF from exported CSV file.\n
+    Import artifacts to RSTUF from exported CSV file.\n
     Note: sqlalchemy needs to be installed in order to use this command.\n
     pip install repository-service-tuf[sqlalchemy,psycopg2]
     """
 
     # SQLAlchemy is an optional dependency and is required only for users who
-    # want to use import_targets. That's why we have import it here.
+    # want to use import_artifacts. That's why we have import it here.
     try:
         from sqlalchemy import Connection, MetaData, Table, create_engine
     except ModuleNotFoundError:
         raise ModuleNotFoundError(
-            "SQLAlchemy is required by import-targets. "
+            "SQLAlchemy is required by import-artifacts. "
             "pip install repository-service-tuf[sqlalchemy,psycopg2]"
         )
     settings = context.obj["settings"]
@@ -179,7 +179,7 @@ def import_targets(
     bs_status = bootstrap_status(settings)
     if bs_status.get("data", {}).get("bootstrap") is False:
         raise click.ClickException(
-            "`import-targets` requires bootstrap process done. "
+            "`import-artifacts` requires bootstrap process done. "
             f"{bs_status.get('message')}"
         )
 
@@ -207,15 +207,15 @@ def import_targets(
     db_client.commit()
     console.print("Import status: All data imported to RSTUF DB")
 
-    if skip_publish_targets:
+    if skip_publish_artifacts:
         console.print(
             "Import status: Finished. "
-            "Not targets published (`--skip-publish-targets`)"
+            "No artifacts published (`--skip-publish-artifacts`)"
         )
     else:
-        console.print("Import status: Submitting action publish targets")
+        console.print("Import status: Submitting action publish artifacts")
         task_id = publish_targets(settings)
-        console.print(f"Import status: Publish targets task id is {task_id}")
+        console.print(f"Import status: Publish artifacts task id is {task_id}")
         # monitor task status
         result = task_status(task_id, settings, "Import status: task ")
         if result is not None:

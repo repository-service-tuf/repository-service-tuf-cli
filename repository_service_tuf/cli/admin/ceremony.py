@@ -213,8 +213,8 @@ Now imagine that the organization stores the following files:
 - https://example.com/downloads/productB/productB-v1.0.tar
 - https://example.com/downloads/productB/updates/servicepack-1.tar
 
-As we said the targets will be uniformly distributed over the 8 bins no matter
-if they are located in the same folder.
+As we said the artifacts will be uniformly distributed over the 8 bins no
+matter if they are located in the same folder.
 In this example here is how they will be distributed:
 - "1.bins-0.json" will be responsible for file:
  https://example.com/downloads/productA/productA-v1.0.tar

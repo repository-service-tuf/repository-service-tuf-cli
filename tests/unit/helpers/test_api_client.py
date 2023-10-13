@@ -457,7 +457,7 @@ class TestAPIClient:
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.publish_targets(test_context["settings"])
 
-        assert "Failed to publish targets. 500 Internal Error" in str(err)
+        assert "Failed to publish artifacts. 500 Internal Error" in str(err)
 
         assert api_client.request_server.calls == [
             pretend.call(
