@@ -20,7 +20,7 @@ class URL(Enum):
     config = "api/v1/config/"
     metadata = "api/v1/metadata/"
     task = "api/v1/task/?task_id="
-    publish_targets = "api/v1/targets/publish/"
+    publish_targets = "api/v1/artifacts/publish/"
     metadata_sign = "api/v1/metadata/sign/"
     metadata_sign_delete = "api/v1/metadata/sign/delete"
     artifacts = "api/v1/artifacts/"
