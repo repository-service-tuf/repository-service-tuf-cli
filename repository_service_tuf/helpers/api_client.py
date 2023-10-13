@@ -166,7 +166,7 @@ def publish_targets(settings: LazySettings) -> str:
     )
     if publish_targets.status_code != 202:
         raise click.ClickException(
-            f"Failed to publish targets. {publish_targets.status_code} "
+            f"Failed to publish artifacts. {publish_targets.status_code} "
             f"{publish_targets.text}"
         )
     task_id = publish_targets.json()["data"]["task_id"]
