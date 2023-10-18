@@ -20,7 +20,7 @@ repos:
   - id: isort
     args: [-l79, --profile, black, --check, --diff]
 - repo: https://github.com/psf/black
-  rev: '23.9.1'
+  rev: '23.10.0'
   hooks:
   - id: black
     args: [-l79, --check, --diff, .]
