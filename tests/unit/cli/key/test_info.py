@@ -15,19 +15,18 @@ class TestKeyInfoInteraction:
             "path/to/key.key",  # Enter the key's filename:
             "password",  # Enter the private key password:
         ]
+        fake_load_key = pretend.call_recorder(
+            lambda *a: RSTUFKey(
+                key={
+                    "keyid": "keyid",
+                    "keytype": "keytype",
+                    "scheme": "scheme",
+                    "keyval": {"public": "k_public", "private": "private"},
+                }
+            )
+        )
         monkeypatch.setattr(
-            info,
-            "load_key",
-            pretend.call_recorder(
-                lambda *a: RSTUFKey(
-                    key={
-                        "keyid": "keyid",
-                        "keytype": "keytype",
-                        "scheme": "scheme",
-                        "keyval": {"public": "k_public", "private": "private"},
-                    }
-                )
-            ),
+            "repository_service_tuf.helpers.tuf.load_key", fake_load_key
         )
         result = client.invoke(
             info.info,
@@ -41,7 +40,7 @@ class TestKeyInfoInteraction:
         assert "scheme" in result.output
         assert "k_public" in result.output
         assert "k_private" not in result.output
-        assert info.load_key.calls == [
+        assert fake_load_key.calls == [
             pretend.call("path/to/key.key", "ed25519", "password", "")
         ]
 
@@ -51,12 +50,11 @@ class TestKeyInfoInteraction:
             "path/to/key.key",  # Enter the key's filename:
             "password",  # Enter the private key password:
         ]
+        fake_load_key = pretend.call_recorder(
+            lambda *a: RSTUFKey(key={}, error="Failed to load OH NO")
+        )
         monkeypatch.setattr(
-            info,
-            "load_key",
-            pretend.call_recorder(
-                lambda *a: RSTUFKey(key={}, error="Failed to load OH NO")
-            ),
+            "repository_service_tuf.helpers.tuf.load_key", fake_load_key
         )
 
         result = client.invoke(
@@ -65,6 +63,6 @@ class TestKeyInfoInteraction:
 
         assert result.exit_code == 1
         assert "Failed to load OH NO" in result.output
-        assert info.load_key.calls == [
+        assert fake_load_key.calls == [
             pretend.call("path/to/key.key", "ed25519", "password", "")
         ]

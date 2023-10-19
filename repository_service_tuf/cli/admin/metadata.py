@@ -310,7 +310,7 @@ def _keys_additions(root_info: MetadataInfo):
         else:
             console.print(f"You must add {signing_keys_needed} more key(s)")
 
-        root_key: RSTUFKey = get_key(Root.type)
+        root_key: RSTUFKey = get_key(Root.type, "", ask_name=True)
         if root_key.error:
             console.print(root_key.error)
             continue
@@ -325,10 +325,6 @@ def _keys_additions(root_info: MetadataInfo):
         if root_info.is_keyid_used(root_key.key["keyid"]):
             console.print(":cross_mark: [red]Failed[/]: Key is already used")
             continue
-
-        root_key.name = prompt.Prompt.ask(
-            "[Optional] Give a [green]name/tag[/] to the key"
-        )
 
         root_info.add_key(root_key)
 
@@ -423,7 +419,7 @@ def _modify_online_key(root_info: MetadataInfo):
             console.print("Skipping further online key changes")
             break
 
-        online_key: RSTUFKey = get_key("online")
+        online_key: RSTUFKey = get_key("online", ask_name=True)
         if online_key.error:
             console.print(online_key.error)
             continue
@@ -439,10 +435,6 @@ def _modify_online_key(root_info: MetadataInfo):
                 ":cross_mark: [red]Failed[/]: Key matches one of the root keys"
             )
             continue
-
-        online_key.name = prompt.Prompt.ask(
-            "[Optional] Give a [green]name/tag[/] to the key"
-        )
 
         root_info.change_online_key(online_key)
 
