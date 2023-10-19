@@ -25,8 +25,9 @@ def _get_key() -> RSTUFKey:
     filepath: str = prompt.Prompt.ask(
         "Enter the private key's [green]file name[/]"
     )
+    password_green = click.style("private key password", fg="green")
     password: str = click.prompt(
-        "Enter the private key password", hide_input=True
+        f"Enter the {password_green}", hide_input=True
     )
 
     return load_key(filepath, keytype, password, "")
