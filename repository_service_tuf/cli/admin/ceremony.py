@@ -26,7 +26,7 @@ from repository_service_tuf.helpers.tuf import (
     ServiceSettings,
     TUFManagement,
     get_supported_schemes_for_key_type,
-    load_key,
+    get_key,
     load_payload,
     save_payload,
 )
@@ -374,19 +374,7 @@ def _configure_keys(
             default=KeyType.KEY_TYPE_ED25519.value,
         )
         if signing_key == "private":
-            filepath = prompt.Prompt.ask(
-                f"Enter the {role_cyan}`s [green]private key path[/]"
-            )
-            password_green = click.style("private key password", fg="green")
-            password = click.prompt(
-                f"Enter the {role_cyan}`s {password_green}", hide_input=True
-            )
-            name = prompt.Prompt.ask(
-                f"[Optional] Give a [green]name/tag[/] to the {role_cyan} key",
-                default="",
-                show_default=False,
-            )
-            role_key: RSTUFKey = load_key(filepath, key_type, password, name)
+            role_key: RSTUFKey = get_key(role, key_type, ask_name=True)
             if role_key.error:
                 console.print(role_key.error)
 
@@ -402,7 +390,7 @@ def _configure_keys(
                 scheme = allowed_schemes[0]
             else:
                 scheme = prompt.Prompt.ask(
-                    f"Choose {colored_role}`s [green]public key scheme[/]",
+                    f"Choose {role_cyan}`s [green]public key scheme[/]",
                     choices=allowed_schemes,
                     default=SCHEME_DEFAULTS[key_type],
                 )

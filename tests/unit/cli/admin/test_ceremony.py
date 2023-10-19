@@ -99,12 +99,12 @@ class TestCeremonyInteraction:
             "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
             "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
             "strongPass",  # Enter the root`s private key password
-            "",  # Give a name/tag to the key [Optional]
+            "",  # [Optional] Give a name/tag to the root`s key
             "",  # Select to use private key or public? [private/public] (public)  # noqa
             "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
             "fake_id",  # # Enter root`s key id
             "fake_hash",  # Enter root`s public key hash
-            "root key 2",  # Give a name/tag to the key [Optional]
+            "root key 2",  # [Optional] Give a name/tag to the root`s key
             "",
         ]
 
@@ -133,14 +133,14 @@ class TestCeremonyInteraction:
             "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
             "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
             "strongPass",  # Enter the root`s private key password
-            "",  # Give a name/tag to the key [Optional]
+            "",  # [Optional] Give a name/tag to the root`s key
             "",  # Select to use private key or public? [private/public] (public)  # noqa
             "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
             "",  # # Enter root`s key id
             "fake_id",  # # Enter root`s key id
             "",  # Enter root`s public key hash
             "fake_hash",  # Enter root`s public key hash
-            "",  # Give a name/tag to the key [Optional]
+            "",  # [Optional] Give a name/tag to the root`s key
             "",
         ]
 
@@ -208,16 +208,16 @@ class TestCeremonyInteraction:
             "",  # Select the root`s key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
             "wrong password",  # Enter the root`s private key password
-            "",  # Give a name/tag to the key [Optional]
+            "",  # [Optional] Give a name/tag to the root`s key
             "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
             "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
             "strongPass",  # Enter the root`s private key password
-            "",  # Give a name/tag to the key [Optional]
+            "",  # [Optional] Give a name/tag to the root`s key
             "private",  # Select to use private key or public? [private/public] (public)  # noqa
             "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
             "tests/files/key_storage/JimiHendrix.key",  # Enter the root`s private key path  # noqa
             "strongPass",  # Enter the root`s private key password
-            "",  # Give a name/tag to the key [Optional]
+            "",  # [Optional] Give a name/tag to the root`s key
         ]
 
         test_result = client.invoke(
@@ -240,7 +240,7 @@ class TestCeremonyInteraction:
         ceremony.setup = test_setup
         input_step1, input_step2, input_step3, input_step4 = test_inputs
 
-        # update all: Give a name/tag to the key [Optional]
+        # update all: [Optional] Give a name/tag to the root`s key
         input_step2[-1] = "Online key"
         input_step3[4] = "Martin's Key"
         input_step3[9] = "Steven's Key"
@@ -270,16 +270,16 @@ class TestCeremonyInteraction:
             "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
             "tests/files/key_storage/online.key",  # Enter the root`s private key path  # noqa
             "strongPass",  # Enter the root`s private key password
-            "",  # Give a name/tag to the key [Optional]
+            "",  # [Optional] Give a name/tag to the root`s key
             "",  # Choose 1/2 root key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
             "strongPass",  # Enter the root`s private key password
-            "",  # Give a name/tag to the key [Optional]
+            "",  # [Optional] Give a name/tag to the root`s key
             "private",  # Select to use private key or public? [private/public] (public)  # noqa
             "",  # Choose 2/2 root key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/JimiHendrix.key",  # Enter the root`s private key path  # noqa
             "strongPass",  # Enter the root`s private key password
-            "",  # Give a name/tag to the key [Optional]
+            "",  # [Optional] Give a name/tag to the root`s key
         ]
 
         test_result = client.invoke(

@@ -195,7 +195,7 @@ Step 2: Load the Online Key
     Select the ONLINE`s key type [ed25519/ecdsa/rsa] (ed25519):
     Enter ONLINE`s key id: f7a6872f297634219a80141caa2ec9ae8802098b07b67963272603e36cc19fd8
     Enter ONLINE`s public key hash: 9fe7ddccb75b977a041424a1fdc142e01be4abab918dc4c611fbfe4a3360a9a8
-    Give a name/tag to the key [Optional]:
+    [Optional] Give a name/tag to the root`s key:
 
 
 Step 3: Load Root Keys
@@ -240,7 +240,7 @@ to load their keys.
     Select the root`s key type [ed25519/ecdsa/rsa] (ed25519):
     Enter root`s key id: 800dfb5a1982b82b7893e58035e19f414f553fc08cbb1130cfbae302a7b7fee5
     Enter root`s public key hash: 7098f769f6ab8502b50f3b58686b8a042d5d3bb75d8b3a48a2fcbc15a0223501
-    Give a name/tag to the key [Optional]: Jimi Hendrix
+    [Optional] Give a name/tag to the root`s key: Jimi Hendrix
 
 Step 4: Validate Configuration
 ..............................

@@ -1,44 +1,26 @@
 # SPDX-FileCopyrightText: 2022-2023 VMware Inc
 #
 # SPDX-License-Identifier: MIT
-from rich import prompt
 from rich.console import Console  # type: ignore
 
 from repository_service_tuf.cli import click
 from repository_service_tuf.cli.key import key
-from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.tuf import (
     RSTUFKey,
-    load_key,
+    get_key,
     print_key_table,
 )
 
 console = Console()
 
 
-def _get_key() -> RSTUFKey:
-    keytype: str = prompt.Prompt.ask(
-        "\nChoose key type",
-        choices=KeyType.get_all_members(),
-        default=KeyType.KEY_TYPE_ED25519.value,
-    )
-    filepath: str = prompt.Prompt.ask(
-        "Enter the private key's [green]file name[/]"
-    )
-    password_green = click.style("private key password", fg="green")
-    password: str = click.prompt(
-        f"Enter the {password_green}", hide_input=True
-    )
-
-    return load_key(filepath, keytype, password, "")
-
-
 @key.command()
 def info() -> None:
     """Show key information"""
 
-    rstuf_key = _get_key()
+    rstuf_key: RSTUFKey = get_key()
     if rstuf_key.error:
         console.print(rstuf_key.error)
         raise click.ClickException("Failed to load the Key")
+
     print_key_table(rstuf_key)
