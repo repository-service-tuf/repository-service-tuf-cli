@@ -18,7 +18,12 @@ jobs:
       - name: Update pre-commit hooks
         run: |
           pre-commit autoupdate
+      - name: Check for pre-commit config file changes
+        id: git_diff
+        run: |
+          echo "GIT_DIFF=$(git diff --exit-code 1> /dev/null; echo $?)" >> $GITHUB_OUTPUT
       - name: Run tests
+        if: steps.git_diff.outputs.GIT_DIFF == 1
         # We want to make sure that the new updates do not affect the code
         run: |
           make tests
