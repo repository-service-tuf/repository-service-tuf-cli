@@ -1,9 +1,7 @@
 name: Update pre-commit hooks
 on:
-  workflow_dispatch:
-  schedule:
-    # Run at 8:00 AM every day
-    - cron: "0 8 * * *"
+  push
+
 jobs:
   update-pre-commit-hooks:
     runs-on: ubuntu-latest
@@ -18,7 +16,12 @@ jobs:
       - name: Update pre-commit hooks
         run: |
           pre-commit autoupdate
+      - name: Check for pre-commit updates with git
+        id: git_diff
+        run: |
+          echo "GIT_DIFF=$(git diff --exit-code 1> /dev/null; echo $?)" >> $GITHUB_OUTPUT)
       - name: Run tests
+        if: steps.git_diff.outputs.GIT_DIFF == 1
         # We want to make sure that the new updates do not affect the code
         run: |
           make tests
