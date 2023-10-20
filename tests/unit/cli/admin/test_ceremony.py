@@ -307,8 +307,8 @@ class TestCeremonyInteraction:
         input_step4 = [
             "n",  # Is the online key configuration correct? [y/n]
             "rsa",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
-            "tests/files/key_storage/online-rsa.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
-            "strongPass",  # Enter 1/1 the ONLINE`s private key password
+            "f7a6872f297634219a80141caa2ec9ae8802098b07b67963272603e36cc19fd8",  # Enter ONLINE`s key id  # noqa
+            "9fe7ddccb75b977a041424a1fdc142e01be4abab918dc4c611fbfe4a3360a9a8",  # Enter ONLINE`s public key hash   # noqa
             "",  # [Optional] Give a name/tag to the key
             "y",  # Is the online key configuration correct? [y/n]
             "y",  # Is the root configuration correct? [y/n]
