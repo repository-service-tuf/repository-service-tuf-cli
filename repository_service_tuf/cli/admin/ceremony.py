@@ -369,7 +369,7 @@ def _configure_keys(
             )
 
         key_type = prompt.Prompt.ask(
-            f"Select the {role_cyan}`s key type",
+            f"Choose {role_cyan}`s key type",
             choices=KeyType.get_all_members(),
             default=KeyType.KEY_TYPE_ED25519.value,
         )

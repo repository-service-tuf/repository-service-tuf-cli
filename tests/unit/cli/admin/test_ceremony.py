@@ -96,12 +96,12 @@ class TestCeremonyInteraction:
 
         input_step3 = [
             "y",  # Ready to start loading the root keys? [y/n]
-            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
             "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
             "strongPass",  # Enter the root`s private key password
             "",  # [Optional] Give a name/tag to the root`s key
             "",  # Select to use private key or public? [private/public] (public)  # noqa
-            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
             "fake_id",  # # Enter root`s key id
             "fake_hash",  # Enter root`s public key hash
             "root key 2",  # [Optional] Give a name/tag to the root`s key
@@ -130,12 +130,12 @@ class TestCeremonyInteraction:
 
         input_step3 = [
             "y",  # Ready to start loading the root keys? [y/n]
-            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
             "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
             "strongPass",  # Enter the root`s private key password
             "",  # [Optional] Give a name/tag to the root`s key
             "",  # Select to use private key or public? [private/public] (public)  # noqa
-            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
             "",  # # Enter root`s key id
             "fake_id",  # # Enter root`s key id
             "",  # Enter root`s public key hash
@@ -205,16 +205,16 @@ class TestCeremonyInteraction:
         # overwrite the input_step2
         input_step3 = [
             "y",  # Ready to start loading the root keys? [y/n]
-            "",  # Select the root`s key type [ed25519/ecdsa/rsa]
+            "",  # Choose root`s key type [ed25519/ecdsa/rsa]
             "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
             "wrong password",  # Enter the root`s private key password
             "",  # [Optional] Give a name/tag to the root`s key
-            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
             "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
             "strongPass",  # Enter the root`s private key password
             "",  # [Optional] Give a name/tag to the root`s key
             "private",  # Select to use private key or public? [private/public] (public)  # noqa
-            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
             "tests/files/key_storage/JimiHendrix.key",  # Enter the root`s private key path  # noqa
             "strongPass",  # Enter the root`s private key password
             "",  # [Optional] Give a name/tag to the root`s key
@@ -267,7 +267,7 @@ class TestCeremonyInteraction:
         # overwrite the input_step3 with same key in input_step2 (online key)
         input_step3 = [
             "y",  # Ready to start loading the root keys? [y/n]
-            "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
             "tests/files/key_storage/online.key",  # Enter the root`s private key path  # noqa
             "strongPass",  # Enter the root`s private key password
             "",  # [Optional] Give a name/tag to the root`s key
