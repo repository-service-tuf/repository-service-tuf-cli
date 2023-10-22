@@ -15,8 +15,13 @@ from repository_service_tuf.helpers.api_client import task_status
     type=str,
     required=True,
 )
+@click.option(
+    "--api-server",
+    help="RSTUF API URL, i.e., http://127.0.0.1",
+    required=False,
+)
 @click.pass_context
-def info(context: Context, task_id: str) -> Dict[str, Any]:
+def info(context: Context, task_id: str, api_server: str) -> Dict[str, Any]:
     """
     Retrieve task state.
 
@@ -24,6 +29,15 @@ def info(context: Context, task_id: str) -> Dict[str, Any]:
     """
 
     settings = context.obj.get("settings")
+
+    if api_server:
+        settings.SERVER = api_server
+
+    if settings.get("SERVER") is None:
+        raise click.ClickException(
+            "Requires '--api-server' or configuring the `.rstuf.yml` file. "
+            "Example: --api-server https://api.rstuf.example.com"
+        )
 
     status = task_status(
         task_id=task_id, settings=settings, title="Task status:"
