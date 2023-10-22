@@ -953,6 +953,7 @@ This command retrieves the task state of the given task ID using the RSTUF REST 
     Retrieve task state.
 
     ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --api-server      TEXT  RSTUF API URL, i.e., http://127.0.0.1                                    │
     │ --help          -h    Show this message and exit.                                                │
     ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 
