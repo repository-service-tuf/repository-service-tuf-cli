@@ -56,7 +56,7 @@ class TestGenerateInteraction:
         inputs = [
             key_type,  # Choose key type [ed25519/ecdsa/rsa] (ed25519)
             filename,  # Enter the keys' filename ...
-            "n",  # Do you want to overwrite the existing 'test-filename' file?
+            "y",  # Do you want to overwrite the existing 'test-filename' file?
         ]
 
         generate._verify_password = pretend.call_recorder(lambda a: password)
