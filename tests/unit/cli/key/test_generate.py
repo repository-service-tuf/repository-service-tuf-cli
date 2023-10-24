@@ -43,9 +43,7 @@ class TestGenerateInteraction:
         assert test_result.exit_code == 1
 
     @pytest.mark.parametrize("key_type", KeyType.get_all_members() + ["test"])
-    def test_generate_types_generation(
-        self, key_type, client, monkeypatch
-    ) -> None:
+    def test_generate_types_generation(self, key_type, client) -> None:
         """
         Test that all `KeyType` enum members input choices call the appropriate
         keypair generate function
@@ -56,7 +54,7 @@ class TestGenerateInteraction:
         inputs = [
             key_type,  # Choose key type [ed25519/ecdsa/rsa] (ed25519)
             filename,  # Enter the keys' filename ...
-            "y",  # Do you want to overwrite the existing 'test-filename' file?
+            "y",  # Do you want to overwrite the existing 'test-filename' file?  # noqa: E501
         ]
 
         generate._verify_password = pretend.call_recorder(lambda a: password)
@@ -65,6 +63,7 @@ class TestGenerateInteraction:
                 key={
                     "keyid": "keyid",
                     "keytype": "keytype",
+                    "scheme": "scheme",
                     "keyval": {"public": "k_public", "private": "private"},
                 }
             )
@@ -95,6 +94,7 @@ class TestGenerateInteraction:
                 ]
                 assert "keyid" in test_result.output
                 assert "keytype" in test_result.output
+                assert "scheme" in test_result.output
                 assert "k_public" in test_result.output
                 assert "k_private" not in test_result.output
 
@@ -108,6 +108,7 @@ class TestGenerateInteraction:
             assert generate.load_key.calls == []
             assert "keyid" not in test_result.output
             assert "keytype" not in test_result.output
+            assert "scheme" not in test_result.output
             assert "k_public" not in test_result.output
             assert "k_private" not in test_result.output
 
@@ -125,6 +126,7 @@ class TestGenerateInteraction:
             inputs = [
                 key_type,  # Choose key type [ed25519/ecdsa/rsa] (ed25519)
                 filename,  # Enter the keys' filename ...
+                "y",  # Do you want to overwrite the existing 'filename' file
             ]
 
             generate._verify_password = pretend.call_recorder(
@@ -134,6 +136,7 @@ class TestGenerateInteraction:
             test_result = client.invoke(
                 generate.generate,
                 input="\n".join(inputs),
+                catch_exceptions=False,
             )
 
             # the default option for the filename
@@ -175,6 +178,7 @@ class TestGenerateInteraction:
         test_result = client.invoke(
             generate.generate,
             input="\n".join(inputs),
+            catch_exceptions=False,
         )
 
         assert generate.os.path.isfile.calls == [pretend.call(filename)]  # type: ignore # noqa: E501
