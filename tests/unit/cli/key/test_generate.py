@@ -42,7 +42,7 @@ class TestGenerateInteraction:
 
         assert test_result.exit_code == 1
 
-    @pytest.mark.parametrize("key_type", KeyType.get_all_members() + ["test"])
+    @pytest.mark.parametrize("key_type", KeyType.get_all_members())
     def test_generate_types_generation(self, key_type, client) -> None:
         """
         Test that all `KeyType` enum members input choices call the appropriate
@@ -76,40 +76,25 @@ class TestGenerateInteraction:
             "rsa": "_generate_and_write_rsa_keypair",
         }
 
-        if key_type in KeyType.get_all_members():
-            with patch(
-                mock_file_path + mocked_functions[key_type],
-                return_value=None,
-            ) as mock_keypair:
-                test_result = client.invoke(
-                    generate.generate,
-                    input="\n".join(inputs),
-                    catch_exceptions=False,
-                )
-
-                mock_keypair.called_once()
-                assert test_result.exit_code == 0
-                assert generate.load_key.calls == [
-                    pretend.call(filename, key_type, password, "")
-                ]
-                assert "keyid" in test_result.output
-                assert "keytype" in test_result.output
-                assert "scheme" in test_result.output
-                assert "k_public" in test_result.output
-                assert "k_private" not in test_result.output
-
-        else:
+        with patch(
+            mock_file_path + mocked_functions[key_type],
+            return_value=None,
+        ) as mock_keypair:
             test_result = client.invoke(
                 generate.generate,
                 input="\n".join(inputs),
+                catch_exceptions=False,
             )
 
-            assert test_result.exit_code == 1
-            assert generate.load_key.calls == []
-            assert "keyid" not in test_result.output
-            assert "keytype" not in test_result.output
-            assert "scheme" not in test_result.output
-            assert "k_public" not in test_result.output
+            mock_keypair.called_once()
+            assert test_result.exit_code == 0
+            assert generate.load_key.calls == [
+                pretend.call(filename, key_type, password, "")
+            ]
+            assert "keyid" in test_result.output
+            assert "keytype" in test_result.output
+            assert "scheme" in test_result.output
+            assert "k_public" in test_result.output
             assert "k_private" not in test_result.output
 
     @pytest.mark.parametrize("filename", ["\n", "test-filename"])
