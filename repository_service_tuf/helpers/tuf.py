@@ -23,6 +23,7 @@ from securesystemslib.interface import (  # type: ignore
 )
 from securesystemslib.signer import Signer  # type: ignore
 from securesystemslib.signer import SSlibSigner  # type: ignore
+from securesystemslib.signer import KEY_FOR_TYPE_AND_SCHEME
 from securesystemslib.signer import SSlibKey as Key  # type: ignore
 from tuf.api.exceptions import UnsignedMetadataError
 from tuf.api.metadata import SPECIFICATION_VERSION, Metadata, Role, Root
@@ -427,6 +428,15 @@ class TUFManagement:
         return self.repository_metadata
 
 
+def get_supported_schemes_for_key_type(key_type: str) -> List[str]:
+    supported_schemes: List[str] = []
+    for info in KEY_FOR_TYPE_AND_SCHEME.keys():
+        if info[0] == key_type:
+            supported_schemes.append(info[1])
+
+    return supported_schemes
+
+
 def load_key(
     filepath: str, keytype: str, password: Optional[str], name: str
 ) -> RSTUFKey:
@@ -473,10 +483,12 @@ def print_key_table(rstuf_key: RSTUFKey) -> None:
     key_table = table.Table()
     key_table.add_column("Key ID", justify="center")
     key_table.add_column("Key Type", justify="center")
+    key_table.add_column("Key Scheme", justify="center")
     key_table.add_column("Public Key", justify="center")
     row_items = [
         rstuf_key.key["keyid"],
         rstuf_key.key["keytype"],
+        rstuf_key.key["scheme"],
         rstuf_key.key["keyval"]["public"],
     ]
 

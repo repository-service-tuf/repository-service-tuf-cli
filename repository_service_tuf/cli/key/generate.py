@@ -45,11 +45,10 @@ def generate() -> None:
     """Generate cryptographic keys using the `securesystemslib` library"""
 
     key_type: str = prompt.Prompt.ask(
-        "\nChoose key type",
+        "\nChoose [green]key type[/]",
         choices=KeyType.get_all_members(),
         default=KeyType.KEY_TYPE_ED25519.value,
     )
-
     filename: str = prompt.Prompt.ask(
         "Enter the key's [green]filename[/]:",
         default=f"id_{key_type}",
