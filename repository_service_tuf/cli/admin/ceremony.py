@@ -25,8 +25,8 @@ from repository_service_tuf.helpers.tuf import (
     RSTUFKey,
     ServiceSettings,
     TUFManagement,
-    get_supported_schemes_for_key_type,
     get_key,
+    get_supported_schemes_for_key_type,
     load_payload,
     save_payload,
 )
