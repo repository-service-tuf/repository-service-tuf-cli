@@ -306,9 +306,45 @@ class TestCeremonyInteraction:
         # key and confirm the configuration
         input_step4 = [
             "n",  # Is the online key configuration correct? [y/n]
+            "",  # Select the ONLINE`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "f7a6872f297634219a80141caa2ec9ae8802098b07b67963272603e36cc19fd8",  # Enter ONLINE`s key id  # noqa
+            "9fe7ddccb75b977a041424a1fdc142e01be4abab918dc4c611fbfe4a3360a9a8",  # Enter ONLINE`s public key hash   # noqa
+            "",  # Give a name/tag to the key [Optional]
+            "y",  # Is the online key configuration correct? [y/n]
+            "y",  # Is the root configuration correct? [y/n]
+            "y",  # Is the targets configuration correct? [y/n]
+            "y",  # Is the snapshot configuration correct? [y/n]
+            "y",  # Is the timestamp configuration correct? [y/n]
+            "y",  # Is the bins configuration correct? [y/n]
+        ]
+
+        test_result = client.invoke(
+            ceremony.ceremony,
+            input="\n".join(
+                input_step1 + input_step2 + input_step3 + input_step4
+            ),
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 0, test_result.output
+        assert "Ceremony done. 🔐 🎉." in test_result.output
+        # passwords not shown in output
+        assert "strongPass" not in test_result.output
+
+    def test_ceremony_online_key_non_ed25519_key_type(
+        self, client, test_context, test_inputs, test_setup
+    ):
+        ceremony.setup = test_setup
+        input_step1, input_step2, input_step3, input_step4 = test_inputs
+
+        # overwrite the step 4
+        # Load RSA key with more than 1 scheme option.
+        input_step4 = [
+            "n",  # Is the online key configuration correct? [y/n]
             "rsa",  # Choose 1/1 ONLINE key type [ed25519/ecdsa/rsa]
-            "tests/files/key_storage/online-rsa.key",  # Enter 1/1 the ONLINE`s private key path  # noqa
-            "strongPass",  # Enter 1/1 the ONLINE`s private key password
+            "rsassa-pss-sha256",  # Choose ONLINE`s key scheme [rsassa-pss-sha256] ([rsassa-pss-sha|rsa-pkcs1v15-sha][224, 256, 384, 512])  # noqa
+            "b1b4a183b603ad34e898ab7a3b4d138d5fab5bcd77f6a8abee49be17aeea302c",  # Enter ONLINE`s key id  # noqa
+            "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9...\n-----END PUBLIC KEY-----",  # Enter ONLINE`s public key hash   # noqa
             "",  # [Optional] Give a name/tag to the key
             "y",  # Is the online key configuration correct? [y/n]
             "y",  # Is the root configuration correct? [y/n]
