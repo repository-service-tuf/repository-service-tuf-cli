@@ -23,6 +23,7 @@ class TestKeyInfoInteraction:
                     key={
                         "keyid": "keyid",
                         "keytype": "keytype",
+                        "scheme": "scheme",
                         "keyval": {"public": "k_public", "private": "private"},
                     }
                 )
@@ -37,6 +38,7 @@ class TestKeyInfoInteraction:
         assert result.exit_code == 0, result.output
         assert "keyid" in result.output
         assert "keytype" in result.output
+        assert "scheme" in result.output
         assert "k_public" in result.output
         assert "k_private" not in result.output
         assert info.load_key.calls == [

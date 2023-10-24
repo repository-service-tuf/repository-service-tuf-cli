@@ -12,7 +12,7 @@ from rich import box, markdown, prompt, table  # type: ignore
 
 from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.admin import admin
-from repository_service_tuf.constants import KeyType
+from repository_service_tuf.constants import SCHEME_DEFAULTS, KeyType
 from repository_service_tuf.helpers.api_client import (
     URL,
     bootstrap_status,
@@ -25,6 +25,7 @@ from repository_service_tuf.helpers.tuf import (
     RSTUFKey,
     ServiceSettings,
     TUFManagement,
+    get_supported_schemes_for_key_type,
     load_key,
     load_payload,
     save_payload,
@@ -396,6 +397,17 @@ def _configure_keys(
             )
 
         else:
+            allowed_schemes = get_supported_schemes_for_key_type(key_type)
+            # No point of asking the user for choice if there is only 1 scheme.
+            if len(allowed_schemes) == 1:
+                scheme = allowed_schemes[0]
+            else:
+                scheme = prompt.Prompt.ask(
+                    f"Choose {colored_role}`s [green]public key scheme[/]",
+                    choices=allowed_schemes,
+                    default=SCHEME_DEFAULTS[key_type],
+                )
+
             while True:
                 keyid = prompt.Prompt.ask(
                     f"Enter {colored_role}`s [green]key id[/]"
@@ -419,7 +431,7 @@ def _configure_keys(
             role_key = RSTUFKey(
                 key={
                     "keytype": key_type,
-                    "scheme": key_type,
+                    "scheme": scheme,
                     "keyid": keyid,
                     "keyid_hash_algorithms": ["sha256", "sha512"],
                     "keyval": {
@@ -462,14 +474,27 @@ def _run_user_validation():
         keys_table = table.Table(box=box.MINIMAL)
         if path is True:
             keys_table.add_column(
-                "path", justify="right", style="cyan", no_wrap=True
+                "Path", justify="right", style="cyan", no_wrap=True
             )
         keys_table.add_column("Storage", justify="center")
         keys_table.add_column("Verified", justify="center")
         keys_table.add_column("Name/Tag", justify="center")
         keys_table.add_column("Id", justify="center")
+        keys_table.add_column("Key Type", justify="center")
+        keys_table.add_column("Key Scheme", justify="center")
 
         return keys_table
+
+    def _add_row_keys_table(table: table.Table, key: RSTUFKey, storage: str):
+        table.add_row(
+            f"[yellow]{key.key_path}[/]",
+            f"[green]{storage}[/]",
+            ":white_heavy_check_mark:",
+            f"[yellow]{key.name}",
+            f"[yellow]{key.key.get('keyid')}[/]",
+            f"[yellow]{key.key.get('keytype')}[/]",
+            f"[yellow]{key.key.get('scheme')}[/]",
+        )
 
     # Validations
     #
@@ -477,13 +502,7 @@ def _run_user_validation():
     while True:
         online_key_table = _init_summary_table("ONLINE KEY SUMMARY")
         keys_table = _init_keys_table()
-        keys_table.add_row(
-            f"[yellow]{setup.online_key.key_path}[/]",
-            "[green]Online[/]",
-            ":white_heavy_check_mark:",
-            f"[yellow]{setup.online_key.name}",
-            f"[yellow]{setup.online_key.key.get('keyid')}[/]",
-        )
+        _add_row_keys_table(keys_table, setup.online_key, "Online")
 
         online_key_table.add_row(keys_table)
         console.print("\n", online_key_table)
@@ -509,13 +528,7 @@ def _run_user_validation():
             if role == Roles.ROOT:
                 keys_table = _init_keys_table()
                 for key in setup.root_keys.values():
-                    keys_table.add_row(
-                        f"[yellow]{key.key_path}[/]",
-                        "[bright_blue]Offline[/]",
-                        ":white_heavy_check_mark:",
-                        f"[yellow]{key.name}",
-                        key.key.get("keyid"),
-                    )
+                    _add_row_keys_table(keys_table, key, "Offline")
 
                 role_table.add_row(
                     (
@@ -531,12 +544,8 @@ def _run_user_validation():
             else:
                 keys_table = _init_keys_table(path=False)
                 if setup.online_key.key is not None:
-                    keys_table.add_row(
-                        "[green]Online[/]",
-                        ":white_heavy_check_mark:",
-                        f"[yellow]{setup.online_key.name}",
-                        key.key.get("keyid"),
-                    )
+                    _add_row_keys_table(keys_table, setup.online_key, "Online")
+
                 role_table.add_row(
                     (
                         f"Role: [cyan]{role.value}[/]"
