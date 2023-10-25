@@ -81,22 +81,22 @@ def test_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
         "",  # What is the metadata expiration for the bins role?(Days) (365)?
     ]
     input_step2 = [
-        "",  # Select the ONLINE`s key type [ed25519/ecdsa/rsa] (ed25519)
+        "",  # Choose ONLINE`s key type [ed25519/ecdsa/rsa] (ed25519)
         "f7a6872f297634219a80141caa2ec9ae8802098b07b67963272603e36cc19fd8",  # Enter ONLINE`s key id  # noqa
         "9fe7ddccb75b977a041424a1fdc142e01be4abab918dc4c611fbfe4a3360a9a8",  # Enter ONLINE`s public key hash   # noqa
-        "",  # Give a name/tag to the key [Optional]
+        "",  # [Optional] Give a name/tag to the root`s key
     ]
     input_step3 = [
         "y",  # Ready to start loading the root keys? [y/n]
-        "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+        "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
         "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
         "strongPass",  # Enter the root`s private key password
-        "",  # Give a name/tag to the key [Optional]
+        "",  # [Optional] Give a name/tag to the root`s key
         "private",  # Select to use private key or public? [private/public] (public)  # noqa
-        "",  # Select the root`s key type [ed25519/ecdsa/rsa] (ed25519)
+        "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
         "tests/files/key_storage/JimiHendrix.key",  # Enter the root`s private key path  # noqa
         "strongPass",  # Enter the root`s private key password
-        "",  # Give a name/tag to the key [Optional]
+        "",  # [Optional] Give a name/tag to the root`s key
     ]
     input_step4 = [
         "y",  # Is the online key configuration correct? [y/n]

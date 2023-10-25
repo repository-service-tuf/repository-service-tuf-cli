@@ -25,8 +25,8 @@ from repository_service_tuf.helpers.tuf import (
     RSTUFKey,
     ServiceSettings,
     TUFManagement,
+    get_key,
     get_supported_schemes_for_key_type,
-    load_key,
     load_payload,
     save_payload,
 )
@@ -344,7 +344,7 @@ def _configure_role(role: Roles) -> None:
 def _configure_keys(
     role: str, number_of_keys: int
 ) -> Generator[RSTUFKey, None, None]:
-    colored_role = click.style(role, fg="cyan")
+    role_cyan = click.style(role, fg="cyan")
     key_count = 1
     while key_count <= number_of_keys:
         console.print(
@@ -369,25 +369,12 @@ def _configure_keys(
             )
 
         key_type = prompt.Prompt.ask(
-            f"Select the {colored_role}`s key type",
+            f"Choose {role_cyan}`s key type",
             choices=KeyType.get_all_members(),
             default=KeyType.KEY_TYPE_ED25519.value,
         )
         if signing_key == "private":
-            filepath = prompt.Prompt.ask(
-                f"Enter the {colored_role}`s [green]private key path[/]"
-            )
-
-            password = click.prompt(
-                f"Enter the {colored_role}`s private key password",
-                hide_input=True,
-            )
-            name = prompt.Prompt.ask(
-                "[Optional] Give a name/tag to the key",
-                default="",
-                show_default=False,
-            )
-            role_key: RSTUFKey = load_key(filepath, key_type, password, name)
+            role_key: RSTUFKey = get_key(role, key_type, ask_name=True)
             if role_key.error:
                 console.print(role_key.error)
 
@@ -403,27 +390,27 @@ def _configure_keys(
                 scheme = allowed_schemes[0]
             else:
                 scheme = prompt.Prompt.ask(
-                    f"Choose {colored_role}`s [green]public key scheme[/]",
+                    f"Choose {role_cyan}`s [green]public key scheme[/]",
                     choices=allowed_schemes,
                     default=SCHEME_DEFAULTS[key_type],
                 )
 
             while True:
                 keyid = prompt.Prompt.ask(
-                    f"Enter {colored_role}`s [green]key id[/]"
+                    f"Enter {role_cyan}`s [green]key id[/]"
                 )
                 if keyid.strip() != "":
                     break
 
             while True:
                 public = prompt.Prompt.ask(
-                    f"Enter {colored_role}`s [green]public key hash[/]"
+                    f"Enter {role_cyan}`s [green]public key hash[/]"
                 )
                 if public.strip() != "":
                     break
 
             name = prompt.Prompt.ask(
-                "Give a name/tag to the key [Optional]",
+                f"[Optional] Give a [green]name/tag[/] to the {role_cyan} key",
                 default=keyid[:7],
                 show_default=False,
             )

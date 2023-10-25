@@ -14,7 +14,6 @@ from tuf.api.serialization import DeserializationError
 
 from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.admin import admin
-from repository_service_tuf.constants import KeyType
 from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,
@@ -27,7 +26,7 @@ from repository_service_tuf.helpers.tuf import (
     MetadataInfo,
     RSTUFKey,
     UnsignedMetadataError,
-    load_key,
+    get_key,
     load_payload,
     save_payload,
 )
@@ -204,25 +203,6 @@ def _print_md_info(md_info: MetadataInfo, trusted_md: Optional[bool] = True):
     console.print("\n")
 
 
-def _get_key(role: str) -> RSTUFKey:
-    key_type = prompt.Prompt.ask(
-        f"\nChoose [cyan]{role}[/] key type",
-        choices=KeyType.get_all_members(),
-        default=KeyType.KEY_TYPE_ED25519.value,
-    )
-    filepath = prompt.Prompt.ask(
-        f"Enter the [cyan]{role}[/]`s private key [green]path[/]"
-    )
-    colored_role = click.style(role, fg="cyan")
-    colored_pass = click.style("password", fg="green")
-    password = click.prompt(
-        f"Enter the {colored_role}`s private key {colored_pass}",
-        hide_input=True,
-    )
-
-    return load_key(filepath, key_type, password, "")
-
-
 def _is_valid_current_key(
     keyid: str, root_info: MetadataInfo, already_loaded_keyids: List[str]
 ) -> bool:
@@ -261,7 +241,7 @@ def _current_md_keys_validation(root_info: MetadataInfo):
         console.print(
             f"You will enter information for key {key_count} of {threshold}"
         )
-        root_key: RSTUFKey = _get_key(Root.type)
+        root_key: RSTUFKey = get_key(Root.type)
         if root_key.error:
             console.print(f"Failed loading key {key_count} of {threshold}")
             console.print(root_key.error)
@@ -330,7 +310,7 @@ def _keys_additions(root_info: MetadataInfo):
         else:
             console.print(f"You must add {signing_keys_needed} more key(s)")
 
-        root_key: RSTUFKey = _get_key(Root.type)
+        root_key: RSTUFKey = get_key(Root.type, "", ask_name=True)
         if root_key.error:
             console.print(root_key.error)
             continue
@@ -345,10 +325,6 @@ def _keys_additions(root_info: MetadataInfo):
         if root_info.is_keyid_used(root_key.key["keyid"]):
             console.print(":cross_mark: [red]Failed[/]: Key is already used")
             continue
-
-        root_key.name = prompt.Prompt.ask(
-            "[Optional] Give a [green]name/tag[/] to the key"
-        )
 
         root_info.add_key(root_key)
 
@@ -443,7 +419,7 @@ def _modify_online_key(root_info: MetadataInfo):
             console.print("Skipping further online key changes")
             break
 
-        online_key: RSTUFKey = _get_key("online")
+        online_key: RSTUFKey = get_key("online", ask_name=True)
         if online_key.error:
             console.print(online_key.error)
             continue
@@ -459,10 +435,6 @@ def _modify_online_key(root_info: MetadataInfo):
                 ":cross_mark: [red]Failed[/]: Key matches one of the root keys"
             )
             continue
-
-        online_key.name = prompt.Prompt.ask(
-            "[Optional] Give a [green]name/tag[/] to the key"
-        )
 
         root_info.change_online_key(online_key)
 
@@ -670,7 +642,7 @@ def _get_signing_key(role_info: MetadataInfo) -> RSTUFKey:
     )
 
     while True:
-        rstuf_key = _get_key(sign_key_name)
+        rstuf_key: RSTUFKey = get_key(sign_key_name)
         if rstuf_key.error:
             console.print(rstuf_key.error)
             retry = prompt.Confirm.ask(

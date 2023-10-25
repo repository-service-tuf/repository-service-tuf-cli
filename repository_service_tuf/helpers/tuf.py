@@ -10,7 +10,7 @@ from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import click
-from rich import table
+from rich import prompt, table
 from rich.console import Console
 from securesystemslib.exceptions import (  # type: ignore
     CryptoError,
@@ -28,6 +28,8 @@ from securesystemslib.signer import SSlibKey as Key  # type: ignore
 from tuf.api.exceptions import UnsignedMetadataError
 from tuf.api.metadata import SPECIFICATION_VERSION, Metadata, Role, Root
 from tuf.api.serialization.json import JSONSerializer
+
+from repository_service_tuf.constants import KeyType
 
 console = Console()
 
@@ -437,16 +439,45 @@ def get_supported_schemes_for_key_type(key_type: str) -> List[str]:
     return supported_schemes
 
 
-def load_key(
-    filepath: str, keytype: str, password: Optional[str], name: str
+def get_key(
+    role: Optional[str] = None,
+    key_type: str = "",
+    ask_name: bool = False,
 ) -> RSTUFKey:
+    role = f"{click.style(role, fg='cyan')}`s " if role is not None else ""
+    if key_type == "":
+        key_type = prompt.Prompt.ask(
+            f"\nChoose {role}key type",
+            choices=KeyType.get_all_members(),
+            default=KeyType.KEY_TYPE_ED25519.value,
+        )
+
+    filepath: str = prompt.Prompt.ask(
+        f"Enter the {role}private key [green]path[/]"
+    )
+    password_green = click.style("password", fg="green")
+    password: str = click.prompt(
+        f"Enter the {role}private key {password_green}", hide_input=True
+    )
+    name = ""
+    if ask_name:
+        name = prompt.Prompt.ask(
+            f"[Optional] Give a [green]name/tag[/] to the {role}key",
+            default="",
+            show_default=False,
+        )
+
+    return load_key(filepath, key_type, password, name)
+
+
+def load_key(path: str, keytype: str, password: str, name: str) -> RSTUFKey:
     """Load a securesystemslib private key file into an RSTUFKey object"""
     try:
-        key = import_privatekey_from_file(filepath, keytype, password)
+        key = import_privatekey_from_file(path, keytype, password)
         # Make sure name cannot be an empty string.
         # If no name is given use first 7 letters of the keyid.
         name = name if name != "" else key["keyid"][:7]
-        return RSTUFKey(key=key, key_path=filepath, name=name)
+        return RSTUFKey(key=key, key_path=path, name=name)
     except CryptoError as err:
         return RSTUFKey(
             error=(
