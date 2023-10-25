@@ -10,6 +10,7 @@ Subpackages
    repository_service_tuf.cli.admin
    repository_service_tuf.cli.artifact
    repository_service_tuf.cli.key
+   repository_service_tuf.cli.task
 
 Module contents
 ---------------

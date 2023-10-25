@@ -913,3 +913,47 @@ This command adds the provided artifact to the TUF Metadata using the RSTUF REST
     │ --help          -h    Show this message and exit.                                                │
     ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 
+
+.. rstuf-cli-task
+
+Task Management (``task``)
+==================================
+
+Manages tasks using the RSTUF REST API.
+
+.. code::
+
+    ❯ rstuf task
+
+    Usage: rstuf task [OPTIONS] COMMAND [ARGS]...
+
+    Task Management Commands
+
+    ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --help          -h    Show this message and exit.                                                │
+    ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+    ╭─ Commands ───────────────────────────────────────────────────────────────────────────────────────╮
+    │ info          Retrieve task state.                                                               │
+    ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+.. rstuf-cli-task-info
+
+Task Information (``info``)
+---------------------------
+
+This command retrieves the task state of the given task ID using the RSTUF REST API.
+
+.. code::
+
+    ❯ rstuf task info --help
+
+    Usage: rstuf task info [OPTIONS] TASK_ID
+
+    Retrieve task state.
+
+    ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --api-server      TEXT  RSTUF API URL, i.e., http://127.0.0.1                                    │
+    │ --help          -h    Show this message and exit.                                                │
+    ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+
