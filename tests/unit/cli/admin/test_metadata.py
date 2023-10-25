@@ -107,17 +107,20 @@ class TestMetadataUpdate:
             data = json.loads(f.read())
             root = Metadata.from_dict(data["metadata"]["root"])
 
-        for root_key_id in root.signed.roles["root"].keyids:
-            root_key = root.signed.keys[root_key_id]
-            # Only "Steven's key" is left which existed from the initial root
+        for root_id in root.signed.roles["root"].keyids:
+            root_key = root.signed.keys[root_id]
+            # Only "Steven's key" is left which existed from the initial root.
+            # For the rest of the keys there is no input and we expect them to
+            # have a default name.
             if root_key.unrecognized_fields.get("name") != "Steven's Key":
-                assert root_key.unrecognized_fields.get("name") is None
+                assert root_key.unrecognized_fields.get("name") == root_id[:7]
 
         online_roles = ["timestamp", "snapshot", "targets"]
         for role in online_roles:
             keyid = root.signed.roles[role].keyids[0]
             key = root.signed.keys[keyid]
-            assert key.unrecognized_fields.get("name") is None
+            # Make sure the online key name has been given a default value
+            assert key.unrecognized_fields.get("name") == keyid[:7]
 
     def test_metadata_update_no_root_changes(
         self, client, test_context, md_update_input
