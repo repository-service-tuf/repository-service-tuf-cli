@@ -16,6 +16,7 @@ dynaconf = {extras = ["yaml"], version = "*"}
 isort = "*"
 sqlalchemy = "*"
 psycopg2 = "*"
+pytest-xdist = "*"
 
 [dev-packages]
 black = "*"
