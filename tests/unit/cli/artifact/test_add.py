@@ -22,6 +22,8 @@ class TestAddArtifactInteraction:
             artifact_path,  # artifact filepath
             "--path",
             path,
+            "--api-server",
+            "fake-server",
         ]
 
         add.create_artifact_payload_from_filepath = pretend.call_recorder(
@@ -35,20 +37,38 @@ class TestAddArtifactInteraction:
 
             result = client.invoke(add.add, input, obj=test_context)
 
-            assert add.create_artifact_payload_from_filepath.calls == [
-                pretend.call(filepath=artifact_path, path=path)
-            ]
+        assert result.exit_code == 0, result.output
+        assert "Successfully submitted task" in result.output
+        assert "RSTUF task ID" in result.output
 
-            assert add.send_payload.calls == [
-                pretend.call(
-                    settings=test_context["settings"],
-                    url=URL.ARTIFACTS.value,
-                    payload={"k": "v"},
-                    expected_msg="Target(s) successfully submitted.",
-                    command_name="Artifact Addition",
-                )
-            ]
+        assert add.create_artifact_payload_from_filepath.calls == [
+            pretend.call(filepath=artifact_path, path=path)
+        ]
 
-            assert result.exit_code == 0, result.output
-            assert "Successfully submitted task" in result.output
-            assert "RSTUF task ID" in result.output
+        assert add.send_payload.calls == [
+            pretend.call(
+                settings=test_context["settings"],
+                url=URL.ARTIFACTS.value,
+                payload={"k": "v"},
+                expected_msg="New Artifact(s) successfully submitted.",
+                command_name="Artifact Addition",
+            )
+        ]
+
+    def test_add_without_api_server(self, client, test_context):
+        artifact_path = "dummy-artifact"
+        path = "target/path"
+
+        input = [
+            artifact_path,  # artifact filepath
+            "--path",
+            path,
+        ]
+        with client.isolated_filesystem():
+            with open(artifact_path, "w") as f:
+                f.write("Dummy Artifact")
+
+            result = client.invoke(add.add, input, obj=test_context)
+
+        assert result.exit_code == 1, result.output
+        assert "Requires '--api-server'" in result.output
