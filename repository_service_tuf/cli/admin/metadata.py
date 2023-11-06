@@ -524,7 +524,7 @@ def update(
 
         task_id = send_payload(
             settings=settings,
-            url=URL.metadata.value,
+            url=URL.METADATA.value,
             payload=payload,
             expected_msg="Metadata update accepted.",
             command_name="Metadata Update",
@@ -584,7 +584,7 @@ def update(
         if upload:
             task_id = send_payload(
                 settings=settings,
-                url=URL.metadata.value,
+                url=URL.METADATA.value,
                 payload=payload,
                 expected_msg="Metadata update accepted.",
                 command_name="Metadata Update",
@@ -609,7 +609,7 @@ def _get_pending_roles(
         settings.SERVER = api_server
 
     response = request_server(
-        settings.SERVER, URL.metadata_sign.value, Methods.get
+        settings.SERVER, URL.METADATA_SIGN.value, Methods.GET
     )
     if response.status_code != 200:
         raise click.ClickException(
@@ -727,7 +727,7 @@ def sign(context, api_server: Optional[str], delete: Optional[bool]) -> None:
         payload = {"role": rolename}
         task_id = send_payload(
             settings,
-            URL.metadata_sign_delete.value,
+            URL.METADATA_SIGN_DELETE.value,
             payload,
             "Metadata delete sign accepted.",
             "Metadata delete sign",
@@ -748,7 +748,7 @@ def sign(context, api_server: Optional[str], delete: Optional[bool]) -> None:
     console.print("\nSending signature")
     task_id = send_payload(
         settings,
-        URL.metadata_sign.value,
+        URL.METADATA_SIGN.value,
         payload,
         "Metadata sign accepted.",
         "Metadata sign",

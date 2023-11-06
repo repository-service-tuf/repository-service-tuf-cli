@@ -585,7 +585,7 @@ class TestMetadataUpdateOptions:
         assert metadata.send_payload.calls == [
             pretend.call(
                 settings=test_context["settings"],
-                url=URL.metadata.value,
+                url=URL.METADATA.value,
                 payload={"data": "а"},
                 expected_msg="Metadata update accepted.",
                 command_name="Metadata Update",
@@ -685,7 +685,7 @@ class TestMetadataUpdateOptions:
         assert metadata.send_payload.calls == [
             pretend.call(
                 settings=test_context["settings"],
-                url=URL.metadata.value,
+                url=URL.METADATA.value,
                 payload={"data": "foo"},
                 expected_msg="Metadata update accepted.",
                 command_name="Metadata Update",
@@ -736,13 +736,13 @@ class TestMetadataSign:
             pretend.call(
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
-                metadata.Methods.get,
+                metadata.Methods.GET,
             )
         ]
         assert metadata.send_payload.calls == [
             pretend.call(
                 test_context["settings"],
-                URL.metadata_sign.value,
+                URL.METADATA_SIGN.value,
                 {
                     "role": "root",
                     "signature": {
@@ -786,7 +786,7 @@ class TestMetadataSign:
             pretend.call(
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
-                metadata.Methods.get,
+                metadata.Methods.GET,
             )
         ]
 
@@ -815,7 +815,7 @@ class TestMetadataSign:
             pretend.call(
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
-                metadata.Methods.get,
+                metadata.Methods.GET,
             )
         ]
 
@@ -843,7 +843,7 @@ class TestMetadataSign:
             pretend.call(
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
-                metadata.Methods.get,
+                metadata.Methods.GET,
             )
         ]
 
@@ -886,13 +886,13 @@ class TestMetadataSign:
             pretend.call(
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
-                metadata.Methods.get,
+                metadata.Methods.GET,
             )
         ]
         assert metadata.send_payload.calls == [
             pretend.call(
                 test_context["settings"],
-                URL.metadata_sign.value,
+                URL.METADATA_SIGN.value,
                 {
                     "role": "root",
                     "signature": {
@@ -942,7 +942,7 @@ class TestMetadataSign:
             pretend.call(
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
-                metadata.Methods.get,
+                metadata.Methods.GET,
             )
         ]
 
@@ -987,13 +987,13 @@ class TestMetadataSign:
             pretend.call(
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
-                metadata.Methods.get,
+                metadata.Methods.GET,
             )
         ]
         assert metadata.send_payload.calls == [
             pretend.call(
                 test_context["settings"],
-                URL.metadata_sign.value,
+                URL.METADATA_SIGN.value,
                 {
                     "role": "root",
                     "signature": {
@@ -1046,7 +1046,7 @@ class TestMetadataSign:
             pretend.call(
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
-                metadata.Methods.get,
+                metadata.Methods.GET,
             )
         ]
 
@@ -1084,7 +1084,7 @@ class TestMetadataSign:
             pretend.call(
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
-                metadata.Methods.get,
+                metadata.Methods.GET,
             )
         ]
 
@@ -1129,13 +1129,13 @@ class TestMetadataSignOptions:
             pretend.call(
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
-                metadata.Methods.get,
+                metadata.Methods.GET,
             )
         ]
         assert metadata.send_payload.calls == [
             pretend.call(
                 test_context["settings"],
-                URL.metadata_sign.value,
+                URL.METADATA_SIGN.value,
                 {
                     "role": "root",
                     "signature": {
@@ -1191,6 +1191,6 @@ class TestMetadataSignOptions:
             pretend.call(
                 "http://127.0.0.1",
                 "api/v1/metadata/sign/",
-                metadata.Methods.get,
+                metadata.Methods.GET,
             ),
         ]

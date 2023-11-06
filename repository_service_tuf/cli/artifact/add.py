@@ -49,7 +49,7 @@ def add(context: Context, filepath: str, path: str) -> str:
 
     task_id = send_payload(
         settings=settings,
-        url=URL.artifacts.value,
+        url=URL.ARTIFACTS.value,
         payload=payload,
         expected_msg="Target(s) successfully submitted.",
         command_name="Artifact Addition",

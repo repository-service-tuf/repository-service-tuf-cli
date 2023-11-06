@@ -42,7 +42,7 @@ class TestAddArtifactInteraction:
             assert add.send_payload.calls == [
                 pretend.call(
                     settings=test_context["settings"],
-                    url=URL.artifacts.value,
+                    url=URL.ARTIFACTS.value,
                     payload={"k": "v"},
                     expected_msg="Target(s) successfully submitted.",
                     command_name="Artifact Addition",

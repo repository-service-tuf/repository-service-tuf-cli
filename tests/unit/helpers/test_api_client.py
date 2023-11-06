@@ -23,7 +23,7 @@ class TestAPIClient:
             get=pretend.call_recorder(lambda *a, **kw: fake_response)
         )
         result = api_client.request_server(
-            "http://server", "url", api_client.Methods.get
+            "http://server", "url", api_client.Methods.GET
         )
 
         assert result == fake_response
@@ -47,7 +47,7 @@ class TestAPIClient:
         )
 
         result = api_client.request_server(
-            "http://server", "url", api_client.Methods.post, {"k": "v"}
+            "http://server", "url", api_client.Methods.POST, {"k": "v"}
         )
 
         assert result == fake_response
@@ -71,7 +71,7 @@ class TestAPIClient:
         )
 
         result = api_client.request_server(
-            "http://server", "url", api_client.Methods.delete, {"k": "v"}
+            "http://server", "url", api_client.Methods.DELETE, {"k": "v"}
         )
 
         assert result == fake_response
@@ -99,7 +99,7 @@ class TestAPIClient:
         )
         with pytest.raises(api_client.click.exceptions.ClickException) as err:
             api_client.request_server(
-                "http://server", "url", api_client.Methods.post, {"k": "v"}
+                "http://server", "url", api_client.Methods.POST, {"k": "v"}
             )
 
         assert "Failed to connect to http://server" in str(err.value)
@@ -118,8 +118,8 @@ class TestAPIClient:
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
-                api_client.URL.bootstrap.value,
-                api_client.Methods.get,
+                api_client.URL.BOOTSTRAP.value,
+                api_client.Methods.GET,
             )
         ]
 
@@ -140,8 +140,8 @@ class TestAPIClient:
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
-                api_client.URL.bootstrap.value,
-                api_client.Methods.get,
+                api_client.URL.BOOTSTRAP.value,
+                api_client.Methods.GET,
             )
         ]
 
@@ -162,8 +162,8 @@ class TestAPIClient:
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
-                api_client.URL.bootstrap.value,
-                api_client.Methods.get,
+                api_client.URL.BOOTSTRAP.value,
+                api_client.Methods.GET,
             )
         ]
 
@@ -183,8 +183,8 @@ class TestAPIClient:
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
-                api_client.URL.bootstrap.value,
-                api_client.Methods.get,
+                api_client.URL.BOOTSTRAP.value,
+                api_client.Methods.GET,
             )
         ]
 
@@ -220,22 +220,22 @@ class TestAPIClient:
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
-                api_client.Methods.get,
+                api_client.Methods.GET,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
-                api_client.Methods.get,
+                api_client.Methods.GET,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
-                api_client.Methods.get,
+                api_client.Methods.GET,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
-                api_client.Methods.get,
+                api_client.Methods.GET,
             ),
         ]
 
@@ -287,17 +287,17 @@ class TestAPIClient:
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
-                api_client.Methods.get,
+                api_client.Methods.GET,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
-                api_client.Methods.get,
+                api_client.Methods.GET,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
-                api_client.Methods.get,
+                api_client.Methods.GET,
             ),
         ]
 
@@ -322,7 +322,7 @@ class TestAPIClient:
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
-                api_client.Methods.get,
+                api_client.Methods.GET,
             ),
         ]
 
@@ -346,7 +346,7 @@ class TestAPIClient:
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
-                api_client.Methods.get,
+                api_client.Methods.GET,
             ),
         ]
 
@@ -370,7 +370,7 @@ class TestAPIClient:
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
-                api_client.Methods.get,
+                api_client.Methods.GET,
             ),
         ]
 
@@ -409,17 +409,17 @@ class TestAPIClient:
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
-                api_client.Methods.get,
+                api_client.Methods.GET,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
-                api_client.Methods.get,
+                api_client.Methods.GET,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
-                api_client.Methods.get,
+                api_client.Methods.GET,
             ),
         ]
 
@@ -440,8 +440,8 @@ class TestAPIClient:
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
-                api_client.URL.publish_targets.value,
-                api_client.Methods.post,
+                api_client.URL.PUBLISH_TARGETS.value,
+                api_client.Methods.POST,
             )
         ]
 
@@ -462,8 +462,8 @@ class TestAPIClient:
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
-                api_client.URL.publish_targets.value,
-                api_client.Methods.post,
+                api_client.URL.PUBLISH_TARGETS.value,
+                api_client.Methods.POST,
             )
         ]
 
@@ -483,7 +483,7 @@ class TestAPIClient:
         )
         result = api_client.send_payload(
             settings=test_context["settings"],
-            url=api_client.URL.bootstrap.value,
+            url=api_client.URL.BOOTSTRAP.value,
             payload={"payload": "data"},
             expected_msg="Bootstrap accepted.",
             command_name="Bootstrap",
@@ -493,8 +493,8 @@ class TestAPIClient:
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
-                api_client.URL.bootstrap.value,
-                api_client.Methods.post,
+                api_client.URL.BOOTSTRAP.value,
+                api_client.Methods.POST,
                 {"payload": "data"},
             )
         ]
@@ -518,7 +518,7 @@ class TestAPIClient:
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.send_payload(
                 settings=test_context["settings"],
-                url=api_client.URL.bootstrap.value,
+                url=api_client.URL.BOOTSTRAP.value,
                 payload={"payload": "data"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
@@ -529,8 +529,8 @@ class TestAPIClient:
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
-                api_client.URL.bootstrap.value,
-                api_client.Methods.post,
+                api_client.URL.BOOTSTRAP.value,
+                api_client.Methods.POST,
                 {"payload": "data"},
             )
         ]
@@ -553,7 +553,7 @@ class TestAPIClient:
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.send_payload(
                 settings=test_context["settings"],
-                url=api_client.URL.bootstrap.value,
+                url=api_client.URL.BOOTSTRAP.value,
                 payload={"payload": "data"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
@@ -564,8 +564,8 @@ class TestAPIClient:
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
-                api_client.URL.bootstrap.value,
-                api_client.Methods.post,
+                api_client.URL.BOOTSTRAP.value,
+                api_client.Methods.POST,
                 {"payload": "data"},
             )
         ]
@@ -589,7 +589,7 @@ class TestAPIClient:
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.send_payload(
                 settings=test_context["settings"],
-                url=api_client.URL.bootstrap.value,
+                url=api_client.URL.BOOTSTRAP.value,
                 payload={"payload": "data"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
@@ -600,8 +600,8 @@ class TestAPIClient:
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
-                api_client.URL.bootstrap.value,
-                api_client.Methods.post,
+                api_client.URL.BOOTSTRAP.value,
+                api_client.Methods.POST,
                 {"payload": "data"},
             )
         ]
@@ -625,7 +625,7 @@ class TestAPIClient:
         with pytest.raises(api_client.click.ClickException) as err:
             api_client.send_payload(
                 settings=test_context["settings"],
-                url=api_client.URL.bootstrap.value,
+                url=api_client.URL.BOOTSTRAP.value,
                 payload={"payload": "data"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
@@ -636,8 +636,8 @@ class TestAPIClient:
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
-                api_client.URL.bootstrap.value,
-                api_client.Methods.post,
+                api_client.URL.BOOTSTRAP.value,
+                api_client.Methods.POST,
                 {"payload": "data"},
             )
         ]
