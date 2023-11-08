@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
+import base64
 import copy
 import json
 from dataclasses import asdict, dataclass, field
@@ -10,6 +11,7 @@ from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import click
+from cryptography.hazmat.primitives import serialization
 from rich import prompt, table
 from rich.console import Console
 from securesystemslib.exceptions import (  # type: ignore
@@ -437,6 +439,22 @@ def get_supported_schemes_for_key_type(key_type: str) -> List[str]:
             supported_schemes.append(info[1])
 
     return supported_schemes
+
+
+def _conform_rsa_key(input_key: str) -> str:
+    "Conform public key in base64 format to format used by securesystemslib."
+    try:
+        kms_pubkey = serialization.load_der_public_key(
+            base64.b64decode(input_key)
+        )
+        public_key_pem = kms_pubkey.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo,
+        ).decode("utf-8")
+
+        return public_key_pem
+    except Exception:
+        return input_key
 
 
 def get_key(
