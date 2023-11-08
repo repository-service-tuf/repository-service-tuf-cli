@@ -16,20 +16,20 @@ console = Console()
 
 
 class URL(Enum):
-    bootstrap = "api/v1/bootstrap/"
-    config = "api/v1/config/"
-    metadata = "api/v1/metadata/"
-    task = "api/v1/task/?task_id="
-    publish_targets = "api/v1/artifacts/publish/"
-    metadata_sign = "api/v1/metadata/sign/"
-    metadata_sign_delete = "api/v1/metadata/sign/delete"
-    artifacts = "api/v1/artifacts/"
+    BOOTSTRAP = "api/v1/bootstrap/"
+    CONFIG = "api/v1/config/"
+    METADATA = "api/v1/metadata/"
+    TASK = "api/v1/task/?task_id="
+    PUBLISH_TARGETS = "api/v1/artifacts/publish/"
+    METADATA_SIGN = "api/v1/metadata/sign/"
+    METADATA_SIGN_DELETE = "api/v1/metadata/sign/delete"
+    ARTIFACTS = "api/v1/artifacts/"
 
 
 class Methods(Enum):
-    get = "get"
-    post = "post"
-    delete = "delete"
+    GET = "get"
+    POST = "post"
+    DELETE = "delete"
 
 
 def request_server(
@@ -41,7 +41,7 @@ def request_server(
     headers: Optional[Dict[str, str]] = None,
 ) -> requests.Response:
     try:
-        if method == Methods.get:
+        if method == Methods.GET:
             response = requests.get(
                 f"{server}/{url}",
                 json=payload,
@@ -50,7 +50,7 @@ def request_server(
                 timeout=300,
             )
 
-        elif method == Methods.post:
+        elif method == Methods.POST:
             response = requests.post(
                 f"{server}/{url}",
                 json=payload,
@@ -59,7 +59,7 @@ def request_server(
                 timeout=300,
             )
 
-        elif method == Methods.delete:
+        elif method == Methods.DELETE:
             response = requests.delete(
                 f"{server}/{url}",
                 json=payload,
@@ -79,7 +79,7 @@ def request_server(
 
 def bootstrap_status(settings: LazySettings) -> Dict[str, Any]:
     response = request_server(
-        settings.SERVER, URL.bootstrap.value, Methods.get
+        settings.SERVER, URL.BOOTSTRAP.value, Methods.GET
     )
     if response.status_code == 404:
         raise click.ClickException(
@@ -107,8 +107,8 @@ def task_status(
     while True:
         state_response = request_server(
             settings.SERVER,
-            f"{URL.task.value}{task_id}",
-            Methods.get,
+            f"{URL.TASK.value}{task_id}",
+            Methods.GET,
         )
 
         if state_response.status_code != 200:
@@ -161,8 +161,8 @@ def task_status(
 def publish_targets(settings: LazySettings) -> str:
     publish_targets = request_server(
         settings.SERVER,
-        URL.publish_targets.value,
-        Methods.post,
+        URL.PUBLISH_TARGETS.value,
+        Methods.POST,
     )
     if publish_targets.status_code != 202:
         raise click.ClickException(
@@ -198,7 +198,7 @@ def send_payload(
     response = request_server(
         settings.SERVER,
         url,
-        Methods.post,
+        Methods.POST,
         payload,
     )
 

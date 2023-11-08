@@ -550,7 +550,7 @@ class TestCeremonyOptions:
         assert ceremony.send_payload.calls == [
             pretend.call(
                 settings=test_context["settings"],
-                url=URL.bootstrap.value,
+                url=URL.BOOTSTRAP.value,
                 payload={"k": "v"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
@@ -623,7 +623,7 @@ class TestCeremonyOptions:
         assert ceremony.send_payload.calls == [
             pretend.call(
                 settings=test_context["settings"],
-                url=URL.bootstrap.value,
+                url=URL.BOOTSTRAP.value,
                 payload={"k": "v"},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",

@@ -738,7 +738,7 @@ def ceremony(
         console.print("Starting online bootstrap")
         task_id = send_payload(
             settings=settings,
-            url=URL.bootstrap.value,
+            url=URL.BOOTSTRAP.value,
             payload=bootstrap_payload,
             expected_msg="Bootstrap accepted.",
             command_name="Bootstrap",
@@ -757,7 +757,7 @@ def ceremony(
         if bootstrap is True:
             task_id = send_payload(
                 settings=settings,
-                url=URL.bootstrap.value,
+                url=URL.BOOTSTRAP.value,
                 payload=bootstrap_payload,
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
