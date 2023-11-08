@@ -93,7 +93,7 @@ def _import_csv_to_rstuf(
 
 
 def _get_succinct_roles(api_server: str) -> SuccinctRoles:
-    response = request_server(api_server, URL.config.value, Methods.get)
+    response = request_server(api_server, URL.CONFIG.value, Methods.GET)
     if response.status_code != 200:
         raise click.ClickException(
             f"Failed to retrieve RSTUF config {response.text}"

@@ -204,8 +204,8 @@ class TestImportArtifactsFunctions:
         assert import_artifacts.request_server.calls == [
             pretend.call(
                 "http://127.0.0.1",
-                import_artifacts.URL.config.value,
-                import_artifacts.Methods.get,
+                import_artifacts.URL.CONFIG.value,
+                import_artifacts.Methods.GET,
             )
         ]
         assert import_artifacts.SuccinctRoles.calls == [
@@ -240,8 +240,8 @@ class TestImportArtifactsFunctions:
         assert import_artifacts.request_server.calls == [
             pretend.call(
                 "http://127.0.0.1",
-                import_artifacts.URL.config.value,
-                import_artifacts.Methods.get,
+                import_artifacts.URL.CONFIG.value,
+                import_artifacts.Methods.GET,
             )
         ]
         assert fake_response.json.calls == [pretend.call()]
