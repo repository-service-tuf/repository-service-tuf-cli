@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 import copy
+import json
 import sys
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
@@ -112,15 +113,16 @@ METADATA_SIGNING = """
 # Metadata Signing
 
 Metadata signing allows sending signature of pending Repository Service for TUF
-(RSTUF) role metadata to an existing RSTUF API deployment.
+(RSTUF) role metadata to an existing RSTUF API deployment. Or saving the
+signature locally.
 
 The Metadata Signing does the following steps:
-- retrieves the metadata pending for signatures from RSTUF API
+- retrieves the metadata pending for signatures from RSTUF API or local file
 - selects the metadata role for signing
 - loads the private key for signing
 
 After loading the key it will sign the role metadata and send the request to
-the RSTUF API with the signature.
+the RSTUF API with the signature, or save the signature locally.
 """
 
 
@@ -599,26 +601,32 @@ def update(
 
 
 def _get_pending_roles(
-    settings: Any, api_server: Optional[str]
+    settings: Any,
+    api_server: Optional[str],
+    offline_metadata: Optional[click.File],
 ) -> Dict[str, Any]:
-    if api_server:
-        settings.SERVER = api_server
+    response_data: Dict[str, Any]
+    if offline_metadata:
+        response_data = json.load(offline_metadata)  # type: ignore
+    else:
+        if api_server:
+            settings.SERVER = api_server
 
-    if settings.get("SERVER") is None:
-        api_server = prompt.Prompt.ask("\n[cyan]API[/] URL address")
-        settings.SERVER = api_server
+        if settings.get("SERVER") is None:
+            api_server = prompt.Prompt.ask("\n[cyan]API[/] URL address")
+            settings.SERVER = api_server
 
-    response = request_server(
-        settings.SERVER, URL.METADATA_SIGN.value, Methods.GET
-    )
-    if response.status_code != 200:
-        raise click.ClickException(
-            f"Failed to retrieve metadata for signing. Error: {response.text}"
+        response = request_server(
+            settings.SERVER, URL.METADATA_SIGN.value, Methods.GET
         )
+        if response.status_code != 200:
+            raise click.ClickException(
+                f"Failed to fetch metadata for signing. Error: {response.text}"
+            )
 
-    response_data: Dict[str, Any] = response.json().get("data")
-    if response_data is None:
-        raise click.ClickException(response.text)
+        response_data = response.json().get("data")
+        if response_data is None:
+            raise click.ClickException(response.text)
 
     pending_roles: Dict[str, Any] = response_data.get("metadata", {})
     if len(pending_roles) == 0:
@@ -689,8 +697,14 @@ def _sign_metadata(role_info: MetadataInfo, rstuf_key: RSTUFKey) -> Signature:
     required=False,
     is_flag=True,
 )
+@click.argument("offline_metadata", required=False, type=click.File("r"))
 @click.pass_context
-def sign(context, api_server: Optional[str], delete: Optional[bool]) -> None:
+def sign(
+    context,
+    api_server: Optional[str],
+    delete: Optional[bool],
+    offline_metadata: Optional[click.File],
+) -> None:
     """
     Start metadata signature.
     """
@@ -698,7 +712,7 @@ def sign(context, api_server: Optional[str], delete: Optional[bool]) -> None:
 
     settings = context.obj["settings"]
 
-    pending_roles = _get_pending_roles(settings, api_server)
+    pending_roles = _get_pending_roles(settings, api_server, offline_metadata)
     role_info: MetadataInfo
     rolename: str
 
@@ -743,15 +757,22 @@ def sign(context, api_server: Optional[str], delete: Optional[bool]) -> None:
 
     rstuf_key = _get_signing_key(role_info)
     signature = _sign_metadata(role_info, rstuf_key)
-
     payload = {"role": rolename, "signature": signature.to_dict()}
-    console.print("\nSending signature")
-    task_id = send_payload(
-        settings,
-        URL.METADATA_SIGN.value,
-        payload,
-        "Metadata sign accepted.",
-        "Metadata sign",
-    )
-    task_status(task_id, settings, "Metadata sign status:")
+
+    if offline_metadata:
+        with open("signature.json", "w") as write_signature:
+            json.dump(payload, write_signature)
+
+    else:
+        console.print("\nSending signature")
+        task_id = send_payload(
+            settings,
+            URL.METADATA_SIGN.value,
+            payload,
+            "Metadata sign accepted.",
+            "Metadata sign",
+        )
+        task_status(task_id, settings, "Metadata sign status:")
+
+    console.print_json(json.dumps(payload))
     console.print("\nMetadata Signed! 🔑\n")
