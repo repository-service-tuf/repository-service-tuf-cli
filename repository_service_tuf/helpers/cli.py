@@ -70,7 +70,7 @@ def calculate_blake2b_256(filepath: str) -> str:
 
 
 def create_artifact_payload_from_filepath(
-    filepath: str, path: str
+    filepath: str, path: Optional[str]
 ) -> Dict[str, Any]:
     """
     Create the payload for the API request of `POST api/v1/artifacts/`.
@@ -83,6 +83,11 @@ def create_artifact_payload_from_filepath(
     length: int = os.path.getsize(filepath)
     blake2b_256_hash: str = calculate_blake2b_256(filepath)
 
+    if path:
+        payload_path = f"{path.rstrip('/')}/{filepath.split('/')[-1]}"
+    else:
+        payload_path = f"{filepath.split('/')[-1]}"
+
     payload = AddPayload(
         targets=[
             Targets(
@@ -93,7 +98,7 @@ def create_artifact_payload_from_filepath(
                     },
                     custom=None,
                 ),
-                path=f"{path.rstrip('/')}/{filepath.split('/')[-1]}",
+                path=payload_path,
             )
         ]
     )

@@ -22,11 +22,10 @@ class TestAddArtifactInteraction:
             artifact_path,  # artifact filepath
             "--path",
             path,
+            "--api-server",
+            "fake-server",
         ]
 
-        add.create_artifact_payload_from_filepath = pretend.call_recorder(
-            lambda *a, **kw: {"k": "v"}
-        )
         add.send_payload = pretend.call_recorder(lambda *a, **kw: "123")
 
         with client.isolated_filesystem():
@@ -35,20 +34,100 @@ class TestAddArtifactInteraction:
 
             result = client.invoke(add.add, input, obj=test_context)
 
-            assert add.create_artifact_payload_from_filepath.calls == [
-                pretend.call(filepath=artifact_path, path=path)
-            ]
+        assert result.exit_code == 0, result.output
+        assert "Successfully submitted task" in result.output
+        assert "RSTUF task ID" in result.output
 
-            assert add.send_payload.calls == [
-                pretend.call(
-                    settings=test_context["settings"],
-                    url=URL.ARTIFACTS.value,
-                    payload={"k": "v"},
-                    expected_msg="Target(s) successfully submitted.",
-                    command_name="Artifact Addition",
-                )
-            ]
+        assert add.send_payload.calls == [
+            pretend.call(
+                settings=test_context["settings"],
+                url=URL.ARTIFACTS.value,
+                payload={
+                    "targets": [
+                        {
+                            "info": {
+                                "length": 14,
+                                "hashes": {
+                                    "blake2b-256": "5b23eadf78d64e16f4ecf121e6631c68fa8eb64fcd5a0762fd36ef37f61369e9"  # noqa
+                                },
+                                "custom": None,
+                            },
+                            "path": f"{path}/{artifact_path}",
+                        }
+                    ],
+                    "add_task_id_to_custom": False,
+                    "publish_targets": True,
+                },
+                expected_msg="New Artifact(s) successfully submitted.",
+                command_name="Artifact Addition",
+            )
+        ]
 
-            assert result.exit_code == 0, result.output
-            assert "Successfully submitted task" in result.output
-            assert "RSTUF task ID" in result.output
+    def test_without_path(self, client, test_context):
+        """
+        Test that the add artifact command works as expected given the
+        expected arguments/options in the CLI.
+        """
+
+        artifact_path = "dummy-artifact"
+
+        input = [
+            artifact_path,  # artifact filepath
+            "--api-server",
+            "fake-server",
+        ]
+
+        add.send_payload = pretend.call_recorder(lambda *a, **kw: "123")
+
+        with client.isolated_filesystem():
+            with open(artifact_path, "w") as f:
+                f.write("Dummy Artifact")
+
+            result = client.invoke(add.add, input, obj=test_context)
+
+        assert result.exit_code == 0, result.output
+        assert "Successfully submitted task" in result.output
+        assert "RSTUF task ID" in result.output
+
+        assert add.send_payload.calls == [
+            pretend.call(
+                settings=test_context["settings"],
+                url=URL.ARTIFACTS.value,
+                payload={
+                    "targets": [
+                        {
+                            "info": {
+                                "length": 14,
+                                "hashes": {
+                                    "blake2b-256": "5b23eadf78d64e16f4ecf121e6631c68fa8eb64fcd5a0762fd36ef37f61369e9"  # noqa
+                                },
+                                "custom": None,
+                            },
+                            "path": artifact_path,
+                        }
+                    ],
+                    "add_task_id_to_custom": False,
+                    "publish_targets": True,
+                },
+                expected_msg="New Artifact(s) successfully submitted.",
+                command_name="Artifact Addition",
+            )
+        ]
+
+    def test_add_without_api_server(self, client, test_context):
+        artifact_path = "dummy-artifact"
+        path = "target/path"
+
+        input = [
+            artifact_path,  # artifact filepath
+            "--path",
+            path,
+        ]
+        with client.isolated_filesystem():
+            with open(artifact_path, "w") as f:
+                f.write("Dummy Artifact")
+
+            result = client.invoke(add.add, input, obj=test_context)
+
+        assert result.exit_code == 1, result.output
+        assert "Requires '--api-server'" in result.output
