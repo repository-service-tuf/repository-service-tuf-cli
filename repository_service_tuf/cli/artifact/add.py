@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: MIT
 
+from typing import Optional
+
 from click import Context
+from rich import print_json
 
 from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.artifact import artifact
@@ -25,11 +28,21 @@ from repository_service_tuf.helpers.cli import (
     "--path",
     help="A custom path (`TARGETPATH`) for the file, defined in the metadata.",
     type=str,
-    required=True,
+    required=False,
     default=None,
 )
+@click.option(
+    "--api-server",
+    help="URL to an RSTUF API.",
+    required=False,
+)
 @click.pass_context
-def add(context: Context, filepath: str, path: str) -> str:
+def add(
+    context: Context,
+    filepath: str,
+    path: Optional[str],
+    api_server: Optional[str],
+) -> None:
     """
     Add artifacts to the TUF metadata.
 
@@ -42,6 +55,14 @@ def add(context: Context, filepath: str, path: str) -> str:
     """
 
     settings = context.obj.get("settings")
+    if api_server:
+        settings.SERVER = api_server
+
+    if settings.get("SERVER") is None:
+        raise click.ClickException(
+            "Requires '--api-server' "
+            "Example: --api-server https://api.rstuf.example.com"
+        )
 
     payload = create_artifact_payload_from_filepath(
         filepath=filepath, path=path
@@ -51,14 +72,10 @@ def add(context: Context, filepath: str, path: str) -> str:
         settings=settings,
         url=URL.ARTIFACTS.value,
         payload=payload,
-        expected_msg="Target(s) successfully submitted.",
+        expected_msg="New Artifact(s) successfully submitted.",
         command_name="Artifact Addition",
     )
 
-    console.print(
-        "Successfully submitted task with a payload of:"
-        f"\n{payload}"
-        f"\nRSTUF task ID (use to check its status) is: {task_id}"
-    )
-
-    return task_id
+    console.print("Successfully submitted task with a payload of:")
+    print_json(data=payload)
+    console.print(f"\nRSTUF task ID (use to check its status) is: {task_id}")

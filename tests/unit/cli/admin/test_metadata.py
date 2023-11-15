@@ -1194,3 +1194,19 @@ class TestMetadataSignOptions:
                 metadata.Methods.GET,
             ),
         ]
+        assert metadata.send_payload.calls == [
+            pretend.call(
+                test_context["settings"],
+                URL.METADATA_SIGN_DELETE.value,
+                {"role": "root"},
+                "Metadata sign delete accepted.",
+                "Metadata delete sign",
+            )
+        ]
+        assert metadata.task_status.calls == [
+            pretend.call(
+                "task_id",
+                test_context["settings"],
+                "Signing process status: ",
+            )
+        ]
