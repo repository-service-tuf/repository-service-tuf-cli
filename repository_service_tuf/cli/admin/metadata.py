@@ -729,12 +729,12 @@ def sign(context, api_server: Optional[str], delete: Optional[bool]) -> None:
             settings,
             URL.METADATA_SIGN_DELETE.value,
             payload,
-            "Metadata delete sign accepted.",
+            "Metadata sign delete accepted.",
             "Metadata delete sign",
         )
         task_status(task_id, settings, "Signing process status: ")
         console.print("\nSigning process deleted!\n")
-        sys.exit()
+        return
 
     console.print(
         f"Signing [cyan]{rolename}[/] version "

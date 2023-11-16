@@ -25,6 +25,7 @@ from repository_service_tuf.helpers.tuf import (
     RSTUFKey,
     ServiceSettings,
     TUFManagement,
+    _conform_rsa_key,
     get_key,
     get_supported_schemes_for_key_type,
     load_payload,
@@ -407,6 +408,9 @@ def _configure_keys(
                     f"Enter {role_cyan}`s [green]public key hash[/]"
                 )
                 if public.strip() != "":
+                    if key_type == KeyType.KEY_TYPE_RSA.value:
+                        public = _conform_rsa_key(public)
+
                     break
 
             name = prompt.Prompt.ask(
