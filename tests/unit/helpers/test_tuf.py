@@ -38,6 +38,17 @@ class TestRSTUFKey:
 
 
 class TestTUFHelperFunctions:
+    def test__conform_rsa_in_aws_format(self):
+        pub_key = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArrJWZ7ieuDiQTlKVcCNx1/pT+8jN1BOMM2xM511Hp1TBi09pSgqsw9pS/o8oV24Q2Q9ebjbKIwqjhTZYLnKOUk4pKMgL56MvqXJLTUvR+9IC1vPuEURUGBjZqew7A11BbdII3BJVVH/F9rKvgiDLZ9WzM5rZGzQi4L52u4Gb3uSLF0QEXBx7i58DF7zs34GpZqgseKN0Q6kb8Vp4VcoDWeW+OCbWNIJd0Bas7ojUi9IosUlJJNE5f2UxqDCNwtf6PiEcYfulU3zIpO3rAuVJ/iKzBMQ61FtsaUd3M4kjsozoAEK3WSqW+RtuYVj5Rr0HYUFB2QXOsDVzIdZ7GLicXQIDAQAB"  # noqa
+        result = tuf._conform_rsa_key(pub_key)
+        expected_result = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArrJWZ7ieuDiQTlKVcCNx\n1/pT+8jN1BOMM2xM511Hp1TBi09pSgqsw9pS/o8oV24Q2Q9ebjbKIwqjhTZYLnKO\nUk4pKMgL56MvqXJLTUvR+9IC1vPuEURUGBjZqew7A11BbdII3BJVVH/F9rKvgiDL\nZ9WzM5rZGzQi4L52u4Gb3uSLF0QEXBx7i58DF7zs34GpZqgseKN0Q6kb8Vp4VcoD\nWeW+OCbWNIJd0Bas7ojUi9IosUlJJNE5f2UxqDCNwtf6PiEcYfulU3zIpO3rAuVJ\n/iKzBMQ61FtsaUd3M4kjsozoAEK3WSqW+RtuYVj5Rr0HYUFB2QXOsDVzIdZ7GLic\nXQIDAQAB\n-----END PUBLIC KEY-----\n"  # noqa
+        assert result == expected_result
+
+    def test__conform_rsa_key_already_correct_format(self):
+        pub_key = "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxcpCDgsz+2pIbvOHte1k\nnC78oeiKACUuo4/0QBwOg+SB6gIh36OEPo0snoxqMDRk4DwksHxCw02jUlWIc1qp\nACvTtpBNk1zD+akbBTpqmBIiZrnf3n2MbiZUdS0DxpHFUhrAsalf60Wzeb9K5cIK\nQJwGCM/TdoZWFGnll6hkpgbK2bl+68oBmvSyL6Gpu66EbmnVGbdKk6CzQzVLq2AD\nkVHaCLvMO4xIT+BzeqNY5FLV6/aa2pxkNPl/lupbkg/lopIdNRCRUSNvKMGEu47L\nVc1iCP1MuV62jhbhqXuzlAEfT6KPFH/drrOfJhWIIdkvdnsNDJuN7eJ637gwiqNe\nDwIDAQAB\n-----END PUBLIC KEY-----\n"  # noqa
+        result = tuf._conform_rsa_key(pub_key)
+        assert result == pub_key
+
     def test_load_key(self, monkeypatch):
         monkeypatch.setattr(
             tuf,
