@@ -522,8 +522,8 @@ def load_payload(path: str) -> Dict[str, Any]:
 def save_payload(file_path: str, payload: Dict[str, Any]):
     """Save the 'payload' into a file with path 'file_path'"""
     # Add .json extension if not there
-    if not file_path.endswith('.json'):
-        file_path += '.json'
+    if not file_path.endswith(".json"):
+        file_path += ".json"
     try:
         with open(file_path, "w") as f:
             f.write(json.dumps(payload, indent=2))
