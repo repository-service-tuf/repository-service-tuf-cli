@@ -171,7 +171,6 @@ class TestTUFHelperFunctions:
         assert tuf.json.dumps.calls == [pretend.call({"k": "v"}, indent=2)]
         assert fake_open.calls == [pretend.call("new_file.json", "w")]
 
-
     def test_save_payload_OSError(self, monkeypatch):
         monkeypatch.setitem(
             tuf.__builtins__,
