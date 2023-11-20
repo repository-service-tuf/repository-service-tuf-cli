@@ -135,7 +135,8 @@ class TestTUFHelperFunctions:
             close=pretend.call_recorder(lambda: None),
             write=pretend.call_recorder(lambda: fake_data),
         )
-        monkeypatch.setitem(tuf.__builtins__, "open", lambda *a: fake_file_obj)
+        fake_open = pretend.call_recorder(lambda *a: fake_file_obj)
+        monkeypatch.setitem(tuf.__builtins__, "open", fake_open)
         monkeypatch.setattr(
             tuf.json,
             "dumps",
@@ -145,6 +146,31 @@ class TestTUFHelperFunctions:
         result = tuf.save_payload("new_file", {"k": "v"})
         assert result is None
         assert tuf.json.dumps.calls == [pretend.call({"k": "v"}, indent=2)]
+        assert fake_open.calls == [pretend.call("new_file.json", "w")]
+
+    def test_save_payload_file_with_json_suffix(self, monkeypatch):
+        fake_data = pretend.stub(
+            write=pretend.call_recorder(lambda *a: "{'k': 'v'}")
+        )
+        fake_file_obj = pretend.stub(
+            __enter__=pretend.call_recorder(lambda: fake_data),
+            __exit__=pretend.call_recorder(lambda *a: None),
+            close=pretend.call_recorder(lambda: None),
+            write=pretend.call_recorder(lambda: fake_data),
+        )
+        fake_open = pretend.call_recorder(lambda *a: fake_file_obj)
+        monkeypatch.setitem(tuf.__builtins__, "open", fake_open)
+        monkeypatch.setattr(
+            tuf.json,
+            "dumps",
+            pretend.call_recorder(lambda *a, **kw: "{'k': 'v'}"),
+        )
+
+        result = tuf.save_payload("new_file.json", {"k": "v"})
+        assert result is None
+        assert tuf.json.dumps.calls == [pretend.call({"k": "v"}, indent=2)]
+        assert fake_open.calls == [pretend.call("new_file.json", "w")]
+
 
     def test_save_payload_OSError(self, monkeypatch):
         monkeypatch.setitem(

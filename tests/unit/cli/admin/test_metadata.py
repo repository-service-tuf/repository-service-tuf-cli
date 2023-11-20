@@ -648,12 +648,12 @@ class TestMetadataUpdateOptions:
 
         # Verify that the file exists and is indeed a root metadata file.
         root: Metadata[Root]
-        with open(custom_payload) as f:
+        with open(f"{custom_payload}.json") as f:
             data = json.loads(f.read())
             root = Metadata.from_dict(data["metadata"]["root"])
             root.verify_delegate("root", root)
 
-        os.remove(custom_payload)
+        os.remove(f"{custom_payload}.json")
 
     def test_metadata_update_full_upload_and_run_ceremony(
         self, client, test_context, md_update_input, monkeypatch
