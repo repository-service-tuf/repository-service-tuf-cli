@@ -939,6 +939,90 @@ This command allows downloading an artifact from a provided repository using the
     │ --help              -h        Show this message and exit.                                        │
     ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
 
+.. rstuf-cli-artifact-repository
+
+Artifact Addition (``repository``)
+---------------------------
+
+This command provides artifact repository management for the RSTUF repository config.
+
+.. code::
+
+    ❯ rstuf artifact repository --help
+
+    Usage: rstuf artifact repository [OPTIONS] COMMAND [ARGS]...
+
+    Repository management.
+
+    ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --help  -h    Show this message and exit.                                                                                                                                 │
+    ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+    ╭─ Commands ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ delete                           Delete repository.                                                                                                                       │
+    │ set                              Set a new repository.                                                                                                                    │
+    │ show                             List configured repositories.                                                                                                            │
+    │ update                           Update repository.                                                                                                                       │
+    │ use                              Switch current repository.                                                                                                               │
+    ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+.. code::
+
+    ❯ rstuf artifact repository delete --help
+
+    Usage: rstuf artifact repository delete [OPTIONS] REPOSITORY
+
+.. code::
+
+    ❯ rstuf artifact repository set --help
+
+    Usage: rstuf artifact repository set [OPTIONS] REPOSITORY
+
+    Set a new repository.
+
+    ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --root           -r  TEXT  A metadata URL to the initial trusted root or a local file.                                                                                    │
+    │ --metadata-url   -m  TEXT  TUF Metadata repository URL.                                                                                                                   │
+    │ --artifacts-url  -a  TEXT  An artifacts base URL to fetch from.                                                                                                           │
+    │ --hash-prefix    -p        A hash prefix.                                                                                                                                 │
+    │ --help           -h        Show this message and exit.                                                                                                                    │
+    ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+.. code::
+
+    ❯ rstuf artifact repository show --help
+
+    Usage: rstuf artifact repository show [OPTIONS] [REPOSITORY]
+
+    List configured repositories.
+
+    ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --all   -a    Show all the configured repositories.                                                                                                                       │
+    │ --help  -h    Show this message and exit.                                                                                                                                 │
+    ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+.. code::
+
+    ❯ rstuf artifact repository update --help
+
+    Usage: rstuf artifact repository update [OPTIONS] REPOSITORY
+
+    Update repository.
+
+    ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --root           -r  TEXT  A metadata URL to the initial trusted root or a local file.                                                                                    │
+    │ --metadata-url   -m  TEXT  TUF Metadata repository URL.                                                                                                                   │
+    │ --artifacts-url  -a  TEXT  An artifacts base URL to fetch from.                                                                                                           │
+    │ --hash-prefix    -p        A hash prefix.                                                                                                                                 │
+    │ --help           -h        Show this message and exit.                                                                                                                    │
+    ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+.. code::
+
+    ❯ rstuf artifact repository use --help
+
+    Usage: rstuf artifact repository use [OPTIONS] REPOSITORY
+
+
 .. rstuf-cli-task
 
 Task Management (``task``)
