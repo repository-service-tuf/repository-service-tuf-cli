@@ -29,8 +29,25 @@ jobs:
     - name: Test Build binary wheel and source tarball
       run: python3 -m build --sdist --wheel --outdir dist/ .
 
+    - name: Restore mypy cache
+      id: cache-mypy-restore
+      uses: actions/cache/restore@v3
+      with:
+        path: |
+          .mypy_cache
+        key: ${{ runner.os }}-py${{ matrix.python-versions }}-mypy-${{ hashFiles('**/.mypy_cache') }}
+
     - name: Run Python tests
-      run: make tests
+      run: |
+        make tests
+
+    - name: Save mypy cache
+      id: cache-mypy-save
+      uses: actions/cache/save@v3
+      with:
+        path: |
+          .mypy_cache
+        key: ${{ runner.os }}-py${{ matrix.python-versions }}-mypy-${{ hashFiles('**/.mypy_cache') }}
 
     - name: Codecov
       uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d
