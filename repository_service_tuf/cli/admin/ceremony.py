@@ -378,6 +378,7 @@ def _configure_keys(
             role_key: RSTUFKey = get_key(role, key_type, ask_name=True)
             if role_key.error:
                 console.print(role_key.error)
+                continue
 
             console.print(
                 ":white_check_mark: Key "
