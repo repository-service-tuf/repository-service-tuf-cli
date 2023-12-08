@@ -14,6 +14,21 @@ class TestCeremonyFunctions:
         result = ceremony._key_already_in_use({"keyid": "ema"})
         assert result is False
 
+    def test__key_already_in_use_key_none(self, test_setup):
+        ceremony.setup = test_setup
+        result = ceremony._key_already_in_use(None)
+        assert result is False
+
+    def test__key_already_in_use_empty_dict(self, test_setup):
+        ceremony.setup = test_setup
+        result = ceremony._key_already_in_use({})
+        assert result is False
+
+    def test__key_already_in_use_no_keyid(self, test_setup):
+        ceremony.setup = test_setup
+        result = ceremony._key_already_in_use({"abc": "bd"})
+        assert result is False
+
     def test__key_already_in_use_exists_in_role(self, test_setup):
         test_setup.root_keys["ema"] = ceremony.RSTUFKey(key={"keyid": "ema"})
         ceremony.setup = test_setup
@@ -100,6 +115,8 @@ class TestCeremonyInteraction:
             catch_exceptions=False,
         )
         assert test_result.exit_code == 0, test_result.output
+        # Assert there was a problem loading the key.
+        assert "Failed" in test_result.output
         # Assert first root key was logged as VERIFIED only ONCE.
         assert test_result.output.count("Key 1/2 Verified") == 1
         assert "Ceremony done. 🔐 🎉." in test_result.output

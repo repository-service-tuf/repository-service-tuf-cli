@@ -249,7 +249,7 @@ setup = BootstrapSetup(
 
 def _key_already_in_use(key: Dict[str, Any]) -> bool:
     """Check if a key is duplicated, used in a role or the online_key"""
-    if key is None:
+    if key is None or len(key) < 0 or key.get("keyid") is None:
         return False
 
     keyid = key["keyid"]
