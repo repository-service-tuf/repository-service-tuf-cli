@@ -434,10 +434,6 @@ def _configure_keys(
                 name=name,
             )
 
-        if role_key.key.get("keyid") is None:
-            console.print(":cross_mark: [red]Failed[/]: Key `keyid` is None.")
-            continue
-
         if _key_already_in_use(role_key.key) is True:
             console.print(":cross_mark: [red]Failed[/]: Key is duplicated.")
             continue
