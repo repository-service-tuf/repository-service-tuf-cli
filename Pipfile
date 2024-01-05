@@ -5,7 +5,7 @@ name = "pypi"
 
 [packages]
 rich-click = "*"
-securesystemslib = {extras = ["crypto"], version = "==0.28.0"}
+securesystemslib = "*"
 click = "*"
 rich = "*"
 auto-click-auto = "*"

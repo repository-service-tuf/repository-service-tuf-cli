@@ -64,6 +64,7 @@ class TestCeremonyInteraction:
             ceremony.ceremony,
             input="\n".join(input_step1),
             obj=test_context,
+            catch_exceptions=False,
         )
         assert "Ceremony aborted." in test_result.output
         assert test_result.exit_code == 1
@@ -79,6 +80,7 @@ class TestCeremonyInteraction:
             ceremony.ceremony,
             input="\n".join(input_step1 + input_step2 + input_step3),
             obj=test_context,
+            catch_exceptions=False,
         )
         assert "Ceremony aborted." in test_result.output
         assert test_result.exit_code == 1
@@ -136,6 +138,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -170,6 +173,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -206,6 +210,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -244,6 +249,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -281,6 +287,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -306,6 +313,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -343,6 +351,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -379,6 +388,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -415,6 +425,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -454,6 +465,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -489,6 +501,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -530,6 +543,7 @@ class TestCeremonyOptions:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -564,6 +578,7 @@ class TestCeremonyOptions:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 1, test_result.output
@@ -594,6 +609,7 @@ class TestCeremonyOptions:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -641,6 +657,7 @@ class TestCeremonyOptions:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 1, test_result.output
@@ -664,6 +681,7 @@ class TestCeremonyOptions:
             ["--bootstrap", "--upload", "--api-server", "http://fake-api"],
             input=None,
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -700,6 +718,7 @@ class TestCeremonyOptions:
             ["--bootstrap", "--upload"],
             input=None,
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 1, test_result.output
@@ -721,6 +740,7 @@ class TestCeremonyOptions:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 1, test_result.output
