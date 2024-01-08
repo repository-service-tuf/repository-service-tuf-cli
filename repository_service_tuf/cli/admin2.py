@@ -150,7 +150,7 @@ def _sign_one(metadata: Metadata, keys: Dict[str, Key]) -> bool:
 def _load(prompt: str) -> Metadata[Root]:
     """Prompt loop to load root from file.
 
-    Loop until success or user exit.
+    Loop until success.
     """
     while True:
         path = Prompt.ask(prompt)
