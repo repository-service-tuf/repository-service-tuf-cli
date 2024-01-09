@@ -63,7 +63,7 @@ class TestAddArtifactInteraction:
             )
         ]
 
-    def test_without_path(self, client, test_context):
+    def test_add_without_path(self, client, test_context):
         """
         Test that the add artifact command works as expected given the
         expected arguments/options in the CLI.
