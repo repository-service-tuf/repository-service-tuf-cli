@@ -9,7 +9,7 @@ from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.artifact import artifact
 from repository_service_tuf.helpers.api_client import URL, send_payload
 from repository_service_tuf.helpers.cli import (
-    create_artifact_payload_from_filepath,
+    create_artifact_add_payload_from_filepath,
 )
 
 
@@ -64,7 +64,7 @@ def add(
             "Example: --api-server https://api.rstuf.example.com"
         )
 
-    payload = create_artifact_payload_from_filepath(
+    payload = create_artifact_add_payload_from_filepath(
         filepath=filepath, path=path
     )
 
