@@ -76,7 +76,10 @@ def _get_verification_result(
     msg = ""
     if not result.verified:
         missing = delegator.roles[Root.type].threshold - len(result.signed)
-        msg = f"need {missing} signature(s) from any of {result.unsigned}"
+        msg = (
+            f"need {missing} signature(s) from any of "
+            f"{sorted(result.unsigned)}"
+        )
 
     unused_keys = {
         keyid: delegator.get_key(keyid) for keyid in result.unsigned
@@ -109,7 +112,7 @@ def _sign(
             # - show only non-empty message (filter)
             # - show only one message, if both are equal (set)
             missing_sig_msg = "\n".join(
-                filter(None, {missing_sig_msg, prev_msg})
+                filter(None, sorted({missing_sig_msg, prev_msg}))
             )
 
         if missing_sig_msg:
@@ -134,7 +137,7 @@ def _sign_one(metadata: Metadata, keys: Dict[str, Key]) -> bool:
     Loops until success or user exit. Returns boolean to indicate user exit.
     """
     while Confirm.ask("Sign?"):
-        keyid = Prompt.ask("Choose key", choices=list(keys))
+        keyid = Prompt.ask("Choose key", choices=sorted(keys))
         try:
             signer = _load_signer(keys[keyid])
             metadata.sign(signer, append=True)
