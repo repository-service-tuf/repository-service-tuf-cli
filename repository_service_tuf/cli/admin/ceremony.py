@@ -249,7 +249,7 @@ setup = BootstrapSetup(
 
 def _key_already_in_use(key: Dict[str, Any]) -> bool:
     """Check if a key is duplicated, used in a role or the online_key"""
-    if key is None:
+    if key is None or len(key) < 0 or key.get("keyid") is None:
         return False
 
     keyid = key["keyid"]
@@ -378,6 +378,7 @@ def _configure_keys(
             role_key: RSTUFKey = get_key(role, key_type, ask_name=True)
             if role_key.error:
                 console.print(role_key.error)
+                continue
 
             console.print(
                 ":white_check_mark: Key "
@@ -432,10 +433,6 @@ def _configure_keys(
                 key_path="N/A (public key only)",
                 name=name,
             )
-
-        if role_key.key.get("keyid") is None:
-            console.print(":cross_mark: [red]Failed[/]: Key `keyid` is None.")
-            continue
 
         if _key_already_in_use(role_key.key) is True:
             console.print(":cross_mark: [red]Failed[/]: Key is duplicated.")
