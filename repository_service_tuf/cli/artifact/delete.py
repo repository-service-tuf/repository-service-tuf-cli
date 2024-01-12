@@ -3,7 +3,7 @@
 from typing import Optional
 
 from click import Context
-from rich import print_json
+from rich import print_json, prompt
 
 from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.artifact import artifact
@@ -55,10 +55,8 @@ def delete(
         settings.SERVER = api_server
 
     if settings.get("SERVER") is None:
-        raise click.ClickException(
-            "Requires '--api-server' "
-            "Example: --api-server https://api.rstuf.example.com"
-        )
+        api_server = prompt.Prompt.ask("\n[cyan]API[/] URL address")
+        settings.SERVER = api_server
 
     payload = create_artifact_delete_payload_from_filepath(
         filepath=filepath, path=path
