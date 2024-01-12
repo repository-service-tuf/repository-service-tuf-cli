@@ -12,14 +12,6 @@ repository\_service\_tuf.cli.artifact.add module
    :undoc-members:
    :show-inheritance:
 
-repository\_service\_tuf.cli.artifact.delete module
----------------------------------------------------
-
-.. automodule:: repository_service_tuf.cli.artifact.delete
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Module contents
 ---------------
 
