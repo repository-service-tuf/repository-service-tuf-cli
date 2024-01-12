@@ -19,7 +19,7 @@ class TestDeleteArtifactInteraction:
         path = "target/path"
 
         input = [
-            artifact_path,  # artifact filepath
+            artifact_path,
             "--path",
             path,
             "--api-server",
@@ -93,19 +93,44 @@ class TestDeleteArtifactInteraction:
         ]
 
     def test_delete_without_api_server(self, client, test_context):
+        """
+        Test that the delete artifact command works as expected given the
+        expected arguments/options in the CLI.
+        """
+        settings = test_context["settings"]
+        settings.SERVER = "fake-server"
+
         artifact_path = "dummy-artifact"
         path = "target/path"
 
         input = [
-            artifact_path,  # artifact filepath
+            artifact_path,
             "--path",
             path,
         ]
+
+        delete.send_payload = pretend.call_recorder(lambda *a, **kw: "123")
+
         with client.isolated_filesystem():
             with open(artifact_path, "w") as f:
                 f.write("Dummy Artifact")
 
             result = client.invoke(delete.delete, input, obj=test_context)
 
-        assert result.exit_code == 1, result.output
-        assert "Requires '--api-server'" in result.output
+        assert result.exit_code == 0, result.output
+        assert "Successfully submitted task" in result.output
+        assert "RSTUF task ID" in result.output
+
+        assert delete.send_payload.calls == [
+            pretend.call(
+                settings=settings,
+                url=URL.ARTIFACTS_DELETE.value,
+                payload={
+                    "targets": [
+                        f"{path}/{artifact_path}",
+                    ],
+                },
+                expected_msg="Remove Artifact(s) successfully submitted.",
+                command_name="Artifact Deletion",
+            )
+        ]
