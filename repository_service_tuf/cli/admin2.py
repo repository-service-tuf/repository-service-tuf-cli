@@ -37,8 +37,6 @@ from tuf.api.serialization import DeserializationError
 
 from repository_service_tuf.cli import console, rstuf
 
-ONLINE_ROLE_NAMES = {Timestamp.type, Snapshot.type, Targets.type}
-
 
 def _load_signer(public_key: Key) -> Signer:
     """Ask for details to load signer, load and return."""
