@@ -14,6 +14,21 @@ class TestCeremonyFunctions:
         result = ceremony._key_already_in_use({"keyid": "ema"})
         assert result is False
 
+    def test__key_already_in_use_key_none(self, test_setup):
+        ceremony.setup = test_setup
+        result = ceremony._key_already_in_use(None)
+        assert result is False
+
+    def test__key_already_in_use_empty_dict(self, test_setup):
+        ceremony.setup = test_setup
+        result = ceremony._key_already_in_use({})
+        assert result is False
+
+    def test__key_already_in_use_no_keyid(self, test_setup):
+        ceremony.setup = test_setup
+        result = ceremony._key_already_in_use({"abc": "bd"})
+        assert result is False
+
     def test__key_already_in_use_exists_in_role(self, test_setup):
         test_setup.root_keys["ema"] = ceremony.RSTUFKey(key={"keyid": "ema"})
         ceremony.setup = test_setup
@@ -49,6 +64,7 @@ class TestCeremonyInteraction:
             ceremony.ceremony,
             input="\n".join(input_step1),
             obj=test_context,
+            catch_exceptions=False,
         )
         assert "Ceremony aborted." in test_result.output
         assert test_result.exit_code == 1
@@ -64,9 +80,50 @@ class TestCeremonyInteraction:
             ceremony.ceremony,
             input="\n".join(input_step1 + input_step2 + input_step3),
             obj=test_context,
+            catch_exceptions=False,
         )
         assert "Ceremony aborted." in test_result.output
         assert test_result.exit_code == 1
+
+    def test_ceremony_problem_loading_priv_key_fix_and_continue(
+        self, client, test_context, test_setup, test_inputs
+    ):
+        ceremony.setup = test_setup
+        input_step1, input_step2, _, input_step4 = test_inputs
+
+        input_step3 = [
+            "y",  # Ready to start loading the root keys? [y/n]
+            "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "foo",  # Enter the root`s private key path  # noqa
+            "bar",  # Enter the root`s private key password
+            "",  # [Optional] Give a name/tag to the root`s key
+            "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
+            "",  # [Optional] Give a name/tag to the root`s key
+            "private",  # Select to use private key or public? [private/public] (public)  # noqa
+            "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "tests/files/key_storage/JimiHendrix.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
+            "",  # [Optional] Give a name/tag to the root`s key
+        ]
+
+        test_result = client.invoke(
+            ceremony.ceremony,
+            input="\n".join(
+                input_step1 + input_step2 + input_step3 + input_step4
+            ),
+            obj=test_context,
+            catch_exceptions=False,
+        )
+        assert test_result.exit_code == 0, test_result.output
+        # Assert there was a problem loading the key.
+        assert "Failed" in test_result.output
+        # Assert first root key was logged as VERIFIED only ONCE.
+        assert test_result.output.count("Key 1/2 Verified") == 1
+        assert "Ceremony done. 🔐 🎉." in test_result.output
+        # passwords not shown in output
+        assert "strongPass" not in test_result.output
 
     def test_ceremony_start_default_values(
         self, client, test_context, test_inputs, test_setup
@@ -81,6 +138,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -115,6 +173,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -151,6 +210,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -189,6 +249,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -226,6 +287,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -251,6 +313,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -288,6 +351,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -324,6 +388,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -360,6 +425,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -399,6 +465,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -434,6 +501,7 @@ class TestCeremonyInteraction:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -475,6 +543,7 @@ class TestCeremonyOptions:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -509,6 +578,7 @@ class TestCeremonyOptions:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 1, test_result.output
@@ -539,6 +609,7 @@ class TestCeremonyOptions:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -586,6 +657,7 @@ class TestCeremonyOptions:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 1, test_result.output
@@ -609,6 +681,7 @@ class TestCeremonyOptions:
             ["--bootstrap", "--upload", "--api-server", "http://fake-api"],
             input=None,
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 0, test_result.output
@@ -645,6 +718,7 @@ class TestCeremonyOptions:
             ["--bootstrap", "--upload"],
             input=None,
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 1, test_result.output
@@ -666,6 +740,7 @@ class TestCeremonyOptions:
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert test_result.exit_code == 1, test_result.output

@@ -298,12 +298,21 @@ class TUFManagement:
 
     def _signers(self, role: Roles) -> List[Signer]:
         """Returns all Signers from the settings for a specific role name"""
+        result: List[Signer] = []
         if role == Roles.ROOT:
-            return [
-                SSlibSigner(key.key) for key in self.setup.root_keys.values()
-            ]
+            for key in self.setup.root_keys.values():
+                # Make sure this key was loaded, not just described.
+                if key.key["keyval"].get("private"):
+                    result.append(SSlibSigner(key.key))
+
+        return result
+
+    def _public_keys(self, role: Roles) -> List[Dict[str, Any]]:
+        """Get public keys for the role 'role'."""
+        if role == Roles.ROOT:
+            return [key.key for key in self.setup.root_keys.values()]
         else:
-            return [SSlibSigner(self.setup.online_key.key)]
+            return [self.setup.online_key.key]
 
     def _sign(self, role: Metadata, role_name: str) -> None:
         """Re-signs metadata with role-specific key from global key store.
@@ -417,12 +426,11 @@ class TUFManagement:
             else:
                 threshold = 1
 
-            signers = self._signers(Roles[role_name.upper()])
-
+            public_keys = self._public_keys(Roles[role_name.upper()])
             add_key_args[role_name] = []
             roles[role_name] = Role([], threshold)
-            for signer in signers:
-                key = Key.from_securesystemslib_key(signer.key_dict)
+            for securesystemslib_key in public_keys:
+                key = Key.from_securesystemslib_key(securesystemslib_key)
                 self._setup_key_name(key, role_name)
                 add_key_args[role_name].append(key)
 

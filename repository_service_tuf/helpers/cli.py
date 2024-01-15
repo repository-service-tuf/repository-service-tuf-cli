@@ -48,6 +48,16 @@ class AddPayload:
         return asdict(self)
 
 
+@dataclass
+class DeletePayload:
+    """The `POST /api/v1/artifacts/delete` required payload."""
+
+    targets: List[str]
+
+    def to_dict(self):
+        return asdict(self)
+
+
 def calculate_blake2b_256(filepath: str) -> str:
     """Calculate the blake2b-256 hash of the given file
 
@@ -69,7 +79,7 @@ def calculate_blake2b_256(filepath: str) -> str:
     return hasher.hexdigest()
 
 
-def create_artifact_payload_from_filepath(
+def create_artifact_add_payload_from_filepath(
     filepath: str, path: Optional[str]
 ) -> Dict[str, Any]:
     """
@@ -102,5 +112,22 @@ def create_artifact_payload_from_filepath(
             )
         ]
     )
+
+    return payload.to_dict()
+
+
+def create_artifact_delete_payload_from_filepath(
+    filepath: str, path: Optional[str]
+) -> Dict[str, Any]:
+    """
+    Create the payload for the API request of `POST api/v1/artifacts/delete`.
+    """
+
+    if path:
+        payload_path = f"{path.rstrip('/')}/{filepath.split('/')[-1]}"
+    else:
+        payload_path = f"{filepath.split('/')[-1]}"
+
+    payload = DeletePayload(targets=[payload_path])
 
     return payload.to_dict()
