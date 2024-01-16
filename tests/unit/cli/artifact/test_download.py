@@ -31,6 +31,22 @@ class TestDownloadArtifacInteraction:
         assert "Please specify metadata url" in test_result.output
         assert test_result.exit_code == 0
 
+    def test_dowlnoad_command_without_config_missing_artifacts_url(
+        self, client, test_context, test_setup
+    ):
+        download.setup = test_setup
+        artifact_name = "file.txt"
+        metadata_url = "http://localhost:8080"
+
+        test_result = client.invoke(
+            download.download,
+            [artifact_name, "-m", metadata_url],
+            obj=test_context,
+        )
+
+        assert "Please specify artifacts url" in test_result.output
+        assert test_result.exit_code == 0
+
     def test_dowlnoad_command_without_config_using_tofu(
         self, client, test_context, test_setup
     ):
@@ -44,6 +60,7 @@ class TestDownloadArtifacInteraction:
             )
 
             metadata_url = "http://localhost:8080"
+            artifact_url = "http://localhost:8081"
             with mock.patch("urllib.request.urlretrieve"):
                 request.urlretrieve = MagicMock(
                     filename=f"{expected_root_path}/root.json"
@@ -51,7 +68,13 @@ class TestDownloadArtifacInteraction:
 
                 test_result = client.invoke(
                     download.download,
-                    [artifact_name, "-m", metadata_url],
+                    [
+                        artifact_name,
+                        "-m",
+                        metadata_url,
+                        "-a",
+                        artifact_url,
+                    ],
                     obj=test_context,
                 )
 
@@ -135,6 +158,82 @@ class TestDownloadArtifacInteraction:
                 )
                 assert test_result.exit_code == 0
 
+    def test_dowlnoad_command_without_config_with_hash_prefix(
+        self, client, test_context, test_setup
+    ):
+        download.setup = test_setup
+        artifact_name = "example_path/file.txt"
+        metadata_url = "http://localhost:8080"
+        artifact_url = "http://localhost:8081"
+        trusted_root_path = "tests/files/artifact_download"
+        with mock.patch(
+            "repository_service_tuf.cli.artifact.download.build_metadata_dir"  # noqa
+        ):
+            download.build_metadata_dir = MagicMock(
+                return_value=trusted_root_path
+            )
+
+            with mock.patch(
+                "repository_service_tuf.cli.artifact.download.download_artifact"  # noqa
+            ):
+                download.build_metadata_dir = MagicMock(return_value=True)
+                test_result = client.invoke(
+                    download.download,
+                    [
+                        artifact_name,
+                        "-m",
+                        metadata_url,
+                        "-a",
+                        artifact_url,
+                        "-p",
+                    ],
+                    obj=test_context,
+                )
+                assert (
+                    "Successfully completed artifact download"
+                    in test_result.output
+                )
+                assert test_result.exit_code == 0
+
+    def test_dowlnoad_command_without_config_with_directory_prefix(
+        self, client, test_context, test_setup
+    ):
+        download.setup = test_setup
+        artifact_name = "example_path/file.txt"
+        metadata_url = "http://localhost:8080"
+        artifact_url = "http://localhost:8081"
+        trusted_root_path = "tests/files/artifact_download"
+        directory_prefix = os.getcwd() + "/downloads"
+        with mock.patch(
+            "repository_service_tuf.cli.artifact.download.build_metadata_dir"  # noqa
+        ):
+            download.build_metadata_dir = MagicMock(
+                return_value=trusted_root_path
+            )
+
+            with mock.patch(
+                "repository_service_tuf.cli.artifact.download.download_artifact"  # noqa
+            ):
+                download.build_metadata_dir = MagicMock(return_value=True)
+                test_result = client.invoke(
+                    download.download,
+                    [
+                        artifact_name,
+                        "-m",
+                        metadata_url,
+                        "-a",
+                        artifact_url,
+                        "-P",
+                        directory_prefix,
+                    ],
+                    obj=test_context,
+                )
+                assert (
+                    "Successfully completed artifact download"
+                    in test_result.output
+                )
+                assert test_result.exit_code == 0
+
     def test_dowlnoad_command_without_config_failed_to_download_artifact(
         self, client, test_context, test_setup
     ):
@@ -196,6 +295,7 @@ class TestDownloadArtifacInteraction:
             )
 
             metadata_url = "http://localhost:8080"
+            artifact_url = "http://localhost:8081"
             with mock.patch(
                 "repository_service_tuf.cli.artifact.download.init_tofu"
             ):
@@ -203,7 +303,13 @@ class TestDownloadArtifacInteraction:
 
                 test_result = client.invoke(
                     download.download,
-                    [artifact_name, "-m", metadata_url],
+                    [
+                        artifact_name,
+                        "-m",
+                        metadata_url,
+                        "-a",
+                        artifact_url,
+                    ],
                     obj=test_context,
                 )
 

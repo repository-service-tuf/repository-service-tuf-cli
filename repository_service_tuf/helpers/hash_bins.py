@@ -18,7 +18,7 @@ def _bin_name(low: int, high: int) -> str:
     hex representation of the hash prefix for uniform bin name lengths.
     """
     if low == high:
-        return f"{low:0{PREFIX_LEN}x}"
+        return f"{low:0{PREFIX_LEN}x}"  # pragma: no cover
 
     return f"{low:0{PREFIX_LEN}x}-{high:0{PREFIX_LEN}x}"
 

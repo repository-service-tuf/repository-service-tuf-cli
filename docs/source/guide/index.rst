@@ -925,7 +925,9 @@ This command allows downloading an artifact from a provided repository using the
 
     Usage: rstuf artifact download [OPTIONS] ARTIFACT_NAME
 
-    Downloads artifacts to the TUF metadata.
+    Downloads an artifact(s) using TUF metadata from a given artifacts URL.
+    Note: all options for this command can be configured.
+    Read 'rstuf artifact repository' documentation for more information.
 
     ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────╮
     │ --root              -r  TEXT  A metadata URL to the initial trusted root or a local file.        │
