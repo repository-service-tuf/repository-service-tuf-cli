@@ -9,7 +9,8 @@ import pytest
 
 from repository_service_tuf.helpers.cli import (
     calculate_blake2b_256,
-    create_artifact_payload_from_filepath,
+    create_artifact_add_payload_from_filepath,
+    create_artifact_delete_payload_from_filepath,
 )
 
 
@@ -51,7 +52,7 @@ class TestCLIHelpers:
             == blake2b_256_hash_temp_file
         )
 
-    def test_create_artifact_payload_from_filepath(
+    def test_create_artifact_add_payload_from_filepath(
         self, temp_file: str, blake2b_256_hash_temp_file: str
     ) -> None:
         """
@@ -79,9 +80,51 @@ class TestCLIHelpers:
         }
 
         assert (
-            create_artifact_payload_from_filepath(
+            create_artifact_add_payload_from_filepath(
                 filepath=temp_file,
                 path=path,
             )
             == expected_artifact_payload
         )
+
+    def test_create_artifact_delete_payload_from_filepath(
+        self,
+        temp_file: str,
+    ) -> None:
+        """
+        Test that the artifact payload is created correctly given the
+        filepath of the artifact
+        """
+
+        path = "/fake/path/"
+
+        expected_artifact_payload = {
+            "targets": [f"{path}{temp_file.split('/')[-1]}"]
+        }
+
+        result = create_artifact_delete_payload_from_filepath(
+            filepath=temp_file,
+            path=path,
+        )
+        assert result == expected_artifact_payload
+
+    def test_create_artifact_add_payload_from_filepath_without_path(
+        self,
+        temp_file: str,
+    ) -> None:
+        """
+        Test that the artifact payload is created correctly given the
+        filepath of the artifact
+        """
+
+        path = None
+
+        expected_artifact_payload = {
+            "targets": [f"{temp_file.split('/')[-1]}"]
+        }
+
+        result = create_artifact_delete_payload_from_filepath(
+            filepath=temp_file,
+            path=path,
+        )
+        assert result == expected_artifact_payload

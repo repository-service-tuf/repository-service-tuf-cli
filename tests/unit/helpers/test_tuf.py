@@ -475,7 +475,7 @@ class TestMetadataInfo:
         ]
 
 
-class TestTUFHelper:
+class TestTUFManagement:
     def _setup_load(self, filenames: List[str]) -> Dict[str, str]:
         result = {}
         for filename in filenames:
@@ -485,25 +485,20 @@ class TestTUFHelper:
 
     def test__signers_root_keys(self, test_tuf_management: TUFManagement):
         test_tuf_management.setup.root_keys = {
-            "id1": RSTUFKey({"a": "b"}),
-            "id2": RSTUFKey({"c": "d"}),
+            "id1": RSTUFKey({"a": "b", "keyval": {"private": "foo"}}),
+            "id2": RSTUFKey({"c": "d", "keyval": {"private": "foo"}}),
         }
         tuf.SSlibSigner = pretend.call_recorder(lambda *a: None)
         result = test_tuf_management._signers(Roles.ROOT)
         assert result == [None, None]
         assert tuf.SSlibSigner.calls == [
-            pretend.call({"a": "b"}),
-            pretend.call({"c": "d"}),
+            pretend.call({"a": "b", "keyval": {"private": "foo"}}),
+            pretend.call({"c": "d", "keyval": {"private": "foo"}}),
         ]
 
-    def test__signers_online_key(self, test_tuf_management: TUFManagement):
-        test_tuf_management.setup.online_key = RSTUFKey({"a": "b"})
-        tuf.SSlibSigner = pretend.call_recorder(lambda *a: None)
+    def test__signers_other_role(self, test_tuf_management: TUFManagement):
         result = test_tuf_management._signers(Roles.TIMESTAMP)
-        assert result == [None]
-        assert tuf.SSlibSigner.calls == [
-            pretend.call({"a": "b"}),
-        ]
+        assert result == []
 
     def test__sign(self, test_tuf_management: TUFManagement):
         fake_role = pretend.stub(
@@ -734,18 +729,14 @@ class TestTUFHelper:
         assert key.unrecognized_fields["name"] == "my-key"
 
     def test_initialize_metadata(self, test_tuf_management: TUFManagement):
-        signers_mock = unittest.mock.Mock()
-        root_signer = pretend.stub(key_dict="root")
-        timestamp_signer = pretend.stub(key_dict="timestamp")
-        snapshot_signer = pretend.stub(key_dict="snapshot")
-        targets_signer = pretend.stub(key_dict="targets")
-        signers_mock.side_effect = [
-            [root_signer],
-            [timestamp_signer],
-            [snapshot_signer],
-            [targets_signer],
+        public_keys_mock = unittest.mock.Mock()
+        public_keys_mock.side_effect = [
+            ["root"],
+            ["timestamp"],
+            ["snapshot"],
+            ["targets"],
         ]
-        test_tuf_management._signers = signers_mock
+        test_tuf_management._public_keys = public_keys_mock
         tuf.Role = pretend.call_recorder(lambda *a: "role")
 
         key_from_securesystemslib_mock = pretend.call_recorder(
@@ -765,7 +756,7 @@ class TestTUFHelper:
         result = test_tuf_management.initialize_metadata()
 
         assert result == test_tuf_management.repository_metadata
-        signers_mock.assert_has_calls(
+        public_keys_mock.assert_has_calls(
             [
                 unittest.mock.call(Roles.ROOT),
                 unittest.mock.call(Roles.TIMESTAMP),

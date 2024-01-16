@@ -3,13 +3,13 @@
 from typing import Optional
 
 from click import Context
-from rich import print_json
+from rich import print_json, prompt
 
 from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.artifact import artifact
 from repository_service_tuf.helpers.api_client import URL, send_payload
 from repository_service_tuf.helpers.cli import (
-    create_artifact_add_payload_from_filepath,
+    create_artifact_delete_payload_from_filepath,
 )
 
 
@@ -37,21 +37,17 @@ from repository_service_tuf.helpers.cli import (
     required=False,
 )
 @click.pass_context
-def add(
+def delete(
     context: Context,
     filepath: str,
     path: Optional[str],
     api_server: Optional[str],
 ) -> None:
     """
-    Add artifacts to the TUF metadata.
+    Delete artifacts to the TUF metadata.
 
-    A POST /api/v1/artifacts/ request to the RSTUF API service is carried out,
-    where:
-    - file info is discovered and added to the request payload. The blake2b-256
-    cryptographic hash function is used to hash the file.
-    - `custom` key of the payload is an empty object
-    - `path` key of the payload is defined by the user
+    A POST /api/v1/artifacts/delete request to the RSTUF API service
+    is carried out.
     """
 
     settings = context.obj.get("settings")
@@ -59,21 +55,19 @@ def add(
         settings.SERVER = api_server
 
     if settings.get("SERVER") is None:
-        raise click.ClickException(
-            "Requires '--api-server' "
-            "Example: --api-server https://api.rstuf.example.com"
-        )
+        api_server = prompt.Prompt.ask("\n[cyan]API[/] URL address")
+        settings.SERVER = api_server
 
-    payload = create_artifact_add_payload_from_filepath(
+    payload = create_artifact_delete_payload_from_filepath(
         filepath=filepath, path=path
     )
 
     task_id = send_payload(
         settings=settings,
-        url=URL.ARTIFACTS.value,
+        url=URL.ARTIFACTS_DELETE.value,
         payload=payload,
-        expected_msg="New Artifact(s) successfully submitted.",
-        command_name="Artifact Addition",
+        expected_msg="Remove Artifact(s) successfully submitted.",
+        command_name="Artifact Deletion",
     )
 
     console.print("Successfully submitted task with a payload of:")
