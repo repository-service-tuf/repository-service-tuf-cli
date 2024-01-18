@@ -25,14 +25,7 @@ from rich.pretty import pprint
 from rich.prompt import Confirm, Prompt
 from securesystemslib.exceptions import StorageError
 from securesystemslib.signer import CryptoSigner, Key, Signer
-from tuf.api.metadata import (
-    Metadata,
-    Root,
-    Snapshot,
-    Targets,
-    Timestamp,
-    UnsignedMetadataError,
-)
+from tuf.api.metadata import Metadata, Root, UnsignedMetadataError
 from tuf.api.serialization import DeserializationError
 
 from repository_service_tuf.cli import console, rstuf
