@@ -82,7 +82,6 @@ def _get_verification_result(
 def _sign(
     metadata: Metadata[Root],
     prev_root: Optional[Root] = None,
-    should_review=True,
 ):
     """Prompt loop to add signatures to root based on verification result.
 
@@ -91,6 +90,7 @@ def _sign(
 
     Loops until fully signed or user exit.
     """
+    reviewed = False
     while True:
         unused_keys, missing_sig_msg = _get_verification_result(
             metadata.signed, metadata
@@ -106,16 +106,16 @@ def _sign(
                 filter(None, sorted({missing_sig_msg, prev_msg}))
             )
 
-        if missing_sig_msg:
-            console.print(missing_sig_msg)
-        else:
+        if not missing_sig_msg:
             console.print("Metadata fully signed.")
             break
 
-        # Optionally, ask once to review the metadata.
-        if should_review and Confirm.ask("Review?"):
+        # Show metadata once for review and signature requirements
+        if not reviewed:
             _show(metadata.signed)
-        should_review = False
+            reviewed = True
+
+        console.print(missing_sig_msg)
 
         # User may signal that they are done signing.
         if not _sign_one(metadata, unused_keys):

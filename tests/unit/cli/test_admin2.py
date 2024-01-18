@@ -2,6 +2,9 @@ from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
+from rich.console import Console
+from rich.pretty import pprint
+from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.cli.admin2 import sign
 
@@ -31,6 +34,14 @@ def patch_getpass(monkeypatch):
 # flake8: noqa
 class TestSign:
     @staticmethod
+    def _pretty(arg):
+        """Helper to format a string as pprint would do it."""
+        console = Console()
+        with console.capture() as capture:
+            pprint(arg, console=console)
+        return capture.get()
+
+    @staticmethod
     def _split(dialog):
         """Helper to split (output, input) tuples of lines in a prompt dialog.
         Some lines may only have outputs."""
@@ -47,17 +58,17 @@ class TestSign:
     def test_sign_v1(self, client: CliRunner, patch_getpass):
         """Sign root v1, with 2/2 keys."""
 
+        root = Metadata[Root].from_file(f"{_ROOTS / 'v1.json'}")
+        root_pretty = self._pretty(root.signed.to_dict())
+
         dialog = [
             (
                 "Enter path to root to sign: ",
                 f"{_ROOTS / 'v1.json'}",
             ),
+            (root_pretty,),
             (
                 "need 2 signature(s) from any of ['50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3', 'c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc']",
-            ),
-            (
-                "Review? [y/n]: ",
-                "n",
             ),
             (
                 "Sign? [y/n]: ",
@@ -111,6 +122,9 @@ class TestSign:
         """Sign root v2, with 2/2 keys from old root and 2/2 from new, where
         1 key is in both old and new (needs 3 signatures in total)."""
 
+        root = Metadata[Root].from_file(f"{_ROOTS / 'v2.json'}")
+        root_pretty = self._pretty(root.signed.to_dict())
+
         dialog = [
             (
                 "Enter path to root to sign: ",
@@ -120,15 +134,12 @@ class TestSign:
                 "Enter path to previous root: ",
                 f"{_ROOTS / 'v1.json'}",
             ),
+            (root_pretty,),
             (
                 "need 2 signature(s) from any of ['2f685fa7546f1856b123223ab086b3def14c89d24eef18f49c32508c2f60e241', '50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3']",
             ),
             (
                 "need 2 signature(s) from any of ['50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3', 'c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc']",
-            ),
-            (
-                "Review? [y/n]: ",
-                "n",
             ),
             (
                 "Sign? [y/n]: ",
