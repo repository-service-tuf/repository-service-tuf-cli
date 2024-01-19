@@ -131,7 +131,7 @@ def _download_artifact(
             )
             return False
 
-    print(f"Using trusted root in {metadata_dir}")
+    console.print(f"Using trusted root in {metadata_dir}")
 
     if directory_prefix:
         # Annotating as it's covered, but codecov doesn't
