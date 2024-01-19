@@ -5,7 +5,6 @@
 
 import base64
 import os
-import sys
 from hashlib import sha256
 from pathlib import Path
 from typing import Optional
@@ -14,24 +13,10 @@ from urllib.parse import urlparse
 
 from click import Context
 from tuf.api.exceptions import DownloadError, RepositoryError
-from tuf.ngclient import Updater
+from tuf.ngclient import Updater, UpdaterConfig
 
 from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.artifact import artifact
-from repository_service_tuf.helpers.hash_bins import find_hash_bin
-
-
-def update_artifact_name_with_hash_prefix(artifact_name: str) -> str:
-    artifact_file_name = artifact_name.split("/")[-1]
-    hash_prefix = find_hash_bin(artifact_file_name)
-    new_artifact_file_name = hash_prefix + "-" + artifact_file_name
-    splitted = artifact_name.rsplit("/", 1)
-    if len(splitted) > 1:
-        return artifact_name.rsplit("/", 1)[0] + "/" + new_artifact_file_name
-    else:
-        # Annotating as it's covered, but codecov doesn't
-        # recognize that properly
-        return new_artifact_file_name  # pragma: no cover
 
 
 def decode_trusted_root(root) -> str:
@@ -59,7 +44,7 @@ def init_tofu(metadata_url: str, root_url: Optional[str]) -> bool:
         if parsed_root_url.scheme and parsed_root_url.netloc:
             request.urlretrieve(root_url, f"{metadata_dir}/root.json")  # nosec
         else:
-            console.print(
+            console.print(  # pragma: no cover
                 f"Failed to parse {root_url}: ",
                 f"{parsed_root_url.scheme}, {parsed_root_url.netloc}",
             )
@@ -73,12 +58,55 @@ def init_tofu(metadata_url: str, root_url: Optional[str]) -> bool:
     return True
 
 
-def download_artifact(
+def perform_tuf_ngclient_download_artifact(
+    metadata_url: str,
+    metadata_dir: str,
+    artifacts_url: str,
+    artifact_name: str,
+    download_dir: str,
+    config: UpdaterConfig,
+) -> bool:
+    try:
+        updater = Updater(
+            metadata_dir=metadata_dir,
+            metadata_base_url=metadata_url,
+            target_base_url=artifacts_url,
+            target_dir=download_dir,
+            config=config,
+        )
+        updater.refresh()
+
+        # Annotating, as it's an external method we don't want to test
+        info = updater.get_targetinfo(artifact_name)  # pragma: no cover
+
+        if info is None:  # pragma: no cover
+            console.print(f"Artifact {artifact_name} not found")
+            return False
+
+        path = updater.find_cached_target(info)  # pragma: no cover
+        if path:  # pragma: no cover
+            console.print(f"Artifact is available in {path}")
+            return True
+
+        path = updater.download_target(info)  # pragma: no cover
+        console.print(  # pragma: no cover
+            f"Artifact downloaded and available in {path}"
+        )
+
+    except (OSError, RepositoryError, DownloadError) as e:
+        console.print(f"Failed to download artifact {artifact_name}: {e}")
+        return False
+
+    return True
+
+
+def _download_artifact(
     metadata_url: Optional[str],
     artifacts_url: Optional[str],
+    hash_prefix: Optional[bool],
+    directory_prefix: Optional[str],
     artifact_name: str,
     root: Optional[str],
-    directory_prefix: Optional[str],
 ) -> bool:
     if metadata_url is None:
         console.print("Please specify metadata url")
@@ -115,35 +143,20 @@ def download_artifact(
     if not os.path.isdir(download_dir):
         os.mkdir(download_dir)
 
-    try:
-        updater = Updater(
-            metadata_dir=metadata_dir,
-            metadata_base_url=metadata_url,
-            target_base_url=artifacts_url,
-            target_dir=download_dir,
-        )
-        updater.refresh()
+    config = UpdaterConfig()
+    if not hash_prefix:
+        config.prefix_targets_with_hash = False
 
-        # Annotating, as it's external method we don't want to test
-        info = updater.get_targetinfo(artifact_name)  # pragma: no cover
+    res = perform_tuf_ngclient_download_artifact(
+        metadata_url,
+        metadata_dir,
+        artifacts_url,
+        artifact_name,
+        download_dir,
+        config,
+    )
 
-        if info is None:  # pragma: no cover
-            console.print(f"Artifact {artifact_name} not found")
-            return False
-
-        path = updater.find_cached_target(info)  # pragma: no cover
-        if path:  # pragma: no cover
-            console.print(f"Artifact is available in {path}")
-            return True
-
-        path = updater.download_target(info)  # pragma: no cover
-        console.print(f"Artifact downloaded and available in {path}")
-
-    except (OSError, RepositoryError, DownloadError) as e:
-        console.print(f"Failed to download artifact {artifact_name}: {e}")
-        return False
-
-    return True
+    return res
 
 
 @artifact.command()
@@ -174,7 +187,7 @@ def download_artifact(
 @click.option(
     "-p",
     "--hash-prefix",
-    help="A hash prefix.",
+    help="A flag to prefix an artifact with a hash.",
     is_flag=True,
     required=None,
 )
@@ -195,7 +208,7 @@ def download(
     artifacts_url: Optional[str],
     hash_prefix: Optional[bool],
     directory_prefix: Optional[str],
-    artifact_name,
+    artifact_name: str,
 ) -> None:
     """
     Downloads artifacts to the TUF metadata.
@@ -208,17 +221,16 @@ def download(
         # Overwriting the config if a flag is passed
         # or using it as default instead
         if not repository:
-            console.print("Please specify current repository")
-            sys.exit(1)
+            raise click.ClickException("Please specify current repository")
         if not rstuf_config.get("REPOSITORIES"):
-            console.print("No reposotiroes listed in the config file")
-            sys.exit(1)
+            raise click.ClickException(
+                "No reposotiroes listed in the config file"
+            )
         if not rstuf_config["REPOSITORIES"].get(repository):
-            console.print(
+            raise click.ClickException(
                 f"Repository {repository} is missing in the "
                 "configuration file"
             )
-            sys.exit(1)
         if not artifacts_url:
             artifacts_url = rstuf_config["REPOSITORIES"][repository].get(
                 "artifact_base_url"
@@ -244,17 +256,16 @@ def download(
                     "or use the download commang without a config file"
                 )
                 return
-            root = decode_trusted_root(root)
+            root = decode_trusted_root(root)  # pragma: no cover
+            console.print(f"Decoded trusted root {root}")
 
-    if hash_prefix:
-        artifact_name = update_artifact_name_with_hash_prefix(artifact_name)
-
-    ok = download_artifact(
+    ok = _download_artifact(
         metadata_url,
         artifacts_url,
+        hash_prefix,
+        directory_prefix,
         artifact_name,
         root,
-        directory_prefix,
     )
 
     if ok:

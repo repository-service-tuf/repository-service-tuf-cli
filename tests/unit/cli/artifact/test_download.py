@@ -138,9 +138,11 @@ class TestDownloadArtifacInteraction:
             )
 
             with mock.patch(
-                "repository_service_tuf.cli.artifact.download.download_artifact"  # noqa
+                "repository_service_tuf.cli.artifact.download.perform_tuf_ngclient_download_artifact"  # noqa
             ):
-                download.build_metadata_dir = MagicMock(return_value=True)
+                download.perform_tuf_ngclient_download_artifact = MagicMock(
+                    return_value=True
+                )
                 test_result = client.invoke(
                     download.download,
                     [
@@ -174,9 +176,11 @@ class TestDownloadArtifacInteraction:
             )
 
             with mock.patch(
-                "repository_service_tuf.cli.artifact.download.download_artifact"  # noqa
+                "repository_service_tuf.cli.artifact.download.perform_tuf_ngclient_download_artifact"  # noqa
             ):
-                download.build_metadata_dir = MagicMock(return_value=True)
+                download.perform_tuf_ngclient_download_artifact = MagicMock(
+                    return_value=True
+                )
                 test_result = client.invoke(
                     download.download,
                     [
@@ -212,9 +216,11 @@ class TestDownloadArtifacInteraction:
             )
 
             with mock.patch(
-                "repository_service_tuf.cli.artifact.download.download_artifact"  # noqa
+                "repository_service_tuf.cli.artifact.download.perform_tuf_ngclient_download_artifact"  # noqa
             ):
-                download.build_metadata_dir = MagicMock(return_value=True)
+                download.perform_tuf_ngclient_download_artifact = MagicMock(
+                    return_value=True
+                )
                 test_result = client.invoke(
                     download.download,
                     [
@@ -377,6 +383,39 @@ class TestDownloadArtifacInteraction:
                 in test_result.output
             )
 
+    def test_dowlnoad_command_with_config_and_no_root_param(
+        self, client, test_context, test_setup
+    ):
+        download.setup = test_setup
+        config = {
+            "CURRENT_REPOSITORY": "r1",
+            "REPOSITORIES": {
+                "r1": {
+                    "artifact_base_url": "http://localhost:8081",
+                    "hash_prefix": "false",
+                    "metadata_url": "http://localhost:8080",
+                    "trusted_root": "c29tZV9yb290",
+                },
+            },
+            "SERVER": "http://127.0.0.1",
+        }
+        artifact_name = "file1.txt"
+
+        test_context["settings"] = config
+        with mock.patch("os.path.isfile"):
+            os.path.isfile = MagicMock(return_value=True)
+
+            with mock.patch(
+                "repository_service_tuf.cli.artifact.download._download_artifact"  # noqa
+            ):
+                download._download_artifact = MagicMock(return_value=True)
+                test_result = client.invoke(
+                    download.download,
+                    [artifact_name],
+                    obj=test_context,
+                )
+                assert "Decoded trusted root some_root" in test_result.output
+
     def test_dowlnoad_command_with_config_repo_is_missing(
         self, client, test_context, test_setup
     ):
@@ -447,13 +486,7 @@ class TestDownloadArtifacInteraction:
 
 
 class TestDownloadArtifactOptions:
-    """Test the artifact download command heplers"""
-
-    def test_update_artifact_url_with_hash_prefix(self):
-        artifact_name = "example_project/file1.tar.gz"
-        want = "example_project/f8-ff-file1.tar.gz"
-        actual = download.update_artifact_name_with_hash_prefix(artifact_name)
-        assert want == actual
+    # """Test the artifact download command heplers"""
 
     def test_decode_trusted_root(self):
         trusted_root = "ZXhhbXBsZS9ob21lL3BhdGgvLmxvY2FsL3NoYXJlL3JzdHVmL3Jvb3QuanNvbg=="  # noqa
