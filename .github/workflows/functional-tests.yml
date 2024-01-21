@@ -108,6 +108,9 @@ jobs:
   functional-signed:
     name: "Signed"
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        pytest-group: [ "1", "2", "3"]
 
     steps:
       - name: Checkout RSTUF CLI source code
