@@ -71,10 +71,6 @@ class TestSign:
                 "need 2 signature(s) from any of ['50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3', 'c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc']",
             ),
             (
-                "Sign? [y/n]: ",
-                "y",
-            ),
-            (
                 "Choose key [50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3/c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc]: ",
                 "50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3",
             ),
@@ -86,26 +82,6 @@ class TestSign:
             (
                 "Signed with key 50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3",
             ),
-            (
-                "need 1 signature(s) from any of ['c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc']",
-            ),
-            (
-                "Sign? [y/n]: ",
-                "y",
-            ),
-            (
-                "Choose key [c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc]: ",
-                "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",
-            ),
-            (
-                "Enter path to encrypted local private key: ",
-                f"{_PEMS / 'ed'}",
-            ),
-            ("Enter password: ",),  # provided via patch_getpass
-            (
-                "Signed with key c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",
-            ),
-            ("Metadata fully signed.",),
             (
                 "Save? [y/n]: ",
                 "n",
@@ -142,10 +118,6 @@ class TestSign:
                 "need 2 signature(s) from any of ['50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3', 'c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc']",
             ),
             (
-                "Sign? [y/n]: ",
-                "y",
-            ),
-            (
                 "Choose key [2f685fa7546f1856b123223ab086b3def14c89d24eef18f49c32508c2f60e241/50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3/c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc]: ",
                 "50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3",
             ),
@@ -157,48 +129,6 @@ class TestSign:
             (
                 "Signed with key 50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3",
             ),
-            (
-                "need 1 signature(s) from any of ['2f685fa7546f1856b123223ab086b3def14c89d24eef18f49c32508c2f60e241']",
-            ),
-            (
-                "need 1 signature(s) from any of ['c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc']",
-            ),
-            (
-                "Sign? [y/n]: ",
-                "y",
-            ),
-            (
-                "Choose key [2f685fa7546f1856b123223ab086b3def14c89d24eef18f49c32508c2f60e241/c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc]: ",
-                "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",
-            ),
-            (
-                "Enter path to encrypted local private key: ",
-                f"{_PEMS / 'ed'}",
-            ),
-            ("Enter password: ",),  # provided via patch_getpass
-            (
-                "Signed with key c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",
-            ),
-            (
-                "need 1 signature(s) from any of ['2f685fa7546f1856b123223ab086b3def14c89d24eef18f49c32508c2f60e241']",
-            ),
-            (
-                "Sign? [y/n]: ",
-                "y",
-            ),
-            (
-                "Choose key [2f685fa7546f1856b123223ab086b3def14c89d24eef18f49c32508c2f60e241]: ",
-                "2f685fa7546f1856b123223ab086b3def14c89d24eef18f49c32508c2f60e241",
-            ),
-            (
-                "Enter path to encrypted local private key: ",
-                f"{_PEMS / 'rsa'}",
-            ),
-            ("Enter password: ",),  # provided via patch_getpass
-            (
-                "Signed with key 2f685fa7546f1856b123223ab086b3def14c89d24eef18f49c32508c2f60e241",
-            ),
-            ("Metadata fully signed.",),
             (
                 "Save? [y/n]: ",
                 "n",

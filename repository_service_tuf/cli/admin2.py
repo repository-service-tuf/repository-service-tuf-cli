@@ -17,14 +17,13 @@ TODO
 - Integrate with existing admin cli
 
 """
-from copy import deepcopy
 from typing import Dict, Optional, Tuple
 
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from rich.pretty import pprint
 from rich.prompt import Confirm, Prompt
 from securesystemslib.exceptions import StorageError
-from securesystemslib.signer import CryptoSigner, Key, Signer
+from securesystemslib.signer import CryptoSigner, Key, Signature, Signer
 from tuf.api.metadata import Metadata, Root, UnsignedMetadataError
 from tuf.api.serialization import DeserializationError
 
@@ -79,66 +78,68 @@ def _get_verification_result(
     return unused_keys, msg
 
 
-def _sign(
-    metadata: Metadata[Root],
-    prev_root: Optional[Root] = None,
-):
-    """Prompt loop to add signatures to root based on verification result.
+def _get_combined_verification_result(
+    metadata: Metadata[Root], prev_root: Optional[Root]
+) -> Tuple[Dict[str, Key], str]:
+    """Get combined verification results from previous and current root."""
+    unused_keys, missing_sig_msg = _get_verification_result(
+        metadata.signed, metadata
+    )
+    if prev_root:
+        prev_keys, prev_msg = _get_verification_result(prev_root, metadata)
+        unused_keys.update(prev_keys)
 
-    Verification results will be showed at least once, before the user is asked
-    if they wish to exit signing.
-
-    Loops until fully signed or user exit.
-    """
-    reviewed = False
-    while True:
-        unused_keys, missing_sig_msg = _get_verification_result(
-            metadata.signed, metadata
+        # Combine "missing signatures" messages from old and new root:
+        # - show only non-empty message (filter)
+        # - show only one message, if both are equal (set)
+        missing_sig_msg = "\n".join(
+            filter(None, sorted({missing_sig_msg, prev_msg}))
         )
-        if prev_root:
-            prev_keys, prev_msg = _get_verification_result(prev_root, metadata)
-            unused_keys.update(prev_keys)
-
-            # Combine "missing signatures" messages from old and new root:
-            # - show only non-empty message (filter)
-            # - show only one message, if both are equal (set)
-            missing_sig_msg = "\n".join(
-                filter(None, sorted({missing_sig_msg, prev_msg}))
-            )
-
-        if not missing_sig_msg:
-            console.print("Metadata fully signed.")
-            break
-
-        # Show metadata once for review and signature requirements
-        if not reviewed:
-            _show(metadata.signed)
-            reviewed = True
-
-        console.print(missing_sig_msg)
-
-        # User may signal that they are done signing.
-        if not _sign_one(metadata, unused_keys):
-            break
+    return unused_keys, missing_sig_msg
 
 
-def _sign_one(metadata: Metadata, keys: Dict[str, Key]) -> bool:
-    """Prompt loop to add one signature to ``metadata`` using ``keys``.
+def _sign_one(
+    metadata: Metadata[Root], prev_root: Optional[Root]
+) -> Optional[Signature]:
+    """Prompt loop to add one signature.
 
-    Loops until success or user exit. Returns boolean to indicate user exit.
+    Return None, if metadata is already fully missing.
+    Otherwise, loop until success and returns the added signature.
     """
-    while Confirm.ask("Sign?"):
-        keyid = Prompt.ask("Choose key", choices=sorted(keys))
-        try:
-            signer = _load_signer(keys[keyid])
-            metadata.sign(signer, append=True)
-            console.print(f"Signed with key {keyid}")
-            return True
+    unused_keys, missing_sig_msg = _get_combined_verification_result(
+        metadata, prev_root
+    )
+    if not missing_sig_msg:
+        console.print("Metadata fully signed.")
+        return None
 
-        except (ValueError, OSError, UnsignedMetadataError) as e:
-            console.print(f"Cannot sign: {e}")
+    _show(metadata.signed)
+    console.print(missing_sig_msg)
 
-    return False
+    # Loop until success
+    signature = None
+    while not signature:
+        signature = _sign(metadata, unused_keys)
+
+    return signature
+
+
+def _sign(metadata: Metadata, keys: Dict[str, Key]) -> Optional[Signature]:
+    """Prompt for signing key and sign.
+
+    Return Signature or None, if signing fails.
+    """
+    signature = None
+    keyid = Prompt.ask("Choose key", choices=sorted(keys))
+    try:
+        signer = _load_signer(keys[keyid])
+        signature = metadata.sign(signer, append=True)
+        console.print(f"Signed with key {keyid}")
+
+    except (ValueError, OSError, UnsignedMetadataError) as e:
+        console.print(f"Cannot sign: {e}")
+
+    return signature
 
 
 def _load(prompt: str) -> Metadata[Root]:
@@ -186,9 +187,9 @@ def admin2():
 
 @admin2.command()  # type: ignore
 def sign() -> None:
-    """Add signatures to root metadata.
+    """Add one signature to root metadata.
 
-    Will ask for root metadata and signing key paths.
+    Will ask for root metadata and signing key path.
     """
     # 1. Load
     root_md = _load("Enter path to root to sign")
@@ -197,14 +198,11 @@ def sign() -> None:
         prev_root_md = _load("Enter path to previous root")
         prev_root = prev_root_md.signed
 
-    # 2. Add missing signatures
-    orig_sigs = deepcopy(root_md.signatures)
-    _sign(root_md, prev_root)
+    # 2. Add signature, if missing
+    signature = _sign_one(root_md, prev_root)
 
-    # 3. Save
-    if root_md.signatures != orig_sigs:
+    # 3. Save, if signature was added
+    if signature:
         _save(root_md)
-    else:
-        console.print("Not saving unchanged metadata.")
 
     console.print("Bye.")
