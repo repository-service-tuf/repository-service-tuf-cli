@@ -19,21 +19,21 @@ from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.artifact import artifact
 
 
-def decode_trusted_root(root) -> str:
+def _decode_trusted_root(root) -> str:
     root_encoded = bytes(root, "utf-8")
     return base64.b64decode(root_encoded).decode("utf-8")
 
 
-def build_metadata_dir(metadata_url: str) -> str:
+def _build_metadata_dir(metadata_url: str) -> str:
     """build a unique and reproducible directory name for the repository url"""
     name = sha256(metadata_url.encode()).hexdigest()[:8]
     return f"{Path.home()}/.local/share/rstuf/{name}"
 
 
-def init_tofu(metadata_url: str, root_url: Optional[str]) -> bool:
+def _init_tofu(metadata_url: str, root_url: Optional[str]) -> None:
     """Initialize local trusted metadata (Trust-On-First-Use) and create a
     directory for downloads"""
-    metadata_dir = build_metadata_dir(metadata_url)
+    metadata_dir = _build_metadata_dir(metadata_url)
 
     os.makedirs(metadata_dir, exist_ok=True)
 
@@ -48,24 +48,26 @@ def init_tofu(metadata_url: str, root_url: Optional[str]) -> bool:
                 f"Failed to parse {root_url}: ",
                 f"{parsed_root_url.scheme}, {parsed_root_url.netloc}",
             )
-    except OSError:  # pragma: no cover
-        console.print(f"Failed to download initial root from {root_url}")
-        return False  # pragma: no cover
+    except (OSError, ConnectionError) as e:  # pragma: no cover
+        raise click.FileError(
+            f"Failed to download initial root from {root_url}",
+            f"Trusted local root not found in {metadata_url} - "
+            "`tofu` was not successful",
+        ) from e
 
     console.print(
         f"Trust-on-First-Use: Initialized new root in {metadata_dir}"
     )
-    return True
 
 
-def perform_tuf_ngclient_download_artifact(
+def _perform_tuf_ngclient_download_artifact(
     metadata_url: str,
     metadata_dir: str,
     artifacts_url: str,
     artifact_name: str,
     download_dir: str,
     config: UpdaterConfig,
-) -> bool:
+) -> None:
     try:
         updater = Updater(
             metadata_dir=metadata_dir,
@@ -80,13 +82,11 @@ def perform_tuf_ngclient_download_artifact(
         info = updater.get_targetinfo(artifact_name)  # pragma: no cover
 
         if info is None:  # pragma: no cover
-            console.print(f"Artifact {artifact_name} not found")
-            return False
+            raise FileNotFoundError(f"Artifact {artifact_name} not found")
 
         path = updater.find_cached_target(info)  # pragma: no cover
         if path:  # pragma: no cover
             console.print(f"Artifact is available in {path}")
-            return True
 
         path = updater.download_target(info)  # pragma: no cover
         console.print(  # pragma: no cover
@@ -94,10 +94,9 @@ def perform_tuf_ngclient_download_artifact(
         )
 
     except (OSError, RepositoryError, DownloadError) as e:
-        console.print(f"Failed to download artifact {artifact_name}: {e}")
-        return False
-
-    return True
+        raise click.FileError(
+            f"Failed to download artifact {artifact_name}: {e}"
+        )
 
 
 def _download_artifact(
@@ -107,15 +106,13 @@ def _download_artifact(
     directory_prefix: Optional[str],
     artifact_name: str,
     root: Optional[str],
-) -> bool:
+) -> None:
     if metadata_url is None:
-        console.print("Please specify metadata url")
-        return False
-    metadata_dir = build_metadata_dir(metadata_url)
+        raise click.ClickException("Please specify metadata url")
+    metadata_dir = _build_metadata_dir(metadata_url)
 
     if artifacts_url is None:
-        console.print("Please specify artifacts url")
-        return False
+        raise click.ClickException("Please specify artifacts url")
 
     if not os.path.isfile(f"{metadata_dir}/root.json"):
         console.print(
@@ -123,13 +120,7 @@ def _download_artifact(
             "Trust-On-First-Use or copy trusted root metadata to "
             f"{metadata_dir}/root.json"
         )
-        ok = init_tofu(metadata_url, root)
-        if not ok:
-            console.print(
-                f"Trusted local root not found in {metadata_url} - "
-                "`tofu` was not successful"
-            )
-            return False
+        _init_tofu(metadata_url, root)
 
     console.print(f"Using trusted root in {metadata_dir}")
 
@@ -141,13 +132,13 @@ def _download_artifact(
         download_dir = os.getcwd() + "/downloads"
 
     if not os.path.isdir(download_dir):
-        os.mkdir(download_dir)
+        os.makedirs(download_dir, exist_ok=True)
 
     config = UpdaterConfig()
     if not hash_prefix:
         config.prefix_targets_with_hash = False
 
-    res = perform_tuf_ngclient_download_artifact(
+    _perform_tuf_ngclient_download_artifact(
         metadata_url,
         metadata_dir,
         artifacts_url,
@@ -155,8 +146,6 @@ def _download_artifact(
         download_dir,
         config,
     )
-
-    return res
 
 
 @artifact.command()
@@ -250,16 +239,15 @@ def download(
         if not root:
             root = rstuf_config["REPOSITORIES"][repository].get("trusted_root")
             if not root:
-                console.print(
+                raise click.ClickException(
                     "Trusted root is not cofigured. "
                     "You should either add it to your config file, "
                     "or use the download commang without a config file"
                 )
-                return
-            root = decode_trusted_root(root)  # pragma: no cover
+            root = _decode_trusted_root(root)  # pragma: no cover
             console.print(f"Decoded trusted root {root}")
 
-    ok = _download_artifact(
+    _download_artifact(
         metadata_url,
         artifacts_url,
         hash_prefix,
@@ -268,7 +256,4 @@ def download(
         root,
     )
 
-    if ok:
-        console.print(
-            f"Successfully completed artifact download: {artifact_name}"
-        )
+    console.print(f"Successfully completed artifact download: {artifact_name}")

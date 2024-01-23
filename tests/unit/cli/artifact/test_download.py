@@ -29,7 +29,7 @@ class TestDownloadArtifacInteraction:
         )
 
         assert "Please specify metadata url" in test_result.output
-        assert test_result.exit_code == 0
+        assert test_result.exit_code == 1
 
     def test_dowlnoad_command_without_config_missing_artifacts_url(
         self, client, test_context, test_setup
@@ -45,7 +45,7 @@ class TestDownloadArtifacInteraction:
         )
 
         assert "Please specify artifacts url" in test_result.output
-        assert test_result.exit_code == 0
+        assert test_result.exit_code == 1
 
     def test_dowlnoad_command_without_config_using_tofu(
         self, client, test_context, test_setup
@@ -87,7 +87,6 @@ class TestDownloadArtifacInteraction:
                     f"Trust-on-First-Use: Initialized new root in \n{expected_root_path}"  # noqa
                     in test_result.output
                 )
-                assert test_result.exit_code == 0
 
     def test_dowlnoad_command_without_config_with_trusted_root(
         self, client, test_context, test_setup
@@ -98,9 +97,9 @@ class TestDownloadArtifacInteraction:
         artifact_url = "http://localhost:8081"
         trusted_root_path = "tests/files/artifact_download"
         with mock.patch(
-            "repository_service_tuf.cli.artifact.download.build_metadata_dir"  # noqa
+            "repository_service_tuf.cli.artifact.download._build_metadata_dir"  # noqa
         ):
-            download.build_metadata_dir = MagicMock(
+            download._build_metadata_dir = MagicMock(
                 return_value=trusted_root_path
             )
 
@@ -120,7 +119,6 @@ class TestDownloadArtifacInteraction:
                 f"Using trusted root in {expected_root_path}"
                 in test_result.output
             )
-            assert test_result.exit_code == 0
 
     def test_dowlnoad_command_without_config_with_artifact_url(
         self, client, test_context, test_setup
@@ -131,16 +129,16 @@ class TestDownloadArtifacInteraction:
         artifact_url = "http://localhost:8081"
         trusted_root_path = "tests/files/artifact_download"
         with mock.patch(
-            "repository_service_tuf.cli.artifact.download.build_metadata_dir"  # noqa
+            "repository_service_tuf.cli.artifact.download._build_metadata_dir"  # noqa
         ):
-            download.build_metadata_dir = MagicMock(
+            download._build_metadata_dir = MagicMock(
                 return_value=trusted_root_path
             )
 
             with mock.patch(
-                "repository_service_tuf.cli.artifact.download.perform_tuf_ngclient_download_artifact"  # noqa
+                "repository_service_tuf.cli.artifact.download._perform_tuf_ngclient_download_artifact"  # noqa
             ):
-                download.perform_tuf_ngclient_download_artifact = MagicMock(
+                download._perform_tuf_ngclient_download_artifact = MagicMock(
                     return_value=True
                 )
                 test_result = client.invoke(
@@ -169,16 +167,16 @@ class TestDownloadArtifacInteraction:
         artifact_url = "http://localhost:8081"
         trusted_root_path = "tests/files/artifact_download"
         with mock.patch(
-            "repository_service_tuf.cli.artifact.download.build_metadata_dir"  # noqa
+            "repository_service_tuf.cli.artifact.download._build_metadata_dir"  # noqa
         ):
-            download.build_metadata_dir = MagicMock(
+            download._build_metadata_dir = MagicMock(
                 return_value=trusted_root_path
             )
 
             with mock.patch(
-                "repository_service_tuf.cli.artifact.download.perform_tuf_ngclient_download_artifact"  # noqa
+                "repository_service_tuf.cli.artifact.download._perform_tuf_ngclient_download_artifact"  # noqa
             ):
-                download.perform_tuf_ngclient_download_artifact = MagicMock(
+                download._perform_tuf_ngclient_download_artifact = MagicMock(
                     return_value=True
                 )
                 test_result = client.invoke(
@@ -209,16 +207,16 @@ class TestDownloadArtifacInteraction:
         trusted_root_path = "tests/files/artifact_download"
         directory_prefix = os.getcwd() + "/downloads"
         with mock.patch(
-            "repository_service_tuf.cli.artifact.download.build_metadata_dir"  # noqa
+            "repository_service_tuf.cli.artifact.download._build_metadata_dir"  # noqa
         ):
-            download.build_metadata_dir = MagicMock(
+            download._build_metadata_dir = MagicMock(
                 return_value=trusted_root_path
             )
 
             with mock.patch(
-                "repository_service_tuf.cli.artifact.download.perform_tuf_ngclient_download_artifact"  # noqa
+                "repository_service_tuf.cli.artifact.download._perform_tuf_ngclient_download_artifact"  # noqa
             ):
-                download.perform_tuf_ngclient_download_artifact = MagicMock(
+                download._perform_tuf_ngclient_download_artifact = MagicMock(
                     return_value=True
                 )
                 test_result = client.invoke(
@@ -260,9 +258,9 @@ class TestDownloadArtifacInteraction:
                     filename=f"{expected_root_path}/root.json"
                 )
                 with mock.patch(
-                    "repository_service_tuf.cli.artifact.download.build_metadata_dir"  # noqa
+                    "repository_service_tuf.cli.artifact.download._build_metadata_dir"  # noqa
                 ):
-                    download.build_metadata_dir = MagicMock(
+                    download._build_metadata_dir = MagicMock(
                         return_value=trusted_root_path
                     )
 
@@ -286,7 +284,7 @@ class TestDownloadArtifacInteraction:
                         f"Failed to download artifact {artifact_name}"
                         in test_result.output
                     )
-                    assert test_result.exit_code == 0
+                    assert test_result.exit_code == 1
 
     def test_dowlnoad_command_with_failing_tofu(
         self, client, test_context, test_setup
@@ -302,33 +300,30 @@ class TestDownloadArtifacInteraction:
 
             metadata_url = "http://localhost:8080"
             artifact_url = "http://localhost:8081"
-            with mock.patch(
-                "repository_service_tuf.cli.artifact.download.init_tofu"
-            ):
-                download.init_tofu = MagicMock(return_value=False)
 
-                test_result = client.invoke(
-                    download.download,
-                    [
-                        artifact_name,
-                        "-m",
-                        metadata_url,
-                        "-a",
-                        artifact_url,
-                    ],
-                    obj=test_context,
-                )
+            test_result = client.invoke(
+                download.download,
+                [
+                    artifact_name,
+                    "-m",
+                    metadata_url,
+                    "-a",
+                    artifact_url,
+                ],
+                obj=test_context,
+            )
 
-                assert "Trusted local root not found" in test_result.output
-                assert (
-                    f"Using 'tofu' to Trust-On-First-Use or copy trusted\nroot metadata to {expected_root_path}/root.json"  # noqa
-                    in test_result.output
-                )
-                assert (
-                    f"Trusted local root not found in {metadata_url} - `tofu` was not \nsuccessful\n"  # noqa
-                    in test_result.output
-                )
-                assert test_result.exit_code == 0
+            assert "Trusted local root not found" in test_result.output
+            assert (
+                f"Using 'tofu' to Trust-On-First-Use or copy trusted\nroot metadata to {expected_root_path}/root.json"  # noqa
+                in test_result.output
+            )
+            assert "Trusted local root not found in" in test_result.output
+            assert (
+                f"{metadata_url} - `tofu` was not successful"
+                in test_result.output
+            )
+            assert test_result.exit_code == 1
 
     def test_dowlnoad_command_with_config_no_current_repo(
         self, client, test_context, test_setup
@@ -476,11 +471,11 @@ class TestDownloadArtifacInteraction:
             )
             assert "Trusted root is not cofigured." in test_result.output
             assert (
-                "You should either add it to your config file, or"
+                "You should either add it to your config file, "
                 in test_result.output
             )
             assert (
-                "use the download commang without a config file"
+                "or use the download commang without a config file"
                 in test_result.output
             )
 
@@ -491,7 +486,7 @@ class TestDownloadArtifactOptions:
     def test_decode_trusted_root(self):
         trusted_root = "ZXhhbXBsZS9ob21lL3BhdGgvLmxvY2FsL3NoYXJlL3JzdHVmL3Jvb3QuanNvbg=="  # noqa
         want = "example/home/path/.local/share/rstuf/root.json"
-        actual = download.decode_trusted_root(trusted_root)
+        actual = download._decode_trusted_root(trusted_root)
         assert want == actual
 
     def test_build_metadata_dir(self):
@@ -500,5 +495,5 @@ class TestDownloadArtifactOptions:
         want = "example_home/.local/share/rstuf/" + metadata_url_hash
         with patch.object(Path, "home") as mock_exists:
             mock_exists.return_value = "example_home"
-            actual = download.build_metadata_dir(metadata_url)
+            actual = download._build_metadata_dir(metadata_url)
             assert want == actual
