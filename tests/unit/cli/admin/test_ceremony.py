@@ -532,6 +532,19 @@ class TestCeremonyInteraction:
             "",  # What is the metadata expiration for the timestamp role?(Days) (365)?  # noqa
             "",  # What is the metadata expiration for the bins role?(Days) (365)?  # noqa
         ]
+        input_step3 = [
+            "y",  # Ready to start loading the root keys? [y/n]
+            "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
+            "",  # [Optional] Give a name/tag to the root`s key
+            "",  # Select to use private key or public? [private/public] (public)  # noqa
+            "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "fake_id",  # # Enter root`s key id
+            "fake_hash",  # Enter root`s public key hash
+            "root key 2",  # [Optional] Give a name/tag to the root`s key
+            "",
+        ]
         test_result = client.invoke(
             ceremony.ceremony,
             "--save",
