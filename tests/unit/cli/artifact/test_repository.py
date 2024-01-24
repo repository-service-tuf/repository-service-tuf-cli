@@ -97,7 +97,7 @@ class TestArtifactRepositoryInteraction:
             obj=test_context,
         )
         assert "There are no configured repositories" in test_result.output
-        assert test_result.exit_code == 0
+        assert test_result.exit_code == 1
 
         test_result = client.invoke(
             repository.show,
@@ -108,7 +108,7 @@ class TestArtifactRepositoryInteraction:
             "Repository r1 is missing in your configuration"
             in test_result.output
         )
-        assert test_result.exit_code == 0
+        assert test_result.exit_code == 1
 
     def test_repository_use(self, client, test_context, test_setup):
         repository.setup = test_setup
@@ -146,7 +146,7 @@ class TestArtifactRepositoryInteraction:
                 side_effect=fake_write_config,
             )
             test_result = client.invoke(
-                repository.use,
+                repository.set,
                 ["r2"],
                 obj=test_context,
             )
@@ -195,7 +195,7 @@ class TestArtifactRepositoryInteraction:
                 side_effect=fake_write_config,
             )
             test_result = client.invoke(
-                repository.set,
+                repository.add,
                 ["-r", "example_path_to_root/root.json", "r3"],
                 obj=test_context,
             )
@@ -254,7 +254,7 @@ class TestArtifactRepositoryInteraction:
             )
 
             test_result = client.invoke(
-                repository.set,
+                repository.add,
                 [
                     "-r",
                     "example_path_to_root/root.json",
@@ -326,7 +326,7 @@ class TestArtifactRepositoryInteraction:
             )
 
             test_result = client.invoke(
-                repository.set,
+                repository.add,
                 ["-p", "r3"],
                 obj=test_context,
             )
@@ -366,7 +366,7 @@ class TestArtifactRepositoryInteraction:
             )
 
             test_result = client.invoke(
-                repository.set,
+                repository.add,
                 [
                     "-r",
                     "example_path_to_root/root.json",
@@ -436,7 +436,7 @@ class TestArtifactRepositoryInteraction:
                 side_effect=fake_write_config,
             )
             test_result = client.invoke(
-                repository.set,
+                repository.add,
                 [
                     "-m",
                     "http://example.com",
@@ -582,7 +582,7 @@ class TestArtifactRepositoryInteraction:
             in test_result.output
         )
         assert "You can create it instead" in test_result.output
-        assert test_result.exit_code == 0
+        assert test_result.exit_code == 1
 
     def test_repository_delete_no_repos(
         self, client, test_context, test_setup
@@ -611,7 +611,7 @@ class TestArtifactRepositoryInteraction:
             "There are no configured repositories. Nothing to delete"
             in test_result.output
         )
-        assert test_result.exit_code == 0
+        assert test_result.exit_code == 1
 
     def test_repository_delete_non_existing(
         self, client, test_context, test_setup
@@ -653,7 +653,7 @@ class TestArtifactRepositoryInteraction:
             "Repository non_existing not available. Nothing to delete"
             in test_result.output
         )
-        assert test_result.exit_code == 0
+        assert test_result.exit_code == 1
 
     def test_repository_delete_existing(
         self, client, test_context, test_setup

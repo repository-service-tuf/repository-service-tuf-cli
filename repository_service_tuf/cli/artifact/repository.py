@@ -37,7 +37,7 @@ def repository(context) -> None:
 def show(
     context: Context,
     all: bool,
-    repository,
+    repository: str,
 ) -> None:
     """
     List configured repositories.
@@ -50,8 +50,7 @@ def show(
             for repo in rstuf_config.get("REPOSITORIES"):
                 console.print(repo)
         else:
-            console.print("There are no configured repositories")
-            return
+            raise click.ClickException("There are no configured repositories")
 
     if repository:
         if rstuf_config.get("REPOSITORIES") and rstuf_config[
@@ -59,7 +58,7 @@ def show(
         ].get(repository):
             console.print(rstuf_config["REPOSITORIES"].get(repository))
         else:
-            console.print(
+            raise click.ClickException(
                 f"Repository {repository} is missing in your configuration"
             )
 
@@ -67,7 +66,7 @@ def show(
 @repository.command()
 @click.pass_context
 @click.argument("repository")
-def use(context: Context, repository) -> None:
+def set(context: Context, repository: str) -> None:
     """
     Switch current repository.
     """
@@ -114,16 +113,16 @@ def use(context: Context, repository) -> None:
 )
 @click.pass_context
 @click.argument("repository")
-def set(
+def add(
     context: Context,
     root: str,
     metadata_url: str,
     artifacts_url: str,
     hash_prefix: bool,
-    repository,
+    repository: str,
 ) -> None:
     """
-    Set a new repository.
+    Add a new repository.
     """
 
     rstuf_config = context.obj.get("settings").as_dict()
@@ -196,7 +195,7 @@ def update(
     metadata_url: str,
     artifacts_url: str,
     hash_prefix: bool,
-    repository,
+    repository: str,
 ) -> None:
     """
     Update repository.
@@ -209,11 +208,10 @@ def update(
         return
 
     if not rstuf_config["REPOSITORIES"].get(repository):
-        console.print(
+        raise click.ClickException(
             f"Repository {repository} not available in config. "
             "You can create it instead"
         )
-        return
 
     if root:
         rstuf_config["REPOSITORIES"][repository][  # pragma: no cover
@@ -235,7 +233,7 @@ def update(
 @repository.command()
 @click.pass_context
 @click.argument("repository")
-def delete(context: Context, repository) -> None:
+def delete(context: Context, repository: str) -> None:
     """
     Delete repository.
     """
@@ -243,16 +241,14 @@ def delete(context: Context, repository) -> None:
     rstuf_config = context.obj.get("settings").as_dict()
 
     if not rstuf_config.get("REPOSITORIES"):
-        console.print(
+        raise click.ClickException(
             "There are no configured repositories. Nothing to delete"
         )
-        return
 
     if not rstuf_config["REPOSITORIES"].get(repository):
-        console.print(
+        raise click.ClickException(
             f"Repository {repository} not available. Nothing to delete"
         )
-        return
 
     repo = rstuf_config["REPOSITORIES"].pop(repository)
 

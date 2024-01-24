@@ -959,10 +959,10 @@ This command provides artifact repository management for the RSTUF repository co
     ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
     ╭─ Commands ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
     │ delete                           Delete repository.                                                                                                                       │
-    │ set                              Set a new repository.                                                                                                                    │
+    │ add                              Add a new repository.                                                                                                                    │
     │ show                             List configured repositories.                                                                                                            │
     │ update                           Update repository.                                                                                                                       │
-    │ use                              Switch current repository.                                                                                                               │
+    │ set                              Switch current repository.                                                                                                               │
     ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 .. code::
@@ -973,11 +973,11 @@ This command provides artifact repository management for the RSTUF repository co
 
 .. code::
 
-    ❯ rstuf artifact repository set --help
+    ❯ rstuf artifact repository add --help
 
-    Usage: rstuf artifact repository set [OPTIONS] REPOSITORY
+    Usage: rstuf artifact repository add [OPTIONS] REPOSITORY
 
-    Set a new repository.
+    Add a new repository.
 
     ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
     │ --root           -r  TEXT  A metadata URL to the initial trusted root or a local file.                                                                                    │
@@ -1018,9 +1018,9 @@ This command provides artifact repository management for the RSTUF repository co
 
 .. code::
 
-    ❯ rstuf artifact repository use --help
+    ❯ rstuf artifact repository set --help
 
-    Usage: rstuf artifact repository use [OPTIONS] REPOSITORY
+    Usage: rstuf artifact repository set [OPTIONS] REPOSITORY
 
 
 .. rstuf-cli-task
