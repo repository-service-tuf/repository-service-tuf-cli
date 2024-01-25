@@ -105,7 +105,7 @@ def _download_artifact(
     hash_prefix: Optional[bool],
     directory_prefix: Optional[str],
     artifact_name: str,
-    root: Optional[str],
+    root_url: Optional[str],
 ) -> None:
     if metadata_url is None:
         raise click.ClickException("Please specify metadata url")
@@ -120,7 +120,7 @@ def _download_artifact(
             "Trust-On-First-Use or copy trusted root metadata to "
             f"{metadata_dir}/root.json"
         )
-        _init_tofu(metadata_url, root)
+        _init_tofu(metadata_url, root_url)
 
     console.print(f"Using trusted root in {metadata_dir}")
 

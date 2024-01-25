@@ -1,332 +1,359 @@
 # SPDX-License-Identifier: MIT
 
 import os
-import uuid
 from hashlib import sha256
-from pathlib import Path
-from unittest import mock
-from unittest.mock import MagicMock, patch
-from urllib import request
+
+import pretend
+from tuf.ngclient import UpdaterConfig
 
 from repository_service_tuf.cli.artifact import download
 
-example_home_dir: str = "example_home_" + str(uuid.uuid4())[:8]
+METADATA_URL = "http://localhost:8080"
+ARTIFACT_URL = "http://localhost:8081"
+ARTIFACT_NAME = "file.txt"
+SRC_PATH = "repository_service_tuf.cli.artifact.download"
 
 
 class TestDownloadArtifacInteraction:
     """Test the artifact download command interaction"""
 
-    def test_dowlnoad_command_without_config_missing_metadata_url(
-        self, client, test_context, test_setup
+    # mocked_os_makedirs not used directly, but mocks os.makedirs
+    def test_download_command_without_config_missing_metadata_url(
+        self, client, test_context, test_setup, mocked_os_makedirs
     ):
         download.setup = test_setup
-        artifact_name = "file.txt"
-
         test_result = client.invoke(
             download.download,
-            artifact_name,
+            ARTIFACT_NAME,
             obj=test_context,
         )
 
         assert "Please specify metadata url" in test_result.output
         assert test_result.exit_code == 1
 
-    def test_dowlnoad_command_without_config_missing_artifacts_url(
-        self, client, test_context, test_setup
+    def test_download_command_without_config_missing_artifacts_url(
+        self, client, test_context, test_setup, mocked_os_makedirs
     ):
         download.setup = test_setup
-        artifact_name = "file.txt"
-        metadata_url = "http://localhost:8080"
 
         test_result = client.invoke(
             download.download,
-            [artifact_name, "-m", metadata_url],
+            [ARTIFACT_NAME, "-m", METADATA_URL],
             obj=test_context,
         )
 
         assert "Please specify artifacts url" in test_result.output
         assert test_result.exit_code == 1
 
-    def test_dowlnoad_command_without_config_using_tofu(
-        self, client, test_context, test_setup
+    def test_download_command_without_config_using_tofu(
+        self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
     ):
         download.setup = test_setup
-        artifact_name = "file.txt"
+        metadata_dir = "foo_dir"
+        fake_build_metadata_dir = pretend.call_recorder(lambda a: metadata_dir)
+        monkeypatch.setattr(
+            f"{SRC_PATH}._build_metadata_dir", fake_build_metadata_dir
+        )
 
-        with patch.object(Path, "home") as mock_exists:
-            mock_exists.return_value = example_home_dir
-            expected_root_path = (
-                f"{example_home_dir}/.local/share/rstuf/a76d8c3e"
+        fake_is_file = pretend.call_recorder(lambda a: False)
+        monkeypatch.setattr(f"{SRC_PATH}.os.path.isfile", fake_is_file)
+        fake_urlretrieve = pretend.call_recorder(lambda *a: "foo/root.json")
+        monkeypatch.setattr(
+            f"{SRC_PATH}.request.urlretrieve",
+            fake_urlretrieve,
+        )
+        fake__perform_tuf_ngclient_download_artifact = pretend.call_recorder(
+            lambda *a: None
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}._perform_tuf_ngclient_download_artifact",
+            fake__perform_tuf_ngclient_download_artifact,
+        )
+        updater_conf = UpdaterConfig()
+        fake_init_updater_config = pretend.call_recorder(lambda: updater_conf)
+        monkeypatch.setattr(
+            f"{SRC_PATH}.UpdaterConfig",
+            fake_init_updater_config,
+        )
+
+        test_result = client.invoke(
+            download.download,
+            [
+                ARTIFACT_NAME,
+                "-m",
+                METADATA_URL,
+                "-a",
+                ARTIFACT_URL,
+            ],
+            obj=test_context,
+            catch_exceptions=False,
+        )
+
+        assert "Trusted local root not found" in test_result.output
+        assert "Using 'tofu' to Trust-On-First-Use" in test_result.output
+        assert "Trust-on-First-Use: Initialized new root" in test_result.output
+        assert fake_urlretrieve.calls == [
+            pretend.call(
+                f"{METADATA_URL}/1.root.json", f"{metadata_dir}/root.json"
             )
+        ]
+        assert fake_build_metadata_dir.calls == [
+            pretend.call(METADATA_URL),
+            pretend.call(METADATA_URL),
+        ]
+        assert fake_init_updater_config.calls == [pretend.call()]
+        assert fake__perform_tuf_ngclient_download_artifact.calls == [
+            pretend.call(
+                METADATA_URL,
+                metadata_dir,
+                ARTIFACT_URL,
+                ARTIFACT_NAME,
+                os.getcwd() + "/downloads",
+                updater_conf,
+            )
+        ]
+        assert test_result.exit_code == 0
 
-            metadata_url = "http://localhost:8080"
-            artifact_url = "http://localhost:8081"
-            with mock.patch("urllib.request.urlretrieve"):
-                request.urlretrieve = MagicMock(
-                    filename=f"{expected_root_path}/root.json"
-                )
-
-                test_result = client.invoke(
-                    download.download,
-                    [
-                        artifact_name,
-                        "-m",
-                        metadata_url,
-                        "-a",
-                        artifact_url,
-                    ],
-                    obj=test_context,
-                )
-
-                assert "Trusted local root not found" in test_result.output
-                assert (
-                    f"Using 'tofu' to Trust-On-First-Use or copy trusted\nroot metadata to {expected_root_path}/root.json"  # noqa
-                    in test_result.output
-                )
-                assert (
-                    f"Trust-on-First-Use: Initialized new root in \n{expected_root_path}"  # noqa
-                    in test_result.output
-                )
-
-    def test_dowlnoad_command_without_config_with_trusted_root(
-        self, client, test_context, test_setup
+    def test_download_command_without_config_with_trusted_root(
+        self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
     ):
         download.setup = test_setup
-        artifact_name = "file.txt"
-        metadata_url = "http://localhost:8080"
-        artifact_url = "http://localhost:8081"
+
         trusted_root_path = "tests/files/artifact_download"
-        with mock.patch(
-            "repository_service_tuf.cli.artifact.download._build_metadata_dir"  # noqa
-        ):
-            download._build_metadata_dir = MagicMock(
-                return_value=trusted_root_path
-            )
+        fake_build_metadata_dir = pretend.call_recorder(
+            lambda a: trusted_root_path
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}._build_metadata_dir", fake_build_metadata_dir
+        )
+        fake__perform_tuf_ngclient_download_artifact = pretend.call_recorder(
+            lambda *a: None
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}._perform_tuf_ngclient_download_artifact",
+            fake__perform_tuf_ngclient_download_artifact,
+        )
+        updater_conf = UpdaterConfig()
+        fake_init_updater_config = pretend.call_recorder(lambda: updater_conf)
+        monkeypatch.setattr(
+            f"{SRC_PATH}.UpdaterConfig",
+            fake_init_updater_config,
+        )
 
-            test_result = client.invoke(
-                download.download,
-                [
-                    artifact_name,
-                    "-m",
-                    metadata_url,
-                    "-a",
-                    artifact_url,
-                ],
-                obj=test_context,
+        test_result = client.invoke(
+            download.download,
+            [
+                ARTIFACT_NAME,
+                "-m",
+                METADATA_URL,
+                "-a",
+                ARTIFACT_URL,
+            ],
+            obj=test_context,
+            catch_exceptions=False,
+        )
+        assert fake_build_metadata_dir.calls == [pretend.call(METADATA_URL)]
+        expected_root_path = trusted_root_path
+        msg = f"Using trusted root in {expected_root_path}"
+        assert msg in test_result.output
+        assert fake__perform_tuf_ngclient_download_artifact.calls == [
+            pretend.call(
+                METADATA_URL,
+                trusted_root_path,
+                ARTIFACT_URL,
+                ARTIFACT_NAME,
+                os.getcwd() + "/downloads",
+                updater_conf,
             )
-            expected_root_path = trusted_root_path
-            assert (
-                f"Using trusted root in {expected_root_path}"
-                in test_result.output
-            )
+        ]
+        assert test_result.exit_code == 0
 
-    def test_dowlnoad_command_without_config_with_artifact_url(
-        self, client, test_context, test_setup
+    def test_download_command_without_config_with_artifact_url(
+        self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
     ):
         download.setup = test_setup
-        artifact_name = "file.txt"
-        metadata_url = "http://localhost:8080"
-        artifact_url = "http://localhost:8081"
-        trusted_root_path = "tests/files/artifact_download"
-        with mock.patch(
-            "repository_service_tuf.cli.artifact.download._build_metadata_dir"  # noqa
-        ):
-            download._build_metadata_dir = MagicMock(
-                return_value=trusted_root_path
+        fake_download_artifact = pretend.call_recorder(lambda *a: None)
+        monkeypatch.setattr(
+            f"{SRC_PATH}._download_artifact", fake_download_artifact
+        )
+        test_result = client.invoke(
+            download.download,
+            [
+                ARTIFACT_NAME,
+                "-m",
+                METADATA_URL,
+                "-a",
+                ARTIFACT_URL,
+            ],
+            obj=test_context,
+        )
+        msg = f"Successfully completed artifact download: {ARTIFACT_NAME}"
+        assert msg in test_result.output
+        assert test_result.exit_code == 0
+        assert fake_download_artifact.calls == [
+            pretend.call(
+                METADATA_URL, ARTIFACT_URL, False, None, ARTIFACT_NAME, None
             )
+        ]
 
-            with mock.patch(
-                "repository_service_tuf.cli.artifact.download._perform_tuf_ngclient_download_artifact"  # noqa
-            ):
-                download._perform_tuf_ngclient_download_artifact = MagicMock(
-                    return_value=True
-                )
-                test_result = client.invoke(
-                    download.download,
-                    [
-                        artifact_name,
-                        "-m",
-                        metadata_url,
-                        "-a",
-                        artifact_url,
-                    ],
-                    obj=test_context,
-                )
-                assert (
-                    f"Successfully completed artifact download: {artifact_name}"  # noqa
-                    in test_result.output
-                )
-                assert test_result.exit_code == 0
-
-    def test_dowlnoad_command_without_config_with_hash_prefix(
-        self, client, test_context, test_setup
+    def test_download_command_without_config_with_hash_prefix(
+        self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
     ):
         download.setup = test_setup
-        artifact_name = "example_path/file.txt"
-        metadata_url = "http://localhost:8080"
-        artifact_url = "http://localhost:8081"
-        trusted_root_path = "tests/files/artifact_download"
-        with mock.patch(
-            "repository_service_tuf.cli.artifact.download._build_metadata_dir"  # noqa
-        ):
-            download._build_metadata_dir = MagicMock(
-                return_value=trusted_root_path
+        artifact_path = f"example_path/{ARTIFACT_NAME}"
+
+        fake_download_artifact = pretend.call_recorder(lambda *a: None)
+        monkeypatch.setattr(
+            f"{SRC_PATH}._download_artifact", fake_download_artifact
+        )
+
+        test_result = client.invoke(
+            download.download,
+            [
+                artifact_path,
+                "-m",
+                METADATA_URL,
+                "-a",
+                ARTIFACT_URL,
+                "-p",
+            ],
+            obj=test_context,
+        )
+        assert "Successfully completed artifact download" in test_result.output
+        assert test_result.exit_code == 0
+        assert fake_download_artifact.calls == [
+            pretend.call(
+                METADATA_URL, ARTIFACT_URL, True, None, artifact_path, None
             )
+        ]
 
-            with mock.patch(
-                "repository_service_tuf.cli.artifact.download._perform_tuf_ngclient_download_artifact"  # noqa
-            ):
-                download._perform_tuf_ngclient_download_artifact = MagicMock(
-                    return_value=True
-                )
-                test_result = client.invoke(
-                    download.download,
-                    [
-                        artifact_name,
-                        "-m",
-                        metadata_url,
-                        "-a",
-                        artifact_url,
-                        "-p",
-                    ],
-                    obj=test_context,
-                )
-                assert (
-                    "Successfully completed artifact download"
-                    in test_result.output
-                )
-                assert test_result.exit_code == 0
-
-    def test_dowlnoad_command_without_config_with_directory_prefix(
-        self, client, test_context, test_setup
+    def test_download_command_without_config_with_directory_prefix(
+        self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
     ):
         download.setup = test_setup
-        artifact_name = "example_path/file.txt"
-        metadata_url = "http://localhost:8080"
-        artifact_url = "http://localhost:8081"
-        trusted_root_path = "tests/files/artifact_download"
+        artifact_path = f"example_path/{ARTIFACT_NAME}"
         directory_prefix = os.getcwd() + "/downloads"
-        with mock.patch(
-            "repository_service_tuf.cli.artifact.download._build_metadata_dir"  # noqa
-        ):
-            download._build_metadata_dir = MagicMock(
-                return_value=trusted_root_path
+
+        fake_download_artifact = pretend.call_recorder(lambda *a: None)
+        monkeypatch.setattr(
+            f"{SRC_PATH}._download_artifact", fake_download_artifact
+        )
+
+        test_result = client.invoke(
+            download.download,
+            [
+                artifact_path,
+                "-m",
+                METADATA_URL,
+                "-a",
+                ARTIFACT_URL,
+                "-P",
+                directory_prefix,
+            ],
+            obj=test_context,
+        )
+        assert "Successfully completed artifact download" in test_result.output
+        assert test_result.exit_code == 0
+        assert fake_download_artifact.calls == [
+            pretend.call(
+                METADATA_URL,
+                ARTIFACT_URL,
+                False,
+                directory_prefix,
+                artifact_path,
+                None,
             )
+        ]
 
-            with mock.patch(
-                "repository_service_tuf.cli.artifact.download._perform_tuf_ngclient_download_artifact"  # noqa
-            ):
-                download._perform_tuf_ngclient_download_artifact = MagicMock(
-                    return_value=True
-                )
-                test_result = client.invoke(
-                    download.download,
-                    [
-                        artifact_name,
-                        "-m",
-                        metadata_url,
-                        "-a",
-                        artifact_url,
-                        "-P",
-                        directory_prefix,
-                    ],
-                    obj=test_context,
-                )
-                assert (
-                    "Successfully completed artifact download"
-                    in test_result.output
-                )
-                assert test_result.exit_code == 0
-
-    def test_dowlnoad_command_without_config_failed_to_download_artifact(
-        self, client, test_context, test_setup
+    def test_download_command_without_config_failed_to_download_artifact(
+        self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
     ):
         download.setup = test_setup
-        artifact_name = "non-existing"
-        metadata_url = "http://localhost:8080"
-        artifact_url = "http://localhost:8081"
-        trusted_root_path = "tests/files/artifact_download"
+        ARTIFACT_NAME = "non-existing"
 
-        with patch.object(Path, "home") as mock_exists:
-            mock_exists.return_value = example_home_dir
-            expected_root_path = (
-                f"{example_home_dir}/.local/share/rstuf/a76d8c3e"
-            )
+        metadata_dir = "foo_dir"
+        fake_build_metadata_dir = pretend.call_recorder(lambda a: metadata_dir)
+        monkeypatch.setattr(
+            f"{SRC_PATH}._build_metadata_dir", fake_build_metadata_dir
+        )
 
-            with mock.patch("urllib.request.urlretrieve"):
-                request.urlretrieve = MagicMock(
-                    filename=f"{expected_root_path}/root.json"
-                )
-                with mock.patch(
-                    "repository_service_tuf.cli.artifact.download._build_metadata_dir"  # noqa
-                ):
-                    download._build_metadata_dir = MagicMock(
-                        return_value=trusted_root_path
-                    )
+        def fake_is_file(path: str) -> bool:
+            if path == f"{metadata_dir}/root.json":
+                return True
+            else:
+                return False
 
-                    test_result = client.invoke(
-                        download.download,
-                        [
-                            artifact_name,
-                            "-m",
-                            metadata_url,
-                            "-a",
-                            artifact_url,
-                        ],
-                        obj=test_context,
-                    )
-                    expected_root_path = trusted_root_path
-                    assert (
-                        f"Using trusted root in {expected_root_path}"
-                        in test_result.output
-                    )
-                    assert (
-                        f"Failed to download artifact {artifact_name}"
-                        in test_result.output
-                    )
-                    assert test_result.exit_code == 1
+        monkeypatch.setattr(
+            f"{SRC_PATH}.os.path.isfile",
+            pretend.call_recorder(lambda a: fake_is_file(a)),
+        )
 
-    def test_dowlnoad_command_with_failing_tofu(
-        self, client, test_context, test_setup
+        class FakeUpdater:
+            def __init__(self, **kw):
+                pass
+
+            def refresh(self):
+                raise OSError("bad")
+
+        monkeypatch.setattr(f"{SRC_PATH}.Updater", FakeUpdater)
+
+        test_result = client.invoke(
+            download.download,
+            [
+                ARTIFACT_NAME,
+                "-m",
+                METADATA_URL,
+                "-a",
+                ARTIFACT_URL,
+            ],
+            obj=test_context,
+        )
+        assert f"Using trusted root in {metadata_dir}" in test_result.output
+        err_msg = f"Failed to download artifact {ARTIFACT_NAME}"
+        assert err_msg in test_result.output
+        assert fake_build_metadata_dir.calls == [
+            pretend.call(METADATA_URL),
+        ]
+        assert test_result.exit_code == 1
+
+    def test_download_command_with_failing_tofu(
+        self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
     ):
         download.setup = test_setup
-        artifact_name = "file.txt"
+        fake_build_metadata_dir = pretend.call_recorder(lambda a: "foo_dir")
+        monkeypatch.setattr(
+            f"{SRC_PATH}._build_metadata_dir", fake_build_metadata_dir
+        )
 
-        with patch.object(Path, "home") as mock_exists:
-            mock_exists.return_value = example_home_dir
-            expected_root_path = (
-                f"{example_home_dir}/.local/share/rstuf/a76d8c3e"
-            )
+        fake_is_file = pretend.call_recorder(lambda a: False)
+        monkeypatch.setattr(f"{SRC_PATH}.os.path.isfile", fake_is_file)
+        monkeypatch.setattr(
+            f"{SRC_PATH}.request.urlretrieve",
+            pretend.raiser(OSError("Bad file")),
+        )
+        test_result = client.invoke(
+            download.download,
+            [
+                ARTIFACT_NAME,
+                "-m",
+                METADATA_URL,
+                "-a",
+                ARTIFACT_URL,
+            ],
+            obj=test_context,
+        )
 
-            metadata_url = "http://localhost:8080"
-            artifact_url = "http://localhost:8081"
+        assert "Trusted local root not found" in test_result.output
+        assert "Using 'tofu' to Trust-On-First-Use" in test_result.output
+        assert (
+            f"{METADATA_URL} - `tofu` was not successful" in test_result.output
+        )
+        assert test_result.exit_code == 1
+        assert len(fake_is_file.calls) == 2
+        assert pretend.call("foo_dir/root.json") in fake_is_file.calls
 
-            test_result = client.invoke(
-                download.download,
-                [
-                    artifact_name,
-                    "-m",
-                    metadata_url,
-                    "-a",
-                    artifact_url,
-                ],
-                obj=test_context,
-            )
-
-            assert "Trusted local root not found" in test_result.output
-            assert (
-                f"Using 'tofu' to Trust-On-First-Use or copy trusted\nroot metadata to {expected_root_path}/root.json"  # noqa
-                in test_result.output
-            )
-            assert "Trusted local root not found in" in test_result.output
-            assert (
-                f"{metadata_url} - `tofu` was not successful"
-                in test_result.output
-            )
-            assert test_result.exit_code == 1
-
-    def test_dowlnoad_command_with_config_no_current_repo(
-        self, client, test_context, test_setup
+    def test_download_command_with_config_no_current_repo(
+        self, client, test_context, test_setup, monkeypatch
     ):
         download.setup = test_setup
         config = {
@@ -340,21 +367,20 @@ class TestDownloadArtifacInteraction:
             },
             "SERVER": "http://127.0.0.1",
         }
-        artifact_name = "file1.txt"
 
         test_context["settings"] = config
-        with mock.patch("os.path.isfile"):
-            os.path.isfile = MagicMock(return_value=True)
+        fake_is_file = pretend.call_recorder(lambda a: True)
+        monkeypatch.setattr(f"{SRC_PATH}.os.path.isfile", fake_is_file)
 
-            test_result = client.invoke(
-                download.download,
-                [artifact_name],
-                obj=test_context,
-            )
-            assert "Please specify current repository" in test_result.output
+        test_result = client.invoke(
+            download.download,
+            [ARTIFACT_NAME],
+            obj=test_context,
+        )
+        assert "Please specify current repository" in test_result.output
 
-    def test_dowlnoad_command_with_config_no_repos_listed(
-        self, client, test_context, test_setup
+    def test_download_command_with_config_no_repos_listed(
+        self, client, test_context, test_setup, monkeypatch
     ):
         download.setup = test_setup
         config = {
@@ -362,24 +388,22 @@ class TestDownloadArtifacInteraction:
             "REPOSITORIES": {},
             "SERVER": "http://127.0.0.1",
         }
-        artifact_name = "file1.txt"
 
         test_context["settings"] = config
-        with mock.patch("os.path.isfile"):
-            os.path.isfile = MagicMock(return_value=True)
+        fake_is_file = pretend.call_recorder(lambda a: True)
+        monkeypatch.setattr(f"{SRC_PATH}.os.path.isfile", fake_is_file)
 
-            test_result = client.invoke(
-                download.download,
-                [artifact_name],
-                obj=test_context,
-            )
-            assert (
-                "No reposotiroes listed in the config file"
-                in test_result.output
-            )
+        test_result = client.invoke(
+            download.download,
+            [ARTIFACT_NAME],
+            obj=test_context,
+        )
+        assert (
+            "No reposotiroes listed in the config file" in test_result.output
+        )
 
-    def test_dowlnoad_command_with_config_and_no_root_param(
-        self, client, test_context, test_setup
+    def test_download_command_with_config_and_no_root_param(
+        self, client, test_context, test_setup, monkeypatch
     ):
         download.setup = test_setup
         config = {
@@ -394,25 +418,24 @@ class TestDownloadArtifacInteraction:
             },
             "SERVER": "http://127.0.0.1",
         }
-        artifact_name = "file1.txt"
 
         test_context["settings"] = config
-        with mock.patch("os.path.isfile"):
-            os.path.isfile = MagicMock(return_value=True)
+        fake_is_file = pretend.call_recorder(lambda a: True)
+        monkeypatch.setattr(f"{SRC_PATH}.os.path.isfile", fake_is_file)
+        fake_download_artifact = pretend.call_recorder(lambda *a: None)
+        monkeypatch.setattr(
+            f"{SRC_PATH}._download_artifact", fake_download_artifact
+        )
 
-            with mock.patch(
-                "repository_service_tuf.cli.artifact.download._download_artifact"  # noqa
-            ):
-                download._download_artifact = MagicMock(return_value=True)
-                test_result = client.invoke(
-                    download.download,
-                    [artifact_name],
-                    obj=test_context,
-                )
-                assert "Decoded trusted root some_root" in test_result.output
+        test_result = client.invoke(
+            download.download,
+            [ARTIFACT_NAME],
+            obj=test_context,
+        )
+        assert "Decoded trusted root some_root" in test_result.output
 
-    def test_dowlnoad_command_with_config_repo_is_missing(
-        self, client, test_context, test_setup
+    def test_download_command_with_config_repo_is_missing(
+        self, client, test_context, test_setup, monkeypatch
     ):
         download.setup = test_setup
         config = {
@@ -427,24 +450,21 @@ class TestDownloadArtifacInteraction:
             },
             "SERVER": "http://127.0.0.1",
         }
-        artifact_name = "file1.txt"
 
         test_context["settings"] = config
-        with mock.patch("os.path.isfile"):
-            os.path.isfile = MagicMock(return_value=True)
+        fake_is_file = pretend.call_recorder(lambda a: True)
+        monkeypatch.setattr(f"{SRC_PATH}.os.path.isfile", fake_is_file)
 
-            test_result = client.invoke(
-                download.download,
-                [artifact_name],
-                obj=test_context,
-            )
-            assert (
-                "Repository r1_expected is missing in the configuration file"
-                in test_result.output
-            )
+        test_result = client.invoke(
+            download.download,
+            [ARTIFACT_NAME],
+            obj=test_context,
+        )
+        err_msg = "Repository r1_expected is missing in the configuration file"
+        assert err_msg in test_result.output
 
-    def test_dowlnoad_command_with_config_no_trusted_root(
-        self, client, test_context, test_setup
+    def test_download_command_with_config_no_trusted_root(
+        self, client, test_context, test_setup, monkeypatch
     ):
         download.setup = test_setup
         config = {
@@ -458,26 +478,19 @@ class TestDownloadArtifacInteraction:
             },
             "SERVER": "http://127.0.0.1",
         }
-        artifact_name = "file1.txt"
 
         test_context["settings"] = config
-        with mock.patch("os.path.isfile"):
-            os.path.isfile = MagicMock(return_value=True)
+        fake_is_file = pretend.call_recorder(lambda a: True)
+        monkeypatch.setattr(f"{SRC_PATH}.os.path.isfile", fake_is_file)
 
-            test_result = client.invoke(
-                download.download,
-                [artifact_name],
-                obj=test_context,
-            )
-            assert "Trusted root is not cofigured." in test_result.output
-            assert (
-                "You should either add it to your config file, "
-                in test_result.output
-            )
-            assert (
-                "or use the download commang without a config file"
-                in test_result.output
-            )
+        test_result = client.invoke(
+            download.download,
+            [ARTIFACT_NAME],
+            obj=test_context,
+        )
+        assert "Trusted root is not cofigured." in test_result.output
+        msg = "You should either add it to your config file,"
+        assert msg in test_result.output
 
 
 class TestDownloadArtifactOptions:
@@ -486,14 +499,16 @@ class TestDownloadArtifactOptions:
     def test_decode_trusted_root(self):
         trusted_root = "ZXhhbXBsZS9ob21lL3BhdGgvLmxvY2FsL3NoYXJlL3JzdHVmL3Jvb3QuanNvbg=="  # noqa
         want = "example/home/path/.local/share/rstuf/root.json"
+
         actual = download._decode_trusted_root(trusted_root)
         assert want == actual
 
-    def test_build_metadata_dir(self):
+    def test_build_metadata_dir(self, monkeypatch):
         metadata_url = "http://example.org"
         metadata_url_hash = sha256(metadata_url.encode()).hexdigest()[:8]
         want = "example_home/.local/share/rstuf/" + metadata_url_hash
-        with patch.object(Path, "home") as mock_exists:
-            mock_exists.return_value = "example_home"
-            actual = download._build_metadata_dir(metadata_url)
-            assert want == actual
+        fake_path_home = pretend.call_recorder(lambda: "example_home")
+        monkeypatch.setattr(f"{SRC_PATH}.Path.home", fake_path_home)
+
+        actual = download._build_metadata_dir(metadata_url)
+        assert want == actual

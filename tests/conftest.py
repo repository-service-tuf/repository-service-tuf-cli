@@ -7,6 +7,7 @@ from datetime import datetime
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, List, Tuple
 
+import pretend
 import pytest  # type: ignore
 from click.testing import CliRunner  # type: ignore
 from dynaconf import Dynaconf
@@ -183,3 +184,12 @@ def metadata_sign_input() -> List[str]:
     ]
 
     return input
+
+
+@pytest.fixture()
+def mocked_os_makedirs(monkeypatch):
+    fake_makedirs = pretend.call_recorder(lambda *a, **kw: None)
+    path = "repository_service_tuf.cli.artifact.download.os.makedirs"
+    monkeypatch.setattr(path, fake_makedirs)
+
+    return fake_makedirs
