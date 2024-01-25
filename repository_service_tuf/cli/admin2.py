@@ -153,13 +153,21 @@ def _show(root: Root):
 
 
 def _request(method: str, url: str, **kwargs: Any) -> Dict[str, Any]:
+    """HTTP requests helper.
+
+    Returns deserialized contents, and raises on error.
+    """
     response = request(method, url, **kwargs)
     response.raise_for_status()
     response_data = response.json()["data"]
     return response_data
 
 
-def _wait_for_success(server, task_id):
+def _wait_for_success(server: str, task_id: str) -> None:
+    """Poll task API indefinitely until async task finishes.
+
+    Raises RuntimeError, if task fails.
+    """
     task_url = parse.urljoin(server, ROUTE.TASK.value + task_id)
     while True:
         response_data = _request("get", task_url)
@@ -176,7 +184,10 @@ def _wait_for_success(server, task_id):
         raise RuntimeError(response_data)
 
 
-def _fetch_metadata(api_server):
+def _fetch_metadata(
+    api_server: str,
+) -> Tuple[Optional[Metadata[Root]], Optional[Root]]:
+    """Fetch from Metadata Sign API."""
     sign_url = parse.urljoin(api_server, ROUTE.METADATA_SIGN.value)
     response_data = _request("get", sign_url)
     metadata = response_data["metadata"]
@@ -194,7 +205,8 @@ def _fetch_metadata(api_server):
     return root_md, prev_root
 
 
-def _push_signature(api_server, signature):
+def _push_signature(api_server: str, signature: Signature) -> None:
+    """Post signature and wait for success of async task."""
     sign_url = parse.urljoin(api_server, ROUTE.METADATA_SIGN.value)
     request_data = {"role": "root", "signature": signature.to_dict()}
     response_data = _request("post", sign_url, json=request_data)
