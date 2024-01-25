@@ -17,17 +17,22 @@ TODO
 - Integrate with existing admin cli
 
 """
-from typing import Dict, Optional, Tuple
+import time
+from typing import Any, Dict, Optional, Tuple
+from urllib import parse
 
+import click
+from click import ClickException
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from requests import request
+from requests.exceptions import RequestException
 from rich.pretty import pprint
-from rich.prompt import Confirm, Prompt
-from securesystemslib.exceptions import StorageError
+from rich.prompt import Prompt
 from securesystemslib.signer import CryptoSigner, Key, Signature, Signer
 from tuf.api.metadata import Metadata, Root, UnsignedMetadataError
-from tuf.api.serialization import DeserializationError
 
 from repository_service_tuf.cli import console, rstuf
+from repository_service_tuf.helpers.api_client import URL as ROUTE
 
 
 def _load_signer(public_key: Key) -> Signer:
@@ -142,42 +147,59 @@ def _sign(metadata: Metadata, keys: Dict[str, Key]) -> Optional[Signature]:
     return signature
 
 
-def _load(prompt: str) -> Metadata[Root]:
-    """Prompt loop to load root from file.
-
-    Loop until success.
-    """
-    while True:
-        path = Prompt.ask(prompt)
-        try:
-            metadata = Metadata[Root].from_file(path)
-            break
-
-        except (StorageError, DeserializationError) as e:
-            console.print(f"Cannot load: {e}")
-
-    return metadata
-
-
 def _show(root: Root):
     """Pretty print root metadata."""
     pprint(root.to_dict())
 
 
-def _save(metadata: Metadata[Root]):
-    """Prompt loop to save root to file.
+def _request(method: str, url: str, **kwargs: Any) -> Dict[str, Any]:
+    response = request(method, url, **kwargs)
+    response.raise_for_status()
+    response_data = response.json()["data"]
+    return response_data
 
-    Loop until success or user exit.
-    """
-    while Confirm.ask("Save?"):
-        path = Prompt.ask("Enter path to save root", default="root.json")
-        try:
-            metadata.to_file(path)
-            console.print(f"Saved to '{path}'...")
-            break
 
-        except StorageError as e:
-            console.print(f"Cannot save: {e}")
+def _wait_for_success(server, task_id):
+    task_url = parse.urljoin(server, ROUTE.TASK.value + task_id)
+    while True:
+        response_data = _request("get", task_url)
+        state = response_data["state"]
+
+        if state in ["PENDING", "RECEIVED", "STARTED", "RUNNING"]:
+            time.sleep(2)
+            continue
+
+        if state == "SUCCESS":
+            if response_data["result"]["status"]:
+                break
+
+        raise RuntimeError(response_data)
+
+
+def _fetch_metadata(api_server):
+    sign_url = parse.urljoin(api_server, ROUTE.METADATA_SIGN.value)
+    response_data = _request("get", sign_url)
+    metadata = response_data["metadata"]
+    root_data = metadata.get("root")
+
+    root_md = None
+    prev_root = None
+    if root_data:
+        root_md = Metadata[Root].from_dict(root_data)
+        if root_md.signed.version > 1:
+            prev_root_data = metadata["trusted_root"]
+            prev_root_md = Metadata[Root].from_dict(prev_root_data)
+            prev_root = prev_root_md.signed
+
+    return root_md, prev_root
+
+
+def _push_signature(api_server, signature):
+    sign_url = parse.urljoin(api_server, ROUTE.METADATA_SIGN.value)
+    request_data = {"role": "root", "signature": signature.to_dict()}
+    response_data = _request("post", sign_url, json=request_data)
+    task_id = response_data["task_id"]
+    _wait_for_success(api_server, task_id)
 
 
 @rstuf.group()  # type: ignore
@@ -186,23 +208,29 @@ def admin2():
 
 
 @admin2.command()  # type: ignore
-def sign() -> None:
-    """Add one signature to root metadata.
+@click.option(
+    "--api-server",
+    help="URL to the RSTUF API.",
+    required=True,
+)
+def sign(api_server: str) -> None:
+    """Add one signature to root metadata."""
+    console.print("Sign")
 
-    Will ask for root metadata and signing key path.
-    """
-    # 1. Load
-    root_md = _load("Enter path to root to sign")
-    prev_root = None
-    if root_md.signed.version > 1:
-        prev_root_md = _load("Enter path to previous root")
-        prev_root = prev_root_md.signed
+    try:
+        root_md, prev_root = _fetch_metadata(api_server)
 
-    # 2. Add signature, if missing
-    signature = _sign_one(root_md, prev_root)
+    except RequestException as e:
+        raise ClickException(str(e))
 
-    # 3. Save, if signature was added
-    if signature:
-        _save(root_md)
+    if not root_md:
+        console.print(f"Nothing to sign on {api_server}.")
 
-    console.print("Bye.")
+    else:
+        signature = _sign_one(root_md, prev_root)
+        if signature:
+            try:
+                _push_signature(api_server, signature)
+
+            except (RequestException, RuntimeError) as e:
+                raise ClickException(str(e))
