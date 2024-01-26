@@ -30,27 +30,27 @@ def _build_metadata_dir(metadata_url: str) -> str:
     return f"{Path.home()}/.local/share/rstuf/{name}"
 
 
-def _init_tofu(metadata_url: str, root_url: Optional[str]) -> None:
+def _init_tofu(metadata_url: str, root: Optional[str]) -> None:
     """Initialize local trusted metadata (Trust-On-First-Use) and create a
     directory for downloads"""
     metadata_dir = _build_metadata_dir(metadata_url)
 
     os.makedirs(metadata_dir, exist_ok=True)
 
-    if not root_url:
-        root_url = f"{metadata_url}/1.root.json"
+    if not root:
+        root = f"{metadata_url}/1.root.json"
     try:
-        parsed_root_url = urlparse(root_url)
-        if parsed_root_url.scheme and parsed_root_url.netloc:
-            request.urlretrieve(root_url, f"{metadata_dir}/root.json")  # nosec
+        parsed_root = urlparse(root)
+        if parsed_root.scheme and parsed_root.netloc:
+            request.urlretrieve(root, f"{metadata_dir}/root.json")  # nosec
         else:
             console.print(  # pragma: no cover
-                f"Failed to parse {root_url}: ",
-                f"{parsed_root_url.scheme}, {parsed_root_url.netloc}",
+                f"Failed to parse {root}: ",
+                f"{parsed_root.scheme}, {parsed_root.netloc}",
             )
     except (OSError, ConnectionError) as e:  # pragma: no cover
         raise click.FileError(
-            f"Failed to download initial root from {root_url}",
+            f"Failed to download initial root from {root}",
             f"Trusted local root not found in {metadata_url} - "
             "`tofu` was not successful",
         ) from e
@@ -105,7 +105,7 @@ def _download_artifact(
     hash_prefix: Optional[bool],
     directory_prefix: Optional[str],
     artifact_name: str,
-    root_url: Optional[str],
+    root: Optional[str],
 ) -> None:
     if metadata_url is None:
         raise click.ClickException("Please specify metadata url")
@@ -120,7 +120,7 @@ def _download_artifact(
             "Trust-On-First-Use or copy trusted root metadata to "
             f"{metadata_dir}/root.json"
         )
-        _init_tofu(metadata_url, root_url)
+        _init_tofu(metadata_url, root)
 
     console.print(f"Using trusted root in {metadata_dir}")
 

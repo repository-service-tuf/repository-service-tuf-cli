@@ -4,6 +4,7 @@ import os
 from hashlib import sha256
 
 import pretend
+import pytest
 from tuf.ngclient import UpdaterConfig
 
 from repository_service_tuf.cli.artifact import download
@@ -14,12 +15,24 @@ ARTIFACT_NAME = "file.txt"
 SRC_PATH = "repository_service_tuf.cli.artifact.download"
 
 
+@pytest.fixture()
+def mocked_os_makedirs(monkeypatch):
+    fake_makedirs = pretend.call_recorder(lambda *a, **kw: None)
+    path = "repository_service_tuf.cli.artifact.download.os.makedirs"
+    monkeypatch.setattr(path, fake_makedirs)
+
+    return fake_makedirs
+
+
 class TestDownloadArtifacInteraction:
     """Test the artifact download command interaction"""
 
     # mocked_os_makedirs not used directly, but mocks os.makedirs
     def test_download_command_without_config_missing_metadata_url(
-        self, client, test_context, test_setup, mocked_os_makedirs
+        self,
+        client,
+        test_context,
+        test_setup,
     ):
         download.setup = test_setup
         test_result = client.invoke(
@@ -32,7 +45,10 @@ class TestDownloadArtifacInteraction:
         assert test_result.exit_code == 1
 
     def test_download_command_without_config_missing_artifacts_url(
-        self, client, test_context, test_setup, mocked_os_makedirs
+        self,
+        client,
+        test_context,
+        test_setup,
     ):
         download.setup = test_setup
 
@@ -201,10 +217,35 @@ class TestDownloadArtifacInteraction:
     ):
         download.setup = test_setup
         artifact_path = f"example_path/{ARTIFACT_NAME}"
+        metadata_dir = "foo_dir"
 
-        fake_download_artifact = pretend.call_recorder(lambda *a: None)
+        def fake_is_file(path: str) -> bool:
+            if path == f"{metadata_dir}/root.json":
+                return True
+            else:
+                return False
+
         monkeypatch.setattr(
-            f"{SRC_PATH}._download_artifact", fake_download_artifact
+            f"{SRC_PATH}.os.path.isfile",
+            pretend.call_recorder(lambda a: fake_is_file(a)),
+        )
+
+        fake_build_metadata_dir = pretend.call_recorder(lambda a: metadata_dir)
+        monkeypatch.setattr(
+            f"{SRC_PATH}._build_metadata_dir", fake_build_metadata_dir
+        )
+        fake__perform_tuf_ngclient_download_artifact = pretend.call_recorder(
+            lambda *a: None
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}._perform_tuf_ngclient_download_artifact",
+            fake__perform_tuf_ngclient_download_artifact,
+        )
+        updater_conf = UpdaterConfig(prefix_targets_with_hash=True)
+        fake_init_updater_config = pretend.call_recorder(lambda: updater_conf)
+        monkeypatch.setattr(
+            f"{SRC_PATH}.UpdaterConfig",
+            fake_init_updater_config,
         )
 
         test_result = client.invoke(
@@ -221,9 +262,17 @@ class TestDownloadArtifacInteraction:
         )
         assert "Successfully completed artifact download" in test_result.output
         assert test_result.exit_code == 0
-        assert fake_download_artifact.calls == [
+        assert fake_build_metadata_dir.calls == [pretend.call(METADATA_URL)]
+        assert "Using trusted root in " in test_result.output
+        assert updater_conf.prefix_targets_with_hash is True
+        assert fake__perform_tuf_ngclient_download_artifact.calls == [
             pretend.call(
-                METADATA_URL, ARTIFACT_URL, True, None, artifact_path, None
+                METADATA_URL,
+                metadata_dir,
+                ARTIFACT_URL,
+                artifact_path,
+                os.getcwd() + "/downloads",
+                updater_conf,
             )
         ]
 
@@ -343,8 +392,8 @@ class TestDownloadArtifacInteraction:
             obj=test_context,
         )
 
-        assert "Trusted local root not found" in test_result.output
         assert "Using 'tofu' to Trust-On-First-Use" in test_result.output
+        assert "Failed to download initial root from" in test_result.output
         assert (
             f"{METADATA_URL} - `tofu` was not successful" in test_result.output
         )
@@ -491,6 +540,7 @@ class TestDownloadArtifacInteraction:
         assert "Trusted root is not cofigured." in test_result.output
         msg = "You should either add it to your config file,"
         assert msg in test_result.output
+        assert test_result.exit_code == 1
 
 
 class TestDownloadArtifactOptions:
