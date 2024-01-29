@@ -198,7 +198,7 @@ class TestAPIClient:
             {
                 "data": {
                     "state": "SUCCESS",
-                    "result": {"status": True},
+                    "response": {"status": True},
                     "k": "v",
                 }
             },
@@ -213,7 +213,7 @@ class TestAPIClient:
 
         assert result == {
             "state": "SUCCESS",
-            "result": {"status": True},
+            "response": {"status": True},
             "k": "v",
         }
         assert api_client.request_server.calls == [
@@ -383,7 +383,7 @@ class TestAPIClient:
             {
                 "data": {
                     "state": "SUCCESS",
-                    "result": {"status": False},
+                    "response": {"status": False},
                     "k": "v",
                 }
             },

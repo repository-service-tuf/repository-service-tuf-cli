@@ -130,8 +130,8 @@ def task_status(
                         console.print(".", end="")
 
                 if state == "SUCCESS":
-                    if result := data.get("result"):
-                        if result.get("status") is True:
+                    if response := data.get("response"):
+                        if response.get("status") is True:
                             return data
                         else:
                             raise click.ClickException(
