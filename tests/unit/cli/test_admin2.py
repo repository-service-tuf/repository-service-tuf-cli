@@ -54,6 +54,8 @@ class TestSign:
         result = client.invoke(
             sign, "--api-server mocked", input="\n".join(inputs)
         )
+        if result.exception:
+            raise result.exception
 
         # Assert signature was added to metadata and sent to mock API
         assert root2.signatures[signer_keyid] == mock_api.calls[0].args[1]
