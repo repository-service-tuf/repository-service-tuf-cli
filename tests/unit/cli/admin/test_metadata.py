@@ -1210,3 +1210,30 @@ class TestMetadataSignOptions:
                 "Signing process status: ",
             )
         ]
+
+    def test_metadata_sign_offline(self, client, test_context):
+        input_step = [
+            "root",  # Choose a metadata to sign [root]
+            "y",  # Do you still want to sign root? [y]
+            "Jimi Hendrix",  # Choose a private key to load [Jimi Hendrix]
+            "",  # Choose Jimi Hendrix key type [ed25519/ecdsa/rsa]
+            "tests/files/key_storage/JimiHendrix.key",  # Enter the Jimi Hendrix`s private key path  # noqa
+            "strongPass",  # Enter the Jimi Hendrix`s private key password
+        ]
+        with open("tests/files/das-root.json", "r") as file:
+            das_root = file.read()
+        fake_offline_md = {"metadata": json.loads(das_root)}
+        json.load = pretend.call_recorder(lambda *a: fake_offline_md)
+        json.dump = pretend.call_recorder(lambda *a: "fake_write")
+        test_result = client.invoke(
+            metadata.sign,
+            ["tests/files/das-root.json"],
+            input="\n".join(input_step),
+            obj=test_context,
+            catch_exceptions=False,
+        )
+
+        assert test_result.exit_code == 0, test_result.output
+        assert "Metadata Signed! 🔑" in test_result.output
+        assert "SIGNING KEYS" in test_result.output
+        assert "PENDING KEYS" in test_result.output
