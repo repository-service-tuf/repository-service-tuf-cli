@@ -19,7 +19,6 @@ TODO
 """
 import time
 from typing import Any, Dict, Optional, Tuple
-from urllib import parse
 
 import click
 from click import ClickException
@@ -163,12 +162,19 @@ def _request(method: str, url: str, **kwargs: Any) -> Dict[str, Any]:
     return response_data
 
 
+def _urljoin(server: str, route: str) -> None:
+    """Very basic urljoin - adds slash separator if missing."""
+    if not server.endswith("/"):
+        server += "/"
+    return server + route
+
+
 def _wait_for_success(server: str, task_id: str) -> None:
     """Poll task API indefinitely until async task finishes.
 
     Raises RuntimeError, if task fails.
     """
-    task_url = parse.urljoin(server, ROUTE.TASK.value + task_id)
+    task_url = _urljoin(server, ROUTE.TASK.value + task_id)
     while True:
         response_data = _request("get", task_url)
         state = response_data["state"]
@@ -188,7 +194,7 @@ def _fetch_metadata(
     api_server: str,
 ) -> Tuple[Optional[Metadata[Root]], Optional[Root]]:
     """Fetch from Metadata Sign API."""
-    sign_url = parse.urljoin(api_server, ROUTE.METADATA_SIGN.value)
+    sign_url = _urljoin(api_server, ROUTE.METADATA_SIGN.value)
     response_data = _request("get", sign_url)
     metadata = response_data["metadata"]
     root_data = metadata.get("root")
@@ -207,7 +213,7 @@ def _fetch_metadata(
 
 def _push_signature(api_server: str, signature: Signature) -> None:
     """Post signature and wait for success of async task."""
-    sign_url = parse.urljoin(api_server, ROUTE.METADATA_SIGN.value)
+    sign_url = _urljoin(api_server, ROUTE.METADATA_SIGN.value)
     request_data = {"role": "root", "signature": signature.to_dict()}
     response_data = _request("post", sign_url, json=request_data)
     task_id = response_data["task_id"]
