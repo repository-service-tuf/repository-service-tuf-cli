@@ -2,33 +2,26 @@
 
 Provides alternative ceremony, metadata update, and sign admin cli commands.
 
-Goals
------
-- use state-of-the-art securesystemslib Signer API only
-- simplify (e.g. avoid custom/redundant abstractions over Metadata API)
-- configure online signer location via uri attached to public key
-  (for repository-service-tuf/repository-service-tuf-worker#427)
-
 TODO
 ----
 - implement ceremony
 - implement update
-- polish enough so that reviewers can try it out
-- Integrate with existing admin cli
 
 """
 import time
-from typing import Any, Dict, Optional, Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple
 
 import click
 from click import ClickException
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from requests import request
 from requests.exceptions import RequestException
-from rich.pretty import pprint
+from rich.markdown import Markdown
 from rich.prompt import Prompt
+from rich.table import Table
 from securesystemslib.signer import CryptoSigner, Key, Signature, Signer
-from tuf.api.metadata import Metadata, Root, UnsignedMetadataError
+from tuf.api.metadata import Metadata, Root, Timestamp, UnsignedMetadataError
 
 from repository_service_tuf.cli import console, rstuf
 from repository_service_tuf.helpers.api_client import URL as ROUTE
@@ -36,70 +29,65 @@ from repository_service_tuf.helpers.api_client import URL as ROUTE
 
 def _load_signer(public_key: Key) -> Signer:
     """Ask for details to load signer, load and return."""
-    # TODO: Give choice -> hsm, sigstore, ...
-
-    # TODO: clarify supported key types, format
-    path = Prompt.ask("Enter path to encrypted local private key")
+    path = Prompt.ask("Please enter path to encrypted local private key")
 
     with open(path, "rb") as f:
         private_pem = f.read()
 
-    password = Prompt.ask("Enter password", password=True)
+    password = Prompt.ask("Please enter password", password=True)
     private_key = load_pem_private_key(private_pem, password.encode())
     return CryptoSigner(private_key, public_key)
 
 
+@dataclass
+class VerificationResult:
+    """tuf.api.metadata.VerificationResult but with Keys objects
+
+    Likely upstreamed (theupdateframework/python-tuf#2544)
+    """
+
+    verified: bool
+    signed: Dict[str, Key]
+    unsigned: Dict[str, Key]
+    threshold: int
+
+
 def _get_verification_result(
     delegator: Root, delegate: Metadata[Root]
-) -> Tuple[Dict[str, Key], str]:
-    """Get opinionated verification result.
-
-    TODO: consider upstreaming features to `get_verification_result`:
-    - return keys (e.g. as dict), not keyids!
-    - missing signature count is convenient, but not necessary
-    - could also just return threshold
-    (IIRC threshold was removed from result, because it can't be unioned.
-     Maybe threshold in the result is more useful, than the union method.)
-
-    Returns dict of unused keys and a message, to tell how many signatures are
-    missing and from which keys. Empty message means fully signed.
-    """
+) -> VerificationResult:
+    """Return signature verification result for delegate."""
     result = delegator.get_verification_result(
         Root.type, delegate.signed_bytes, delegate.signatures
     )
-    msg = ""
-    if not result.verified:
-        missing = delegator.roles[Root.type].threshold - len(result.signed)
-        msg = (
-            f"need {missing} signature(s) from any of "
-            f"{sorted(result.unsigned)}"
-        )
+    signed = {keyid: delegator.get_key(keyid) for keyid in result.signed}
+    unsigned = {keyid: delegator.get_key(keyid) for keyid in result.unsigned}
 
-    unused_keys = {
-        keyid: delegator.get_key(keyid) for keyid in result.unsigned
-    }
+    threshold = delegator.roles[Root.type].threshold
 
-    return unused_keys, msg
+    return VerificationResult(result.verified, signed, unsigned, threshold)
 
 
-def _get_combined_verification_result(
-    metadata: Metadata[Root], prev_root: Optional[Root]
-) -> Tuple[Dict[str, Key], str]:
-    """Get combined verification results from previous and current root."""
-    unused_keys, missing_sig_msg = _get_verification_result(
-        metadata.signed, metadata
-    )
-    if prev_root:
-        prev_keys, prev_msg = _get_verification_result(prev_root, metadata)
-        unused_keys.update(prev_keys)
+def _show_missing_signatures(
+    result: VerificationResult, prev_result: Optional[VerificationResult]
+) -> None:
+    results_to_show = [result]
+    if prev_result:
+        if (
+            prev_result.signed != result.signed
+            or prev_result.threshold != result.threshold
+        ):
+            results_to_show.append(prev_result)
 
-        # Combine "missing signatures" messages from old and new root:
-        # - show only non-empty message (filter)
-        # - show only one message, if both are equal (set)
-        missing_sig_msg = "\n".join(
-            filter(None, sorted({missing_sig_msg, prev_msg}))
-        )
-    return unused_keys, missing_sig_msg
+    for result in results_to_show:
+        missing = result.threshold - len(result.signed)
+        title = f"Please add {missing} more signature(s) from any of "
+        key_table = Table("ID", "Name", title=title)
+
+        for keyid, key in result.unsigned.items():
+            name = key.unrecognized_fields.get("name")
+            key_table.add_row(keyid, name)
+
+        console.print(key_table)
 
 
 def _sign_one(
@@ -110,20 +98,28 @@ def _sign_one(
     Return None, if metadata is already fully missing.
     Otherwise, loop until success and returns the added signature.
     """
-    unused_keys, missing_sig_msg = _get_combined_verification_result(
-        metadata, prev_root
-    )
-    if not missing_sig_msg:
-        console.print("Metadata fully signed.")
+    result = _get_verification_result(metadata.signed, metadata)
+    keys_to_use = {}
+    if not result.verified:
+        keys_to_use = result.unsigned
+
+    prev_result = None
+    if prev_root:
+        prev_result = _get_verification_result(prev_root, metadata)
+        if not prev_result.verified:
+            keys_to_use.update(prev_result.unsigned)
+
+    if not keys_to_use:
+        console.print("Metadata is fully signed.")
         return None
 
     _show(metadata.signed)
-    console.print(missing_sig_msg)
+    _show_missing_signatures(result, prev_result)
 
     # Loop until success
     signature = None
     while not signature:
-        signature = _sign(metadata, unused_keys)
+        signature = _sign(metadata, keys_to_use)
 
     return signature
 
@@ -134,21 +130,67 @@ def _sign(metadata: Metadata, keys: Dict[str, Key]) -> Optional[Signature]:
     Return Signature or None, if signing fails.
     """
     signature = None
-    keyid = Prompt.ask("Choose key", choices=sorted(keys))
+    # TODO: Make sure keyid / name is not truncated in key table.
+    # TODO: Check name collision?
+    # TODO: Support keyid prefix?
+    # -> Then we'd also need to check for collision. Or, should we just enforce
+    #    adding mandatory unique names in bootstrap/update cli, and use full
+    #    keyids as fallback?
+    choices = {}
+    for keyid, key in keys.items():
+        choices[keyid] = key
+        if name := key.unrecognized_fields.get("name"):
+            choices[name] = key
+
+    choice = Prompt.ask(
+        "Please choose signing key by entering keyid or name",
+        choices=choices,
+        show_choices=False,
+    )
+    key = choices[choice]
     try:
-        signer = _load_signer(keys[keyid])
+        signer = _load_signer(key)
         signature = metadata.sign(signer, append=True)
-        console.print(f"Signed with key {keyid}")
+        console.print(f"Signed metadata with key '{choice}'")
 
     except (ValueError, OSError, UnsignedMetadataError) as e:
-        console.print(f"Cannot sign: {e}")
+        console.print(f"Cannot sign metadata with key '{choice}': {e}")
 
     return signature
 
 
+def _get_root_keys(root: Root) -> List[Key]:
+    return [root.get_key(keyid) for keyid in root.roles[Root.type].keyids]
+
+
+def _get_online_key(root: Root) -> Key:
+    # TODO: assert all online roles have the same and only one keyid
+    return root.get_key(root.roles[Timestamp.type].keyids[0])
+
+
 def _show(root: Root):
     """Pretty print root metadata."""
-    pprint(root.to_dict())
+
+    key_table = Table("Role", "ID", "Name", "Signing Scheme", "Public Value")
+    for key in _get_root_keys(root):
+        public_value = key.keyval["public"]  # SSlibKey-specific
+        name = key.unrecognized_fields.get("name")
+        key_table.add_row("Root", key.keyid, name, key.scheme, public_value)
+    key = _get_online_key(root)
+    key_table.add_row(
+        "Online", key.keyid, "", key.scheme, key.keyval["public"]
+    )
+
+    root_table = Table("Infos", "Keys", title="Root Metadata")
+    root_table.add_row(
+        (
+            f"Expiration: {root.expires:%x}\n"
+            f"Threshold: {root.roles[Root.type].threshold}"
+        ),
+        key_table,
+    )
+
+    console.print(root_table)
 
 
 def _request(method: str, url: str, **kwargs: Any) -> Dict[str, Any]:
@@ -233,7 +275,7 @@ def admin2():
 )
 def sign(api_server: str) -> None:
     """Add one signature to root metadata."""
-    console.print("Sign")
+    console.print("\n", Markdown("# Metadata Signing Tool"))
 
     try:
         root_md, prev_root = _fetch_metadata(api_server)
