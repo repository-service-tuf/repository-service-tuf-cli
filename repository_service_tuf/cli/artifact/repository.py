@@ -25,18 +25,10 @@ def repository(context) -> None:
 
 
 @repository.command()
-@click.option(
-    "-a",
-    "--all",
-    help="Show all the configured repositories.",
-    is_flag=True,
-    required=None,
-)
 @click.pass_context
 @click.argument("repository", required=False)
 def show(
     context: Context,
-    all: bool,
     repository: str,
 ) -> None:
     """
@@ -45,22 +37,43 @@ def show(
 
     rstuf_config = context.obj.get("settings")
 
-    if all:
-        if rstuf_config.get("REPOSITORIES"):
-            for repo in rstuf_config.get("REPOSITORIES"):
-                console.print(repo)
-        else:
-            raise click.ClickException("There are no configured repositories")
-
+    current_repository = rstuf_config.get("CURRENT_REPOSITORY")
     if repository:
         if rstuf_config.get("REPOSITORIES") and rstuf_config[
             "REPOSITORIES"
         ].get(repository):
-            console.print(rstuf_config["REPOSITORIES"].get(repository))
+            if current_repository and current_repository == repository:
+                console.print("CURRENT REPOSITORY:")
+            try:
+                console.print_json(
+                    data=dict(rstuf_config["REPOSITORIES"].get(repository))
+                )
+            except TypeError:
+                raise click.ClickException(
+                    f"Repository {repository} has incorrect configuration. "
+                    "Please verify you're using proper types:\n"
+                    "artifact_base_url: <string>\n"
+                    "hash_prefix: <bool>\n"
+                    "metadata_url: <string>\n"
+                    "trusted_root: <base64 string>\n"
+                )
         else:
             raise click.ClickException(
                 f"Repository {repository} is missing in your configuration"
             )
+    else:
+        if rstuf_config.get("REPOSITORIES"):
+            is_default = ""
+            for repo in rstuf_config.get("REPOSITORIES").keys():
+                if current_repository and current_repository == repo:
+                    style = "b green"
+                    is_default = " (default)"
+                else:
+                    style = "b white"
+                    is_default = ""
+                console.print(f"{repo}{is_default}", style=style)
+        else:
+            raise click.ClickException("There are no configured repositories")
 
 
 @repository.command()
@@ -81,11 +94,19 @@ def set(context: Context, repository: str) -> None:
 
 @repository.command()
 @click.option(
+    "-n",
+    "--name",
+    help="A repository name.",
+    type=str,
+    required=True,
+    default=None,
+)
+@click.option(
     "-r",
     "--root",
     help="A metadata URL to the initial trusted root or a local file.",
     type=str,
-    required=None,
+    required=True,
     default=None,
 )
 @click.option(
@@ -93,7 +114,7 @@ def set(context: Context, repository: str) -> None:
     "--metadata-url",
     help="TUF Metadata repository URL.",
     type=str,
-    required=None,
+    required=True,
     default=None,
 )
 @click.option(
@@ -101,7 +122,7 @@ def set(context: Context, repository: str) -> None:
     "--artifacts-url",
     help="An artifacts base URL to fetch from.",
     type=str,
-    required=None,
+    required=True,
     default=None,
 )
 @click.option(
@@ -112,14 +133,13 @@ def set(context: Context, repository: str) -> None:
     required=None,
 )
 @click.pass_context
-@click.argument("repository")
 def add(
     context: Context,
+    name: str,
     root: str,
     metadata_url: str,
     artifacts_url: str,
     hash_prefix: bool,
-    repository: str,
 ) -> None:
     """
     Add a new repository.
@@ -127,12 +147,12 @@ def add(
 
     rstuf_config = context.obj.get("settings").as_dict()
 
-    success_msg: str = f"Successfully added {repository} repository to config"
+    success_msg: str = f"Successfully added {name} repository to config"
     if rstuf_config.get("REPOSITORIES") and rstuf_config["REPOSITORIES"].get(
-        repository
+        name
     ):
-        console.print(f"Repository {repository} already configured")
-        success_msg = f"Successfully updated repository {repository}"
+        console.print(f"Repository {name} already configured")
+        success_msg = f"Successfully updated repository {name}"
 
     encoded_root = b""
     if root:
@@ -146,9 +166,9 @@ def add(
     }
 
     if rstuf_config.get("REPOSITORIES"):
-        rstuf_config["REPOSITORIES"][repository] = repo_data
+        rstuf_config["REPOSITORIES"][name] = repo_data
     else:
-        rstuf_config["REPOSITORIES"] = {repository: repo_data}
+        rstuf_config["REPOSITORIES"] = {name: repo_data}
 
     if context.obj.get("config"):
         write_config(context.obj.get("config"), rstuf_config, False)
