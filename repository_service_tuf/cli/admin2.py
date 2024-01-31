@@ -211,14 +211,13 @@ def _urljoin(server: str, route: str) -> str:
     return server + route
 
 
-def _wait_for_success(server: str, task_id: str) -> None:
+def _wait_for_success(url: str) -> None:
     """Poll task API indefinitely until async task finishes.
 
     Raises RuntimeError, if task fails.
     """
-    task_url = _urljoin(server, ROUTE.TASK.value + task_id)
     while True:
-        response_data = _request("get", task_url)
+        response_data = _request("get", url)
         state = response_data["state"]
 
         if state in ["PENDING", "RECEIVED", "STARTED", "RUNNING"]:
@@ -233,11 +232,10 @@ def _wait_for_success(server: str, task_id: str) -> None:
 
 
 def _fetch_metadata(
-    api_server: str,
+    url: str,
 ) -> Tuple[Optional[Metadata[Root]], Optional[Root]]:
     """Fetch from Metadata Sign API."""
-    sign_url = _urljoin(api_server, ROUTE.METADATA_SIGN.value)
-    response_data = _request("get", sign_url)
+    response_data = _request("get", url)
     metadata = response_data["metadata"]
     root_data = metadata.get("root")
 
@@ -253,13 +251,12 @@ def _fetch_metadata(
     return root_md, prev_root
 
 
-def _push_signature(api_server: str, signature: Signature) -> None:
+def _push_signature(url: str, signature: Signature) -> str:
     """Post signature and wait for success of async task."""
-    sign_url = _urljoin(api_server, ROUTE.METADATA_SIGN.value)
     request_data = {"role": "root", "signature": signature.to_dict()}
-    response_data = _request("post", sign_url, json=request_data)
+    response_data = _request("post", url, json=request_data)
     task_id = response_data["task_id"]
-    _wait_for_success(api_server, task_id)
+    return task_id
 
 
 @rstuf.group()  # type: ignore
@@ -277,9 +274,9 @@ def sign(api_server: str) -> None:
     """Add one signature to root metadata."""
     console.print("\n", Markdown("# Metadata Signing Tool"))
 
+    sign_url = _urljoin(api_server, ROUTE.METADATA_SIGN.value)
     try:
-        root_md, prev_root = _fetch_metadata(api_server)
-
+        root_md, prev_root = _fetch_metadata(sign_url)
     except RequestException as e:
         raise ClickException(str(e))
 
@@ -290,7 +287,8 @@ def sign(api_server: str) -> None:
         signature = _sign_one(root_md, prev_root)
         if signature:
             try:
-                _push_signature(api_server, signature)
-
+                task_id = _push_signature(sign_url, signature)
+                task_url = _urljoin(api_server, ROUTE.TASK.value) + task_id
+                _wait_for_success(task_url)
             except (RequestException, RuntimeError) as e:
                 raise ClickException(str(e))

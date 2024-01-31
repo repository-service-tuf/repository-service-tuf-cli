@@ -44,11 +44,12 @@ class TestSign:
 
         inputs = [signer_keyid, f"{_PEMS / 'ec'}"]
 
-        mock_api = pretend.call_recorder(lambda x, y: None)
+        mock_api = pretend.call_recorder(lambda x, y: "mock_task_id")
         monkeypatch.setattr(
             admin2, "_fetch_metadata", lambda x: (root2, root1.signed)
         )
         monkeypatch.setattr(admin2, "_push_signature", mock_api)
+        monkeypatch.setattr(admin2, "_wait_for_success", lambda x: None)
 
         assert not root2.signatures
         result = client.invoke(
