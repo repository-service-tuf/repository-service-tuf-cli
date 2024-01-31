@@ -9,6 +9,7 @@ TODO
 
 """
 import time
+from copy import copy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -73,7 +74,7 @@ def _show_missing_signatures(
     results_to_show = [result]
     if prev_result:
         if (
-            prev_result.signed != result.signed
+            prev_result.unsigned != result.unsigned
             or prev_result.threshold != result.threshold
         ):
             results_to_show.append(prev_result)
@@ -101,7 +102,7 @@ def _sign_one(
     result = _get_verification_result(metadata.signed, metadata)
     keys_to_use = {}
     if not result.verified:
-        keys_to_use = result.unsigned
+        keys_to_use = copy(result.unsigned)
 
     prev_result = None
     if prev_root:
