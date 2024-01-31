@@ -144,7 +144,7 @@ def _sign(metadata: Metadata, keys: Dict[str, Key]) -> Optional[Signature]:
 
     choice = Prompt.ask(
         "Please choose signing key by entering keyid or name",
-        choices=choices,
+        choices=list(choices),
         show_choices=False,
     )
     key = choices[choice]
@@ -204,7 +204,7 @@ def _request(method: str, url: str, **kwargs: Any) -> Dict[str, Any]:
     return response_data
 
 
-def _urljoin(server: str, route: str) -> None:
+def _urljoin(server: str, route: str) -> str:
     """Very basic urljoin - adds slash separator if missing."""
     if not server.endswith("/"):
         server += "/"
