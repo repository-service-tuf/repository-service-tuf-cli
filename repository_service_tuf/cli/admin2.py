@@ -8,12 +8,16 @@ TODO
 - implement update
 
 """
+
 import time
 from copy import copy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 import click
+
+# Magic import to unbreak `load_pem_private_key` - pyca/cryptography#10315
+import cryptography.hazmat.backends.openssl.backend  # noqa: F401
 from click import ClickException
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from requests import request
