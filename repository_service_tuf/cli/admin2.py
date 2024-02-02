@@ -10,8 +10,6 @@ TODO
 """
 
 import time
-from copy import copy
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 import click
@@ -26,7 +24,13 @@ from rich.markdown import Markdown
 from rich.prompt import Prompt
 from rich.table import Table
 from securesystemslib.signer import CryptoSigner, Key, Signature, Signer
-from tuf.api.metadata import Metadata, Root, Timestamp, UnsignedMetadataError
+from tuf.api.metadata import (
+    Metadata,
+    Root,
+    RootVerificationResult,
+    Timestamp,
+    UnsignedMetadataError,
+)
 
 from repository_service_tuf.cli import console, rstuf
 from repository_service_tuf.helpers.api_client import URL as ROUTE
@@ -44,48 +48,18 @@ def _load_signer(public_key: Key) -> Signer:
     return CryptoSigner(private_key, public_key)
 
 
-@dataclass
-class VerificationResult:
-    """tuf.api.metadata.VerificationResult but with Keys objects
-
-    Likely upstreamed (theupdateframework/python-tuf#2544)
-    """
-
-    verified: bool
-    signed: Dict[str, Key]
-    unsigned: Dict[str, Key]
-    threshold: int
-
-
-def _get_verification_result(
-    delegator: Root, delegate: Metadata[Root]
-) -> VerificationResult:
-    """Return signature verification result for delegate."""
-    result = delegator.get_verification_result(
-        Root.type, delegate.signed_bytes, delegate.signatures
-    )
-    signed = {keyid: delegator.get_key(keyid) for keyid in result.signed}
-    unsigned = {keyid: delegator.get_key(keyid) for keyid in result.unsigned}
-
-    threshold = delegator.roles[Root.type].threshold
-
-    return VerificationResult(result.verified, signed, unsigned, threshold)
-
-
-def _show_missing_signatures(
-    result: VerificationResult, prev_result: Optional[VerificationResult]
-) -> None:
-    results_to_show = [result]
-    if prev_result:
-        if (
-            prev_result.unsigned != result.unsigned
-            or prev_result.threshold != result.threshold
-        ):
-            results_to_show.append(prev_result)
+def _show_missing_signatures(results: RootVerificationResult) -> None:
+    results_to_show = [results.first]
+    # Show only one result, if the same number of signatures from the same set
+    # of keys is missing in both.
+    if (
+        results.second.unsigned != results.first.unsigned
+        or results.second.missing != results.first.missing
+    ):
+        results_to_show.append(results.second)
 
     for result in results_to_show:
-        missing = result.threshold - len(result.signed)
-        title = f"Please add {missing} more signature(s) from any of "
+        title = f"Please add {result.missing} more signature(s) from any of "
         key_table = Table("ID", "Name", title=title)
 
         for keyid, key in result.unsigned.items():
@@ -103,23 +77,27 @@ def _sign_one(
     Return None, if metadata is already fully missing.
     Otherwise, loop until success and returns the added signature.
     """
-    result = _get_verification_result(metadata.signed, metadata)
-    keys_to_use = {}
-    if not result.verified:
-        keys_to_use = copy(result.unsigned)
+    results = metadata.signed.get_root_verification_result(
+        prev_root,
+        metadata.signed_bytes,
+        metadata.signatures,
+    )
 
-    prev_result = None
-    if prev_root:
-        prev_result = _get_verification_result(prev_root, metadata)
-        if not prev_result.verified:
-            keys_to_use.update(prev_result.unsigned)
-
-    if not keys_to_use:
+    if results.verified:
         console.print("Metadata is fully signed.")
         return None
 
+    keys_to_use = {}
+    # Use only those keys to sign, whose signatures are effectively missing.
+    # This also means the cli can't be used to sign beyond the threshold.
+    if not results.first.verified:
+        keys_to_use.update(results.first.unsigned)
+
+    if not results.second.verified:
+        keys_to_use.update(results.second.unsigned)
+
     _show(metadata.signed)
-    _show_missing_signatures(result, prev_result)
+    _show_missing_signatures(results)
 
     # Loop until success
     signature = None
