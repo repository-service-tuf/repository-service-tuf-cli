@@ -733,7 +733,7 @@ def ceremony(
     # option upload: it requires -b/--bootstrap
     if upload is True and bootstrap is False:
         raise click.ClickException("Requires '-b/--bootstrap' option.")
- 
+
     # option bootstrap: checks if the server accepts it beforehand
     if bootstrap:
         if api_server:
