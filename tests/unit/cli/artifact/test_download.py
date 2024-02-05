@@ -135,7 +135,7 @@ class TestDownloadArtifacInteraction:
     ):
         download.setup = test_setup
 
-        trusted_root_path = "tests/files/artifact_download"
+        trusted_root_path = "tests/files"
         fake_build_metadata_dir = pretend.call_recorder(
             lambda a: trusted_root_path
         )

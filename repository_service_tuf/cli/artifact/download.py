@@ -50,7 +50,7 @@ def _init_tofu(metadata_url: str, root: Optional[str]) -> None:
             )
     except (OSError, ConnectionError) as e:  # pragma: no cover
         raise click.FileError(
-            f"Failed to download initial root from {root}",
+            f"Failed to download initial root from {root}. ",
             f"Trusted local root not found in {metadata_url} - "
             "`tofu` was not successful",
         ) from e
