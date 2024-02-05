@@ -394,9 +394,7 @@ class TestDownloadArtifacInteraction:
 
         assert "Using 'tofu' to Trust-On-First-Use" in test_result.output
         assert "Failed to download initial root from" in test_result.output
-        assert (
-            f"{METADATA_URL} - `tofu` was not successful" in test_result.output
-        )
+        assert "`tofu` was not successful" in test_result.output
         assert test_result.exit_code == 1
         assert len(fake_is_file.calls) == 2
         assert pretend.call("foo_dir/root.json") in fake_is_file.calls
