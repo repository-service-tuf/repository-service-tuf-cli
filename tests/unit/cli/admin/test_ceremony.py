@@ -604,7 +604,7 @@ class TestCeremonyOptions:
         ]
         assert ceremony._run_ceremony_steps.calls == [pretend.call(True)]
         assert ceremony.save_payload.calls == [
-            pretend.call("payload.json", {"k": "v", 'timeout': 300})
+            pretend.call("payload.json", {"k": "v", "timeout": 300})
         ]
 
     def test_ceremony_option_save_OSError(
@@ -672,14 +672,14 @@ class TestCeremonyOptions:
             pretend.call(
                 settings=test_context["settings"],
                 url=URL.BOOTSTRAP.value,
-                payload={"k": "v", 'timeout': 300},
+                payload={"k": "v", "timeout": 300},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
             )
         ]
         assert ceremony._run_ceremony_steps.calls == [pretend.call(False)]
         assert ceremony.save_payload.calls == [
-            pretend.call("payload.json", {"k": "v", 'timeout': 300})
+            pretend.call("payload.json", {"k": "v", "timeout": 300})
         ]
         assert ceremony.task_status.calls == [
             pretend.call(
