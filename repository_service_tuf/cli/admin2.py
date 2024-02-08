@@ -203,7 +203,7 @@ def _configure_root_keys(root: Root) -> None:
         _show_root_key_info(root)
 
         # Allow user to skip offline key change (assumes valid metadata)
-        if not Confirm.ask("Do you want to change root keys?"):
+        if not Confirm.ask("Do you want to change root keys or threshold?"):
             break
 
         # TODO: Should we ask for threshold *after* removing/adding keys?
