@@ -146,14 +146,21 @@ def _add_root_keys(root: Root) -> None:
             console.print("Key already in use.")
             continue
 
-        # TODO: Should name be mandatory? Would be helpful to distinguish keys
-        name = Prompt.ask(
-            "Please enter a key name, "
-            "or press enter to continue without name",
-            show_default=False,
-        )
-        if name:
+        while True:
+            name = Prompt.ask("Please enter a key name")
+            if not name:
+                console.print("Key name cannot be empty.")
+                continue
+
+            if name in [
+                key.unrecognized_fields.get(KEY_NAME_FIELD)
+                for key in root.keys.values()
+            ]:
+                console.print("Key name already in use.")
+                continue
+
             new_key.unrecognized_fields[KEY_NAME_FIELD] = name
+            break
 
         root.add_key(new_key, Root.type)
         console.print(f"Added root key '{new_key.keyid}'")

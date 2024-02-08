@@ -77,7 +77,7 @@ class TestUpdate:
             "50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3",  # Choose key to remove [50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3/c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc]:
             "n",  # Do you want to remove a root key? [y/n]:
             f"{_PEMS / 'rsa.pub'}",  # Please enter a public key path:
-            "my rsa root key",  # Please enter a key name, or press enter to continue without name:
+            "my rsa root key",  # Please enter a key name:
             "n",  # Do you want to add a root key? [y/n]:
             "1",  # Please enter a root signature threshold [1]:
             "n",  # Do you want to change root keys or threshold? [y/n]:
