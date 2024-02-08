@@ -141,14 +141,10 @@ def _add_root_keys(root: Root) -> None:
             console.print(f"Cannot load: {e}")
             continue
 
-        # TODO: Handle cases where key already exists:
-        #  * If the key exists as root key the key object remains unchanged
-        #    in the metadata keystore and a name change will not take effect.
-        #  * If the key is already used as online key, the keyid is
-        #    added to root keyids, but the key object also remains unchanged.
-        # Lets just disallow re-adding a key here, even if it is for a
-        # different role, given that different roles have different extra key
-        # fields (root's "KEY_NAME_FIELD" vs. online roles' "KEY_URI_FIELD")
+        # Disallow re-adding a key even if it is for a different role.
+        if new_key.keyid in root.keys:
+            console.print("Key already in use.")
+            continue
 
         # TODO: Should name be mandatory? Would be helpful to distinguish keys
         name = Prompt.ask(
@@ -265,6 +261,11 @@ def _configure_online_key(root: Root) -> None:
             console.print(f"Cannot load: {e}")
             continue
 
+        # Disallow re-adding a key even if it is for a different role.
+        if new_key.keyid in root.keys:
+            console.print("Key already in use.")
+            continue
+
         # For file-based keys we default to a "relative file path uri" using
         # keyid as filename. The online signing key must be made available to
         # the worker under that filename. Additionally, a base path to the file
@@ -277,8 +278,6 @@ def _configure_online_key(root: Root) -> None:
         # Remove current and add new key
         for role_name in ONLINE_ROLE_NAMES:
             root.revoke_key(current_key.keyid, role_name)
-
-            # TODO: Handle case where key already exists as root key. Disallow?
             root.add_key(new_key, role_name)
 
         console.print(f"Configured online key: '{new_key.keyid}'")
