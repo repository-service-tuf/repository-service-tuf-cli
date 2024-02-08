@@ -72,17 +72,15 @@ class TestUpdate:
             f"{_ROOTS / 'v1.json'}",  # Enter path to root to update:
             "10",  # Please enter number of days from now, when root should expire:
             "n",  # Do you want to change the expiry date? [y/n]:
-            "y",  # Do you want to change root keys? [y/n]:
-            "y",  # Do you want to change the root signature threshold? [y/n]:
-            "1",  # Please enter root signature threshold:
+            "y",  # Do you want to change root keys or threshold? [y/n]:
             "y",  # Do you want to remove a root key? [y/n]:
             "50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3",  # Choose key to remove [50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3/c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc]:
-            "y",  # Do you want to remove a root key? [y/n]:
-            "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # Choose key to remove [c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc]:
+            "n",  # Do you want to remove a root key? [y/n]:
             f"{_PEMS / 'rsa.pub'}",  # Please enter a public key path:
             "my rsa root key",  # Please enter a key name, or press enter to continue without name:
             "n",  # Do you want to add a root key? [y/n]:
-            "n",  # Do you want to change root keys? [y/n]:
+            "1",  # Please enter a root signature threshold [1]:
+            "n",  # Do you want to change root keys or threshold? [y/n]:
             "y",  # Do you want to change the online key? [y/n]:
             f"{_PEMS / 'ec.pub'}",  # Please enter a public key path:
             "n",  # Do you want to change the online key? [y/n]:
@@ -106,7 +104,8 @@ class TestUpdate:
         # Assert post-update root threshold, root keys, and online key
         assert new_root.signed.roles["root"].threshold == 1
         assert new_root.signed.roles["root"].keyids == [
-            "2f685fa7546f1856b123223ab086b3def14c89d24eef18f49c32508c2f60e241"
+            "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",
+            "2f685fa7546f1856b123223ab086b3def14c89d24eef18f49c32508c2f60e241",
         ]
         assert sorted(new_root.signed.roles["timestamp"].keyids) == [
             "50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3"

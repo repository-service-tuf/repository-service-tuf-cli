@@ -121,17 +121,16 @@ def _show_root_key_info(root: Root) -> None:
 def _add_root_keys(root: Root) -> None:
     """Prompt loop to add root keys.
 
-    Loops until user exit and threshold is met."""
+    Loops until user exit and root has at least two keys."""
 
     root_role = root.get_delegated_role(Root.type)
 
     while True:
-        missing = root_role.threshold - len(root_role.keyids)
-        if missing > 0:
-            console.print(
-                f"Please add {missing} key(s) "
-                f"to meet threshold ({root_role.threshold})"
-            )
+        min_keys = 2
+        missing = max(0, min_keys - len(root_role.keyids))
+        if missing:
+            console.print(f"Please add at least {missing} more root key(s).")
+
         else:
             if not Confirm.ask("Do you want to add a root key?"):
                 break
@@ -206,23 +205,30 @@ def _configure_root_keys(root: Root) -> None:
         if not Confirm.ask("Do you want to change root keys or threshold?"):
             break
 
-        # TODO: Should we ask for threshold *after* removing/adding keys?
-        # Currently, if the users accidentally sets a wrong threshold, they
-        # might have a hard time to add enough keys to meet it, which they have
-        # to do before they can correct the mistake.
-        if Confirm.ask("Do you want to change the root signature threshold?"):
-            root_role.threshold = _PositiveIntPrompt.ask(
-                "Please enter root signature threshold"
-            )
-            console.print(
-                f"Changed root signature threshold to {root_role.threshold}"
-            )
-
-        # Allow removing keys, even if we drop below threshold.
+        # Remove keys regardless of threshold
         _remove_root_keys(root)
 
-        # Require enough keys to meet the threshold
+        # Add keys regardless of threshold (require 2)
         _add_root_keys(root)
+
+        # Threshold update is optional, depending on the number of root keys
+        # and the current threshold.
+        max_threshold = len(root_role.keyids) - 1
+        if root_role.threshold <= max_threshold:
+            if not Confirm.ask(
+                "Do you want to change the root signature threshold?"
+            ):
+                continue
+            default_threshold = root_role.threshold
+        else:
+            default_threshold = max_threshold
+
+        root_role.threshold = IntPrompt.ask(
+            "Please enter a root signature threshold",
+            choices=[str(i) for i in range(1, max_threshold + 1)],
+            show_choices=False,
+            default=default_threshold,
+        )
 
 
 def _configure_online_key(root: Root) -> None:
