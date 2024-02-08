@@ -97,7 +97,10 @@ class TestUpdate:
         assert sorted(root.signed.roles["timestamp"].keyids) == [
             "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc"
         ]
-        result = client.invoke(update, input="\n".join(inputs))
+        result = client.invoke(
+            update, input="\n".join(inputs), catch_exceptions=False
+        )
+        print(result.output)
 
         new_root = mock_save.calls[0].args[0]
         # Assert post-update root threshold, root keys, and online key
