@@ -496,8 +496,10 @@ def _save(metadata: Metadata[Root]):
             console.print(f"Cannot save: {e}")
 
 
-def _get_root_keys(root: Root) -> List[Key]:
-    return [root.get_key(keyid) for keyid in root.roles[Root.type].keyids]
+def _get_root_keys(root: Root) -> Dict[str, Key]:
+    return {
+        keyid: root.get_key(keyid) for keyid in root.roles[Root.type].keyids
+    }
 
 
 def _get_online_key(root: Root) -> Key:
@@ -509,7 +511,7 @@ def _show(root: Root):
     """Pretty print root metadata."""
 
     key_table = Table("Role", "ID", "Name", "Signing Scheme", "Public Value")
-    for key in _get_root_keys(root):
+    for key in _get_root_keys(root).values():
         public_value = key.keyval["public"]  # SSlibKey-specific
         name = key.unrecognized_fields.get(KEY_NAME_FIELD)
         key_table.add_row("Root", key.keyid, name, key.scheme, public_value)
