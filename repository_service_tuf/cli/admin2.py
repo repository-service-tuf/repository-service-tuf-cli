@@ -242,11 +242,7 @@ def _configure_online_key(root: Root) -> None:
     console.print("Online Key Configuration")
 
     while True:
-        # Get current key
-        # TODO: Assert that all online roles have same/single keyid. Mandate
-        # change otherwise.
-        ts_role = root.get_delegated_role(Timestamp.type)
-        current_key = root.get_key(ts_role.keyids[0])
+        current_key = _get_online_key(root)
 
         # Show key
         # TODO: Make pretty and useful
