@@ -168,24 +168,51 @@ def _add_root_keys(root: Root) -> None:
         _show_root_key_info(root)
 
 
+def _choose_key(reason: str, keys: Dict[str, Key]) -> Tuple[str, Key]:
+    """Prompt loop to choose key from dict of Keys.
+
+    Treats entered choice as key name and falls back to keyid, if no key name
+    is found.
+
+    Returns tuple of entered choice and corresponding Key.
+
+    TODO: Would be cool to make this a custom `Prompt` implementation to get
+    consistent error feedback.
+    """
+    while True:
+        choice = Prompt.ask(
+            f"Please choose key to {reason} by entering its name or keyid"
+        )
+        for keyid, key in keys.items():
+            if name := key.unrecognized_fields.get(KEY_NAME_FIELD):
+                if choice == name:
+                    break
+            if choice == keyid:
+                break
+
+        else:
+            console.print(f"Cannot find key '{choice}'")
+            continue
+
+        return choice, key
+
+
 def _remove_root_keys(root: Root) -> None:
     """Prompt loop to remove root keys.
 
     Loops until no keys left or user exit (threshold is ignored)."""
-    root_role = root.get_delegated_role(Root.type)
+    root_keys = _get_root_keys(root)
 
     while True:
-        if not root_role.keyids:
+        if not root_keys:
             break
 
         if not Confirm.ask("Do you want to remove a root key?"):
             break
 
-        keyid = Prompt.ask(
-            "Choose key to remove", choices=sorted(root_role.keyids)
-        )
-        root.revoke_key(keyid, Root.type)
-        console.print(f"Removed root key '{keyid}'")
+        choice, key = _choose_key("remove", root_keys)
+        root.revoke_key(key.keyid, Root.type)
+        console.print(f"Removed '{choice}'")
 
         _show_root_key_info(root)
 
