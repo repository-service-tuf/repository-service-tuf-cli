@@ -461,24 +461,7 @@ def _sign(metadata: Metadata, keys: Dict[str, Key]) -> Optional[Signature]:
     Return Signature or None, if signing fails.
     """
     signature = None
-    # TODO: Make sure keyid / name is not truncated in key table.
-    # TODO: Check name collision?
-    # TODO: Support keyid prefix?
-    # -> Then we'd also need to check for collision. Or, should we just enforce
-    #    adding mandatory unique names in bootstrap/update cli, and use full
-    #    keyids as fallback?
-    choices = {}
-    for keyid, key in keys.items():
-        choices[keyid] = key
-        if name := key.unrecognized_fields.get(KEY_NAME_FIELD):
-            choices[name] = key
-
-    choice = Prompt.ask(
-        "Please choose signing key by entering keyid or name",
-        choices=list(choices),
-        show_choices=False,
-    )
-    key = choices[choice]
+    choice, key = _choose_key("sign", keys)
     try:
         signer = _load_signer(key)
         signature = metadata.sign(signer, append=True)
