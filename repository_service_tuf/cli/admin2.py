@@ -77,6 +77,14 @@ KEY_NAME_FIELD = "name"
 # Use locale's appropriate date representation to display the expiry date.
 EXPIRY_FORMAT = "%x"
 
+# Root key number and threshold requirements
+_MIN_ROOT_KEYS = 2
+_MIN_THRESHOLD = 1
+_MAX_THRESHOLD_OFFSET = 1
+
+# TODO: assert _MIN_THRESHOLD > 0
+# TODO: assert (_MIN_ROOT_KEYS - _MAX_THRESHOLD_OFFSET) >= _MIN_THRESHOLD
+
 
 class _PositiveIntPrompt(IntPrompt):
     validate_error_message = (
@@ -120,13 +128,12 @@ def _show_root_key_info(root: Root) -> None:
 def _add_root_keys(root: Root) -> None:
     """Prompt loop to add root keys.
 
-    Loops until user exit and root has at least two keys."""
+    Loops until user exit and root has at least _MIN_ROOT_KEYS keys."""
 
     root_role = root.get_delegated_role(Root.type)
 
     while True:
-        min_keys = 2
-        missing = max(0, min_keys - len(root_role.keyids))
+        missing = max(0, _MIN_ROOT_KEYS - len(root_role.keyids))
         if missing:
             console.print(f"Please add at least {missing} more root key(s).")
 
@@ -215,12 +222,9 @@ def _remove_root_keys(root: Root) -> None:
 def _configure_root_keys(root: Root) -> None:
     """Prompt series with loop to add/remove root keys, and enter threshold.
 
-    Loops until user exit (at least one root key must be set).
+    Loops until user exit and root has enough keys.
 
     """
-
-    # Get current keys
-    root_role = root.get_delegated_role(Root.type)
     console.print(Markdown("## Root Key and Threshold Configuration"))
 
     while True:
@@ -230,30 +234,34 @@ def _configure_root_keys(root: Root) -> None:
         if not Confirm.ask("Do you want to change root keys or threshold?"):
             break
 
-        # Remove keys regardless of threshold
+        # Remove keys (ignores threshold)
         _remove_root_keys(root)
 
-        # Add keys regardless of threshold (require 2)
+        # Add keys (ignores threshold, but considers _MIN_ROOT_KEYS)
         _add_root_keys(root)
 
-        # Threshold update is optional, depending on the number of root keys
-        # and the current threshold.
-        max_threshold = len(root_role.keyids) - 1
-        if root_role.threshold <= max_threshold:
-            if not Confirm.ask(
-                "Do you want to change the root signature threshold?"
-            ):
-                continue
-            default_threshold = root_role.threshold
-        else:
-            default_threshold = max_threshold
+        # Set threshold based on current keys
+        # TODO: Fix ugly coupling with _add_root_keys (see _MIN_ROOT_KEYS)
+        # TODO: Revise "Do you want to change?"-pattern inconsistency
+        # Relationship of previous, min and max thresholds makes it tricky
+        root_role = root.get_delegated_role(Root.type)
+        max_ = len(root_role.keyids) - _MAX_THRESHOLD_OFFSET
 
-        root_role.threshold = IntPrompt.ask(
-            "Please enter a root signature threshold",
-            choices=[str(i) for i in range(1, max_threshold + 1)],
-            show_choices=False,
-            default=default_threshold,
-        )
+        prev = root_role.threshold
+        if max_ == _MIN_THRESHOLD:
+            root_role.threshold = max_
+            console.print(
+                f"Max threshold is {max_} ",
+                f"given the number of keys ({len(root_role.keyids)}).",
+            )
+
+        else:
+            root_role.threshold = IntPrompt.ask(
+                f"Please enter desired threshold (prev: {prev}, max: {max_})",
+                choices=[str(i) for i in range(_MIN_THRESHOLD, max_ + 1)],
+                show_choices=False,
+            )
+        console.print(f"Threshold is set to {root_role.threshold}")
 
 
 def _configure_online_key(root: Root) -> None:
