@@ -357,7 +357,7 @@ class TestArtifactRepositoryInteraction:
                 "http://localhost:8081",
                 "-m",
                 "http://localhost:8080",
-                "-p"
+                "-p",
             ],
             obj=test_context,
         )
