@@ -975,16 +975,17 @@ This command provides artifact repository management for the RSTUF repository co
 
     ❯ rstuf artifact repository add --help
 
-    Usage: rstuf artifact repository add [OPTIONS] REPOSITORY
+    Usage: rstuf artifact repository add [OPTIONS]
 
     Add a new repository.
 
     ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ --root           -r  TEXT  A metadata URL to the initial trusted root or a local file.                                                                                    │
-    │ --metadata-url   -m  TEXT  TUF Metadata repository URL.                                                                                                                   │
-    │ --artifacts-url  -a  TEXT  An artifacts base URL to fetch from.                                                                                                           │
-    │ --hash-prefix    -p        A hash prefix.                                                                                                                                 │
-    │ --help           -h        Show this message and exit.                                                                                                                    │
+    │ *  --name           -n  TEXT  A repository name. [required]                                                                                                               │
+    │ *  --root           -r  TEXT  A metadata URL to the initial trusted root or a local file. [required]                                                                      │
+    │ *  --metadata-url   -m  TEXT  TUF Metadata repository URL. [required]                                                                                                     │
+    │ *  --artifacts-url  -a  TEXT  An artifacts base URL to fetch from. [required]                                                                                             │
+    │    --hash-prefix    -p        A hash prefix.                                                                                                                              │
+    │    --help           -h        Show this message and exit.                                                                                                                 │
     ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 .. code::
@@ -994,11 +995,6 @@ This command provides artifact repository management for the RSTUF repository co
     Usage: rstuf artifact repository show [OPTIONS] [REPOSITORY]
 
     List configured repositories.
-
-    ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ --all   -a    Show all the configured repositories.                                                                                                                       │
-    │ --help  -h    Show this message and exit.                                                                                                                                 │
-    ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 .. code::
 
