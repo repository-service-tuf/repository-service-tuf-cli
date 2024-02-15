@@ -24,11 +24,14 @@ def mocked_os_makedirs(monkeypatch):
     return fake_makedirs
 
 
-class TestDownloadArtifacInteraction:
-    """Test the artifact download command interaction"""
+class TestDownloadArtifacInteractionWithoutConfig:
+    """
+    Test the artifact download command interaction
+    without using a config file
+    """
 
     # mocked_os_makedirs not used directly, but mocks os.makedirs
-    def test_download_command_without_config_missing_metadata_url(
+    def test_download_command_missing_metadata_url(
         self,
         client,
         test_context,
@@ -44,7 +47,7 @@ class TestDownloadArtifacInteraction:
         assert "Please specify metadata url" in test_result.output
         assert test_result.exit_code == 1
 
-    def test_download_command_without_config_missing_artifacts_url(
+    def test_download_command_missing_artifacts_url(
         self,
         client,
         test_context,
@@ -61,7 +64,7 @@ class TestDownloadArtifacInteraction:
         assert "Please specify artifacts url" in test_result.output
         assert test_result.exit_code == 1
 
-    def test_download_command_without_config_using_tofu(
+    def test_download_command_using_tofu(
         self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
     ):
         download.setup = test_setup
@@ -130,7 +133,7 @@ class TestDownloadArtifacInteraction:
         ]
         assert test_result.exit_code == 0
 
-    def test_download_command_without_config_with_trusted_root(
+    def test_download_command_with_trusted_root(
         self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
     ):
         download.setup = test_setup
@@ -184,7 +187,7 @@ class TestDownloadArtifacInteraction:
         ]
         assert test_result.exit_code == 0
 
-    def test_download_command_without_config_with_artifact_url(
+    def test_download_command_with_artifact_url(
         self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
     ):
         download.setup = test_setup
@@ -212,7 +215,7 @@ class TestDownloadArtifacInteraction:
             )
         ]
 
-    def test_download_command_without_config_with_hash_prefix(
+    def test_download_command_with_hash_prefix(
         self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
     ):
         download.setup = test_setup
@@ -276,7 +279,7 @@ class TestDownloadArtifacInteraction:
             )
         ]
 
-    def test_download_command_without_config_with_directory_prefix(
+    def test_download_command_with_directory_prefix(
         self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
     ):
         download.setup = test_setup
@@ -314,7 +317,7 @@ class TestDownloadArtifacInteraction:
             )
         ]
 
-    def test_download_command_without_config_failed_to_download_artifact(
+    def test_download_command_failed_to_download_artifact(
         self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
     ):
         download.setup = test_setup
@@ -399,7 +402,14 @@ class TestDownloadArtifacInteraction:
         assert len(fake_is_file.calls) == 2
         assert pretend.call("foo_dir/root.json") in fake_is_file.calls
 
-    def test_download_command_with_config_no_current_repo(
+
+class TestDownloadArtifacInteractionWithConfig:
+    """
+    Test the artifact download command interaction
+    with using a config
+    """
+
+    def test_download_command_no_current_repo(
         self, client, test_context, test_setup, monkeypatch
     ):
         download.setup = test_setup
@@ -426,7 +436,7 @@ class TestDownloadArtifacInteraction:
         )
         assert "Please specify current repository" in test_result.output
 
-    def test_download_command_with_config_no_repos_listed(
+    def test_download_command_no_repos_listed(
         self, client, test_context, test_setup, monkeypatch
     ):
         download.setup = test_setup
@@ -449,7 +459,7 @@ class TestDownloadArtifacInteraction:
             "No reposotiroes listed in the config file" in test_result.output
         )
 
-    def test_download_command_with_config_and_no_root_param(
+    def test_download_command_and_no_root_param(
         self, client, test_context, test_setup, monkeypatch
     ):
         download.setup = test_setup
@@ -481,7 +491,7 @@ class TestDownloadArtifacInteraction:
         )
         assert "Decoded trusted root some_root" in test_result.output
 
-    def test_download_command_with_config_repo_is_missing(
+    def test_download_command_repo_is_missing(
         self, client, test_context, test_setup, monkeypatch
     ):
         download.setup = test_setup
@@ -510,7 +520,7 @@ class TestDownloadArtifacInteraction:
         err_msg = "Repository r1_expected is missing in the configuration file"
         assert err_msg in test_result.output
 
-    def test_download_command_with_config_no_trusted_root(
+    def test_download_command_no_trusted_root(
         self, client, test_context, test_setup, monkeypatch
     ):
         download.setup = test_setup
@@ -542,7 +552,7 @@ class TestDownloadArtifacInteraction:
 
 
 class TestDownloadArtifactOptions:
-    # """Test the artifact download command heplers"""
+    """Test the artifact download command hepler methods"""
 
     def test_decode_trusted_root(self):
         trusted_root = "ZXhhbXBsZS9ob21lL3BhdGgvLmxvY2FsL3NoYXJlL3JzdHVmL3Jvb3QuanNvbg=="  # noqa
