@@ -182,8 +182,6 @@ def _choose_key(reason: str, keys: Dict[str, Key]) -> Tuple[str, Key]:
 
     Returns tuple of entered choice and corresponding Key.
 
-    TODO: Would be cool to make this a custom `Prompt` implementation to get
-    consistent error feedback.
     """
     while True:
         choice = Prompt.ask(
