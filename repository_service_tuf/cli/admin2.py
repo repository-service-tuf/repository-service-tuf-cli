@@ -200,12 +200,8 @@ def _remove_root_keys(root: Root) -> None:
     """Prompt loop to remove root keys.
 
     Loops until no keys left or user exit (threshold is ignored)."""
-    root_keys = _get_root_keys(root)
 
-    while True:
-        if not root_keys:
-            break
-
+    while root_keys := _get_root_keys(root):
         if not Confirm.ask("Do you want to remove a root key?"):
             break
 
