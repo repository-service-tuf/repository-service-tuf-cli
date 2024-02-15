@@ -636,7 +636,7 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
         )
 
     # Inform user for pending signatures
-    pending_signatures: int = setup.threshold[Roles.ROOT] - len(
+    pending_signatures: int = root_role.threshold - len(
         root_metadata.signatures
     )
     if pending_signatures > 0:
