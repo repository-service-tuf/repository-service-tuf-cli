@@ -105,17 +105,16 @@ def _load_public_key_from_file() -> Key:
 
 
 def _show_root_key_info(root: Root) -> None:
-    """Pretty print root keys and threshold."""
-    # TODO: Make prettier and useful
-    root_role = root.get_delegated_role(Root.type)
-    console.print(f"Current Threshold: {root_role.threshold}")
-    console.print("Current Keys:")
-    for keyid in root_role.keyids:
-        key = root.get_key(keyid)
-        name = key.unrecognized_fields.get(KEY_NAME_FIELD, "")
-        if name:
-            name = f"(name: {name})"
-        console.print(f"keyid: {keyid}", name)
+    """Pretty print root keys."""
+    # TODO: What info is useful here?
+    # Info to id the local key, e.g. for removal or signing?
+    # Current Threshold? Could be temporarily incosistent with number of keys.
+    table = Table("ID", "Name", title="Current Keys")
+    for keyid, key in _get_root_keys(root).items():
+        name = key.unrecognized_fields.get(KEY_NAME_FIELD)
+        table.add_row(keyid, name)
+
+    console.print(table)
 
 
 def _add_root_keys(root: Root) -> None:
@@ -223,10 +222,10 @@ def _configure_root_keys(root: Root) -> None:
     Loops until user exit (at least one root key must be set).
 
     """
-    console.print("Root Key Configuration")
 
     # Get current keys
     root_role = root.get_delegated_role(Root.type)
+    console.print(Markdown("## Root Key and Threshold Configuration"))
 
     while True:
         _show_root_key_info(root)
@@ -266,18 +265,21 @@ def _configure_online_key(root: Root) -> None:
 
     Loops until user exit.
     """
-    console.print("Online Key Configuration")
+    console.print(Markdown("## Online Key Configuration"))
 
     while True:
         current_key = _get_online_key(root)
 
-        # Show key
-        # TODO: Make pretty and useful
-        console.print("Current Key:")
-        uri = current_key.unrecognized_fields.get(KEY_URI_FIELD, "")
-        if uri:
-            uri = f"(uri: '{uri}')"
-        console.print(f"keyid: {current_key.keyid}", uri)
+        # TODO: What info is useful here?
+        # Info to id related key pair?
+        # Info to support online signing key config? e.g.
+        # - mount key file into container,
+        # - export ambient KMS credential,
+        # - ...
+        table = Table("ID", "URI", title="Current Key")
+        uri = current_key.unrecognized_fields.get(KEY_URI_FIELD)
+        table.add_row(current_key.keyid, uri)
+        console.print(table)
 
         # Allow user to skip online key change (assumes valid metadata)
         if not Confirm.ask("Do you want to change the online key?"):
@@ -318,7 +320,7 @@ def _configure_expiry(root: Root) -> None:
 
     Loops until user exit and metadata is not expired.
     """
-    console.print("Expiration Date Configuration")
+    console.print(Markdown("## Expiration Date Configuration"))
 
     while True:
         if root.is_expired():
@@ -393,6 +395,8 @@ def _sign_multiple(
     Prints metadata for review once, and signature requirements.
     Loops until fully signed or user exit.
     """
+    console.print(Markdown("## Signing"))
+
     signatures: List[Signature] = []
     show_metadata = True
     while True:
@@ -619,7 +623,8 @@ def update() -> None:
 
     Will ask for root metadata, public key paths, and signing key paths.
     """
-    console.print("Root Metadata Update")
+    console.print("\n", Markdown("# Metadata Update Tool"))
+
     # Load
     current_root_md = _load("Enter path to root to update")
     new_root = deepcopy(current_root_md.signed)
