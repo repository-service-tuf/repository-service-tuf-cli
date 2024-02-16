@@ -224,7 +224,9 @@ def update(
     rstuf_config = context.obj.get("settings").as_dict()
 
     if not rstuf_config.get("REPOSITORIES"):
-        raise click.ClickException("There are no configured repositories to update")
+        raise click.ClickException(
+            "There are no configured repositories to update"
+        )
 
     if not rstuf_config["REPOSITORIES"].get(repository):
         raise click.ClickException(
