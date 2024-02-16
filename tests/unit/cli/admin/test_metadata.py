@@ -1017,9 +1017,9 @@ class TestMetadataSign:
         self, client, test_context, metadata_sign_input
     ):
         input_step = metadata_sign_input
-        input_step[
-            5
-        ] = "tests/files/key_storage/JanisJoplin.key"  # Enter the root`s private key path  # noqa
+        input_step[5] = (
+            "tests/files/key_storage/JanisJoplin.key"  # Enter the root`s private key path  # noqa
+        )
 
         with open("tests/files/das-root.json", "r") as f:
             das_root = f.read()
