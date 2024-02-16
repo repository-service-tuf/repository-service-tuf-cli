@@ -625,9 +625,19 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     tuf_management = TUFManagement(setup, save)
     metadata = tuf_management.initialize_metadata()
 
+    # Inform user for required number of root keys to reach threshold
+    root_metadata = metadata[Roles.ROOT.value]
+    root_role = root_metadata.signed.roles[Roles.ROOT.value]
+    required_num_of_keys = root_role.threshold - len(root_role.keyids)
+    if required_num_of_keys > 0:
+        console.print(
+            "Not enough keys set for root,"
+            f" {required_num_of_keys} more key(s) left to reach threshold.",
+        )
+
     # Inform user for pending signatures
-    pending_signatures: int = setup.threshold[Roles.ROOT] - len(
-        metadata[Roles.ROOT.value].signatures
+    pending_signatures: int = root_role.threshold - len(
+        root_metadata.signatures
     )
     if pending_signatures > 0:
         console.print(
