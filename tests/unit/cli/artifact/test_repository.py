@@ -510,7 +510,7 @@ class TestArtifactRepositoryInteraction:
             "There are no configured repositories to update"
             in test_result.output
         )
-        assert test_result.exit_code == 0
+        assert test_result.exit_code == 1
 
     def test_repository_update(
         self, client, test_context, test_setup, monkeypatch
