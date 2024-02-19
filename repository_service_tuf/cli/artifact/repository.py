@@ -12,7 +12,23 @@ from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.artifact import artifact
 
 
-def write_config(settings_path, settings_data, merge=True):
+def write_config(settings_path, settings_data, merge=False):
+    """
+    Writes config data to the rstuf config file. The expected data
+    is a dict of type:\n
+    {\n
+        "CURRENT_REPOSITORY": "<repository_name>",\n
+        "REPOSITORIES": {\n
+            "<repository_name>": {\n
+                "artifact_base_url": "<url>",\n
+                "hash_prefix": "<True/False>",\n
+                "metadata_url": "<url>",\n
+                "trusted_root": "<base64_path_string",\n
+            },\n
+        },\n
+        "SERVER": "<server_url>",\n
+    }
+    """
     write(settings_path, settings_data, merge)  # pragma: no cover
 
 
@@ -88,7 +104,7 @@ def set(context: Context, repository: str) -> None:
 
     rstuf_config["CURRENT_REPOSITORY"] = repository
     if context.obj.get("config"):
-        write_config(context.obj.get("config"), rstuf_config, False)
+        write_config(context.obj.get("config"), rstuf_config)
         console.print(f"Current repository changed to {repository}")
 
 
@@ -96,7 +112,7 @@ def set(context: Context, repository: str) -> None:
 @click.option(
     "-n",
     "--name",
-    help="A repository name.",
+    help="The repository name.",
     type=str,
     required=True,
     default=None,
@@ -104,7 +120,7 @@ def set(context: Context, repository: str) -> None:
 @click.option(
     "-r",
     "--root",
-    help="A metadata URL to the initial trusted root or a local file.",
+    help="The metadata URL to the initial trusted root or a local file.",
     type=str,
     required=True,
     default=None,
@@ -120,7 +136,7 @@ def set(context: Context, repository: str) -> None:
 @click.option(
     "-a",
     "--artifacts-url",
-    help="An artifacts base URL to fetch from.",
+    help="The artifacts base URL to fetch from.",
     type=str,
     required=True,
     default=None,
@@ -128,7 +144,7 @@ def set(context: Context, repository: str) -> None:
 @click.option(
     "-p",
     "--hash-prefix",
-    help="A hash prefix.",
+    help="Whether to add a hash prefix to artifact names.",
     is_flag=True,
     required=None,
 )
@@ -161,7 +177,7 @@ def add(
     repo_data = {
         "artifact_base_url": artifacts_url,
         "metadata_url": metadata_url,
-        "trusted_root": encoded_root,
+        "trusted_root": encoded_root.decode("UTF-8"),
         "hash_prefix": hash_prefix,
     }
 
@@ -171,7 +187,7 @@ def add(
         rstuf_config["REPOSITORIES"] = {name: repo_data}
 
     if context.obj.get("config"):
-        write_config(context.obj.get("config"), rstuf_config, False)
+        write_config(context.obj.get("config"), rstuf_config)
         console.print(success_msg)
 
 
@@ -247,7 +263,7 @@ def update(
     rstuf_config["REPOSITORIES"][repository]["hash_prefix"] = hash_prefix
 
     if context.obj.get("config"):
-        write_config(context.obj.get("config"), rstuf_config, False)
+        write_config(context.obj.get("config"), rstuf_config)
         console.print(f"Successfully updated repository {repository}")
 
 
@@ -256,7 +272,7 @@ def update(
 @click.argument("repository")
 def delete(context: Context, repository: str) -> None:
     """
-    Delete repository.
+    Delete a repository.
     """
 
     rstuf_config = context.obj.get("settings").as_dict()
@@ -274,5 +290,5 @@ def delete(context: Context, repository: str) -> None:
     repo = rstuf_config["REPOSITORIES"].pop(repository)
 
     if context.obj.get("config"):
-        write_config(context.obj.get("config"), rstuf_config, False)
+        write_config(context.obj.get("config"), rstuf_config)
         console.print(f"Succesfully deleted repository {repo}")

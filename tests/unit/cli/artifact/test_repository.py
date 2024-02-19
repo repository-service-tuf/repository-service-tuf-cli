@@ -301,7 +301,7 @@ class TestArtifactRepositoryInteraction:
         check_settings = test_context["settings"].as_dict()
         assert "r3" in check_settings["REPOSITORIES"]
         assert check_settings["REPOSITORIES"]["r3"]["trusted_root"] == (
-            b"ZXhhbXBsZV9wYXRoX3RvX3Jvb3Qvcm9vdC5qc29u"
+            "ZXhhbXBsZV9wYXRoX3RvX3Jvb3Qvcm9vdC5qc29u"
         )
         assert check_settings["REPOSITORIES"]["r3"]["metadata_url"] == (
             "http://localhost:8080"
@@ -413,7 +413,7 @@ class TestArtifactRepositoryInteraction:
         assert check_settings["REPOSITORIES"]
         assert "r3" in check_settings["REPOSITORIES"]
         assert check_settings["REPOSITORIES"]["r3"]["trusted_root"] == (
-            b"ZXhhbXBsZV9wYXRoX3RvX3Jvb3Qvcm9vdC5qc29u"
+            "ZXhhbXBsZV9wYXRoX3RvX3Jvb3Qvcm9vdC5qc29u"
         )
         assert check_settings["REPOSITORIES"]["r3"]["metadata_url"] == (
             "http://localhost:8080"
