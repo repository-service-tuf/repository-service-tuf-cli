@@ -598,13 +598,55 @@ class TestCeremonyOptions:
 
         assert test_result.exit_code == 0, test_result.output
         assert "Ceremony done. 🔐 🎉." in test_result.output
-        assert "Bootstrap payload (payload.json) saved." in test_result.output
+        assert "Bootstrap payload (payload.json) saved." in test_result.output 
         assert ceremony.os.makedirs.calls == [
             pretend.call("metadata", exist_ok=True)
         ]
         assert ceremony._run_ceremony_steps.calls == [pretend.call(True)]
         assert ceremony.save_payload.calls == [
             pretend.call("payload.json", {"k": "v", "timeout": 300})
+        ]
+
+    def test_ceremony_option_timeout(
+        self, client, test_context, test_inputs, test_setup, monkeypatch
+    ):
+        ceremony.setup = test_setup
+        input_step1, input_step2, input_step3, input_step4 = test_inputs
+
+        monkeypatch.setattr(
+            ceremony,
+            "os",
+            pretend.stub(
+                makedirs=pretend.call_recorder(lambda *a, **kw: None)
+            ),
+        )
+
+        # mock ceremony process steps.
+        # the process is tested in previous the test
+        ceremony._run_ceremony_steps = pretend.call_recorder(
+            lambda *a: {"k": "v"}
+        )
+        ceremony.save_payload = pretend.call_recorder(lambda *a: None)
+
+        test_result = client.invoke(
+            ceremony.ceremony,
+            ["--save", "--timeout", "100"],
+            input="\n".join(
+                input_step1 + input_step2 + input_step3 + input_step4
+            ),
+            obj=test_context,
+            catch_exceptions=False,
+        )
+
+        assert test_result.exit_code == 0, test_result.output
+        assert "Ceremony done. 🔐 🎉." in test_result.output
+        assert "Bootstrap payload (payload.json) saved." in test_result.output 
+        assert ceremony.os.makedirs.calls == [
+            pretend.call("metadata", exist_ok=True)
+        ]
+        assert ceremony._run_ceremony_steps.calls == [pretend.call(True)]
+        assert ceremony.save_payload.calls == [
+            pretend.call("payload.json", {"k": "v", "timeout": 100})
         ]
 
     def test_ceremony_option_save_OSError(
