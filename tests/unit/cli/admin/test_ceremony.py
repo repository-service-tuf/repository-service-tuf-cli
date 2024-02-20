@@ -598,7 +598,7 @@ class TestCeremonyOptions:
 
         assert test_result.exit_code == 0, test_result.output
         assert "Ceremony done. 🔐 🎉." in test_result.output
-        assert "Bootstrap payload (payload.json) saved." in test_result.output 
+        assert "Bootstrap payload (payload.json) saved." in test_result.output
         assert ceremony.os.makedirs.calls == [
             pretend.call("metadata", exist_ok=True)
         ]
@@ -640,7 +640,7 @@ class TestCeremonyOptions:
 
         assert test_result.exit_code == 0, test_result.output
         assert "Ceremony done. 🔐 🎉." in test_result.output
-        assert "Bootstrap payload (payload.json) saved." in test_result.output 
+        assert "Bootstrap payload (payload.json) saved." in test_result.output
         assert ceremony.os.makedirs.calls == [
             pretend.call("metadata", exist_ok=True)
         ]
