@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 import rich_click as click  # type: ignore
-from auto_click_auto import enable_click_shell_completion
+from auto_click_auto import enable_click_shell_completion_option
 from auto_click_auto.constants import ShellType
 from click import Context
 from rich.console import Console
@@ -35,6 +35,11 @@ try:
 except FileNotFoundError:  # pragma: no cover the tests will fail in general
     pass
 
+# Enable tab completion for all available supported shells
+supported_shell_types = {
+    ShellType(shell) for shell in ShellType.get_all_values()
+}
+
 
 @click.group(  # type: ignore
     context_settings={"help_option_names": ["-h", "--help"]}
@@ -50,6 +55,9 @@ except FileNotFoundError:  # pragma: no cover the tests will fail in general
 )
 # adds the --version parameter
 @click.version_option(prog_name=prog_name, version=version)
+@enable_click_shell_completion_option(
+    program_name=prog_name, shells=supported_shell_types
+)
 @click.pass_context
 def rstuf(
     context: Context,
@@ -70,11 +78,3 @@ for _, name, _ in pkgutil.walk_packages(  # type: ignore
     __path__, prefix=__name__ + "."
 ):
     importlib.import_module(name)
-
-# Enable tab completion for all available supported shells
-supported_shell_types = {
-    ShellType(shell) for shell in ShellType.get_all_values()
-}
-enable_click_shell_completion(
-    program_name=prog_name, shells=supported_shell_types
-)
