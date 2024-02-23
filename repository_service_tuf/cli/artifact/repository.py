@@ -195,7 +195,7 @@ def add(
 @click.option(
     "-r",
     "--root",
-    help="A metadata URL to the initial trusted root or a local file.",
+    help="The metadata URL to the initial trusted root or a local file.",
     type=str,
     required=None,
     default=None,
@@ -211,7 +211,7 @@ def add(
 @click.option(
     "-a",
     "--artifacts-url",
-    help="An artifacts base URL to fetch from.",
+    help="The artifacts base URL to fetch from.",
     type=str,
     required=None,
     default=None,
@@ -219,7 +219,7 @@ def add(
 @click.option(
     "-p",
     "--hash-prefix",
-    help="A hash prefix.",
+    help="Whether to add a hash prefix to artifact names.",
     is_flag=True,
     required=None,
 )

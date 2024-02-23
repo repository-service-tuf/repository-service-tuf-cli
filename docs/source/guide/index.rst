@@ -942,7 +942,7 @@ This command allows downloading an artifact from a provided repository using the
 .. rstuf-cli-artifact-repository
 
 Artifact Addition (``repository``)
----------------------------
+----------------------------------
 
 This command provides artifact repository management for the RSTUF repository config.
 
@@ -985,7 +985,7 @@ This command provides artifact repository management for the RSTUF repository co
     │ *  --name           -n  TEXT  The repository name. [required]                                                                                                               │
     │ *  --root           -r  TEXT  The metadata URL to the initial trusted root or a local file. [required]                                                                      │
     │ *  --metadata-url   -m  TEXT  TUF Metadata repository URL. [required]                                                                                                     │
-    │ *  --artifacts-url  -a  TEXT  An artifacts base URL to fetch from. [required]                                                                                             │
+    │ *  --artifacts-url  -a  TEXT  The artifacts base URL to fetch from. [required]                                                                                             │
     │    --hash-prefix    -p        Whether to add a hash prefix to artifact names.                                                                                             │
     │    --help           -h        Show this message and exit.                                                                                                                 │
     ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
@@ -1007,10 +1007,10 @@ This command provides artifact repository management for the RSTUF repository co
     Update repository.
 
     ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ --root           -r  TEXT  A metadata URL to the initial trusted root or a local file.                                                                                    │
+    │ --root           -r  TEXT  The metadata URL to the initial trusted root or a local file.                                                                                    │
     │ --metadata-url   -m  TEXT  TUF Metadata repository URL.                                                                                                                   │
     │ --artifacts-url  -a  TEXT  The artifacts base URL to fetch from.                                                                                                          │
-    │ --hash-prefix    -p        A hash prefix.                                                                                                                                 │
+    │ --hash-prefix    -p        Whether to add a hash prefix to artifact names.                                                                                                                                 │
     │ --help           -h        Show this message and exit.                                                                                                                    │
     ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
