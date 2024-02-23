@@ -70,6 +70,8 @@ class TestArtifactRepositoryInteraction:
             ["r1"],
             obj=test_context,
         )
+        assert "r1" in test_result.output
+        assert "r2" not in test_result.output
         assert (
             '"artifact_base_url": "http://localhost:8081"'
             in test_result.output
@@ -108,6 +110,8 @@ class TestArtifactRepositoryInteraction:
             obj=test_context,
         )
         assert "CURRENT REPOSITORY:" in test_result.output
+        assert "r1" in test_result.output
+        assert "r2" not in test_result.output
         assert test_result.exit_code == 0
 
     def test_repository_show_wrong_data_type(
@@ -160,7 +164,7 @@ class TestArtifactRepositoryInteraction:
         )
         assert test_result.exit_code == 1
 
-    def test_repository_use(
+    def test_repository_set(
         self, client, test_context, test_setup, monkeypatch
     ):
         repository.setup = test_setup
@@ -204,7 +208,7 @@ class TestArtifactRepositoryInteraction:
         assert check_settings.get("CURRENT_REPOSITORY") == "r2"
         assert test_result.exit_code == 0
 
-    def test_repository_set_one_param_only(
+    def test_repository_add_one_param_only(
         self, client, test_context, test_setup, monkeypatch
     ):
         repository.setup = test_setup
@@ -247,7 +251,7 @@ class TestArtifactRepositoryInteraction:
         assert "Try 'add --help' for help" in test_result.output
         assert "Missing option '-m' / '--metadata-url'." in test_result.output
 
-    def test_repository_set_all_params(
+    def test_repository_add_all_params(
         self, client, test_context, test_setup, monkeypatch
     ):
         repository.setup = test_setup
@@ -313,7 +317,7 @@ class TestArtifactRepositoryInteraction:
         assert check_settings["REPOSITORIES"]["r3"]["hash_prefix"] is False
         assert test_result.exit_code == 0
 
-    def test_repository_set_with_hash_prefix(
+    def test_repository_add_with_hash_prefix(
         self, client, test_context, test_setup, monkeypatch
     ):
         repository.setup = test_setup
@@ -370,7 +374,7 @@ class TestArtifactRepositoryInteraction:
         assert check_settings["REPOSITORIES"]["r3"]["hash_prefix"] is True
         assert test_result.exit_code == 0
 
-    def test_repository_set_with_no_repos(
+    def test_repository_add_with_no_repos(
         self, client, test_context, test_setup, monkeypatch
     ):
         repository.setup = test_setup
@@ -425,7 +429,7 @@ class TestArtifactRepositoryInteraction:
         assert check_settings["REPOSITORIES"]["r3"]["hash_prefix"] is True
         assert test_result.exit_code == 0
 
-    def test_repository_set_already_configured(
+    def test_repository_add_already_configured(
         self, client, test_context, test_setup, monkeypatch
     ):
         repository.setup = test_setup
@@ -557,6 +561,90 @@ class TestArtifactRepositoryInteraction:
         check_settings = test_context["settings"].as_dict()
         assert check_settings["REPOSITORIES"]["r1"]["metadata_url"] == (
             "http://example.com"
+        )
+        assert test_result.exit_code == 0
+
+    def test_repository_update_with_root_param(
+        self, client, test_context, test_setup, monkeypatch
+    ):
+        repository.setup = test_setup
+
+        config = {
+            "CURRENT_REPOSITORY": "r1",
+            "REPOSITORIES": {
+                "r1": {
+                    "artifact_base_url": "http://localhost:8081",
+                    "hash_prefix": "False",
+                    "metadata_url": "http://localhost:8080",
+                    "trusted_root": "some_root",
+                },
+            },
+            "SERVER": "http://127.0.0.1",
+        }
+        fake_config = pretend.stub(
+            as_dict=pretend.call_recorder(lambda *a: config),
+        )
+        test_context["settings"] = fake_config
+
+        fake_write_config = pretend.call_recorder(lambda *a: None)
+        monkeypatch.setattr(WRITE_CONFIG_SRC_PATH, fake_write_config)
+
+        test_result = client.invoke(
+            repository.update,
+            [
+                "-r",
+                "some_root_as_a_param",
+                "r1",
+            ],
+            obj=test_context,
+        )
+
+        assert "Successfully updated repository r1" in test_result.output
+        check_settings = test_context["settings"].as_dict()
+        assert check_settings["REPOSITORIES"]["r1"]["trusted_root"] == (
+            b"c29tZV9yb290X2FzX2FfcGFyYW0="
+        )
+        assert test_result.exit_code == 0
+
+    def test_repository_update_with_artifact_url(
+        self, client, test_context, test_setup, monkeypatch
+    ):
+        repository.setup = test_setup
+
+        config = {
+            "CURRENT_REPOSITORY": "r1",
+            "REPOSITORIES": {
+                "r1": {
+                    "artifact_base_url": "http://localhost:8081",
+                    "hash_prefix": "False",
+                    "metadata_url": "http://localhost:8080",
+                    "trusted_root": "some_root",
+                },
+            },
+            "SERVER": "http://127.0.0.1",
+        }
+        fake_config = pretend.stub(
+            as_dict=pretend.call_recorder(lambda *a: config),
+        )
+        test_context["settings"] = fake_config
+
+        fake_write_config = pretend.call_recorder(lambda *a: None)
+        monkeypatch.setattr(WRITE_CONFIG_SRC_PATH, fake_write_config)
+
+        test_result = client.invoke(
+            repository.update,
+            [
+                "-a",
+                "http://myhost:8081",
+                "r1",
+            ],
+            obj=test_context,
+        )
+
+        assert "Successfully updated repository r1" in test_result.output
+        check_settings = test_context["settings"].as_dict()
+        assert check_settings["REPOSITORIES"]["r1"]["artifact_base_url"] == (
+            "http://myhost:8081"
         )
         assert test_result.exit_code == 0
 

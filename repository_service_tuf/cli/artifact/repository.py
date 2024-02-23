@@ -62,7 +62,13 @@ def show(
                 console.print("CURRENT REPOSITORY:")
             try:
                 console.print_json(
-                    data=dict(rstuf_config["REPOSITORIES"].get(repository))
+                    data=dict(
+                        {
+                            repository: rstuf_config["REPOSITORIES"].get(
+                                repository
+                            )
+                        }
+                    )
                 )
             except TypeError:
                 raise click.ClickException(
@@ -251,14 +257,14 @@ def update(
         )
 
     if root:
-        rstuf_config["REPOSITORIES"][repository][  # pragma: no cover
-            "trusted_root"
-        ] = base64.b64encode(bytes(root, "utf-8"))
+        rstuf_config["REPOSITORIES"][repository]["trusted_root"] = (
+            base64.b64encode(bytes(root, "utf-8"))
+        )
     if metadata_url:
         rstuf_config["REPOSITORIES"][repository]["metadata_url"] = metadata_url
     if artifacts_url:
-        rstuf_config["REPOSITORIES"][repository][  # pragma: no cover
-            "artifacts_url"
+        rstuf_config["REPOSITORIES"][repository][
+            "artifact_base_url"
         ] = artifacts_url
     rstuf_config["REPOSITORIES"][repository]["hash_prefix"] = hash_prefix
 
