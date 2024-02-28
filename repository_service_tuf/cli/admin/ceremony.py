@@ -278,15 +278,6 @@ def _configure_role_target():
         show_choices=True,
     )
 
-    targets_base_url = click.prompt(
-        "\nWhat is the targets base URL? (i.e.: "
-        "https://www.example.com/downloads/)"
-    )
-    if targets_base_url.endswith("/") is False:
-        targets_base_url = targets_base_url + "/"
-
-    setup.services.targets_base_url = targets_base_url
-
 
 def _configure_role_root():
     setup.number_of_keys[Roles.ROOT] = prompt.IntPrompt.ask(
@@ -544,11 +535,8 @@ def _run_user_validation():
                 )
 
             if role == Roles.TARGETS:
-                base_url = setup.services.targets_base_url
                 role_table.add_row(
                     (
-                        f"\n[white]Base URL:[/] [yellow]{base_url}[/]"
-                        "\n"
                         "\n[orange1]DELEGATIONS[/]"
                         f"\n[aquamarine3]{role.value} -> bins[/]"
                         "\nNumber of bins: "

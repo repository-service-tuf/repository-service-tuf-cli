@@ -50,7 +50,6 @@ class Roles(Enum):
 @dataclass
 class ServiceSettings:
     number_of_delegated_bins: int = 256
-    targets_base_url: str = ""
     targets_online_key: bool = True
 
     def to_dict(self):

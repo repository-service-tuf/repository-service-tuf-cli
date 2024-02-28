@@ -75,7 +75,6 @@ def test_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
         "",  # What is the metadata expiration for the targets role?(Days) (365)?  # noqa
         "y",  # Show example?
         "16",  # Choose the number of delegated hash bin roles
-        "http://www.example.com/repository",  # What is the targets base URL
         "",  # What is the metadata expiration for the snapshot role?(Days) (365)?  # noqa
         "",  # What is the metadata expiration for the timestamp role?(Days) (365)?  # noqa
         "",  # What is the metadata expiration for the bins role?(Days) (365)?
