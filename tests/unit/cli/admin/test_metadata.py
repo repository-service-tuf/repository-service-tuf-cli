@@ -7,10 +7,21 @@ import os
 from datetime import datetime, timedelta
 
 import pretend  # type: ignore
+import pytest
 from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.cli.admin import metadata
 from repository_service_tuf.helpers.api_client import URL
+
+
+@pytest.fixture
+def tmp_update_payload_path(tmpdir, request) -> str:
+    # We get the test unique name as pytest when it's creating a temp dir its
+    # cutting part of the test name if it's longer. Using the test function
+    # unique name makes sure there are no possibilities of collisions.
+    # https://stackoverflow.com/questions/17726954/py-test-how-to-get-the-current-tests-name-from-the-setup-method#comment69402327_34732269
+    dir = tmpdir.mkdir(request.node.name)
+    return f"{dir}/metadata_update_payload.json"
 
 
 class TestMetadataUpdate:
@@ -21,22 +32,26 @@ class TestMetadataUpdate:
         assert test_result.exit_code == 1
         assert "Metadata Update" in test_result.output
 
-    def test_metadata_update(self, client, test_context, md_update_input):
+    def test_metadata_update(
+        self, client, test_context, md_update_input, tmp_update_payload_path
+    ):
         input_step1, input_step2, input_step3, input_step4 = md_update_input
 
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
             obj=test_context,
+            catch_exceptions=False,
         )
         finish_msg = "Ceremony done. 🔐 🎉. Root metadata update completed."
         assert finish_msg in test_result.output
         assert test_result.exit_code == 0
 
         root: Metadata[Root]
-        with open("metadata-update-payload.json") as f:
+        with open(tmp_update_payload_path) as f:
             data = json.loads(f.read())
             root = Metadata.from_dict(data["metadata"]["root"])
 
@@ -64,7 +79,7 @@ class TestMetadataUpdate:
         assert online_key.unrecognized_fields["name"] == "New RSA Online Key"
 
     def test_md_update_no_key_names_given(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, tmp_update_payload_path
     ):
         input_step1, input_step2, _, _ = md_update_input
 
@@ -93,6 +108,7 @@ class TestMetadataUpdate:
 
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -103,7 +119,7 @@ class TestMetadataUpdate:
         assert test_result.exit_code == 0
 
         root: Metadata[Root]
-        with open("metadata-update-payload.json") as f:
+        with open(tmp_update_payload_path) as f:
             data = json.loads(f.read())
             root = Metadata.from_dict(data["metadata"]["root"])
 
@@ -173,7 +189,7 @@ class TestMetadataUpdate:
         assert test_result.exit_code == 0
 
     def test_metadata_update_authorize_wrong_key_info_and_retry(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, tmp_update_payload_path
     ):
         _, input_step2, input_step3, input_step4 = md_update_input
         input_step1 = [
@@ -188,6 +204,7 @@ class TestMetadataUpdate:
         ]
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -198,7 +215,7 @@ class TestMetadataUpdate:
         assert test_result.exit_code == 0
 
     def test_metadata_update_no_update_expiration(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, tmp_update_payload_path
     ):
         input_step1, _, input_step3, input_step4 = md_update_input
         input_step2 = [
@@ -206,6 +223,7 @@ class TestMetadataUpdate:
         ]
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -218,7 +236,12 @@ class TestMetadataUpdate:
         assert skipping_expiration_change_msg in test_result.output
 
     def test_metadata_update_no_update_expired_expiration(
-        self, client, test_context, monkeypatch, md_update_input
+        self,
+        client,
+        test_context,
+        monkeypatch,
+        md_update_input,
+        tmp_update_payload_path,
     ):
         fake_date = datetime(2050, 6, 16, 9, 5, 1)
         fake_datetime = pretend.stub(
@@ -235,6 +258,7 @@ class TestMetadataUpdate:
         ]
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -247,7 +271,7 @@ class TestMetadataUpdate:
         assert warning_msg in test_result.output
 
     def test_metadata_update_no_update_expiration_negative(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, tmp_update_payload_path
     ):
         input_step1, _, input_step3, input_step4 = md_update_input
         input_step2 = [
@@ -258,6 +282,7 @@ class TestMetadataUpdate:
         ]
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -269,7 +294,7 @@ class TestMetadataUpdate:
         assert "Expiration extension must be at least 1" in test_result.output
 
     def test_metadata_update_no_root_keys_modification(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, tmp_update_payload_path
     ):
         input_step1, input_step2, _, input_step4 = md_update_input
         input_step3 = [
@@ -277,6 +302,7 @@ class TestMetadataUpdate:
         ]
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -288,7 +314,7 @@ class TestMetadataUpdate:
         assert "Skipping further root keys changes" in test_result.output
 
     def test_metadata_update_negative_threshold(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, tmp_update_payload_path
     ):
         input_step1, input_step2, _, input_step4 = md_update_input
         input_step3 = [
@@ -301,6 +327,7 @@ class TestMetadataUpdate:
         ]
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -312,7 +339,7 @@ class TestMetadataUpdate:
         assert "Threshold must be at least 1" in test_result.output
 
     def test_metadata_update_key_removal_of_non_existent_key(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, tmp_update_payload_path
     ):
         input_step1, input_step2, _, input_step4 = md_update_input
         key_name = "none existent"
@@ -327,6 +354,7 @@ class TestMetadataUpdate:
         ]
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -338,7 +366,7 @@ class TestMetadataUpdate:
         assert f"Failed: key {key_name} is not in root" in test_result.output
 
     def test_metadata_update_key_remove_all_keys(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, tmp_update_payload_path
     ):
         # We are removing all keys, but then re-adding a key which was used by
         # the current trusted root. That's why the threshold check is passed
@@ -362,6 +390,7 @@ class TestMetadataUpdate:
         ]
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -373,7 +402,7 @@ class TestMetadataUpdate:
         assert "No keys are left for removal." in test_result.output
 
     def test_metadata_update_add_keys_to_fulfill_threshold_requirement(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, tmp_update_payload_path
     ):
         input_step1, input_step2, _, _ = md_update_input
         # First set high threshold requirement not met by current keys amount
@@ -396,6 +425,7 @@ class TestMetadataUpdate:
         ]
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -408,7 +438,7 @@ class TestMetadataUpdate:
         assert warning in test_result.output
 
     def test_metadata_update_remove_key_then_add_to_fulfill_threshold(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, tmp_update_payload_path
     ):
         # Verify that if a key is removed, then another one must be added to
         # fulfill the threshold requirement
@@ -433,6 +463,7 @@ class TestMetadataUpdate:
         ]
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -445,7 +476,7 @@ class TestMetadataUpdate:
         assert warning in test_result.output
 
     def test_metadata_update_add_curr_online_key(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, tmp_update_payload_path
     ):
         input_step1, input_step2, _, input_step4 = md_update_input
         input_step3 = [
@@ -463,6 +494,7 @@ class TestMetadataUpdate:
 
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -475,7 +507,7 @@ class TestMetadataUpdate:
         assert warning in test_result.output
 
     def test_metadata_update_add_used_key(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, tmp_update_payload_path
     ):
         input_step1, input_step2, _, input_step4 = md_update_input
         input_step3 = [
@@ -493,6 +525,7 @@ class TestMetadataUpdate:
 
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -505,7 +538,7 @@ class TestMetadataUpdate:
         assert warning in test_result.output
 
     def test_metadata_update_change_online_key_to_the_same(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, tmp_update_payload_path
     ):
         input_step1, input_step2, input_step3, _ = md_update_input
         input_step4 = [
@@ -519,6 +552,7 @@ class TestMetadataUpdate:
 
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -531,7 +565,7 @@ class TestMetadataUpdate:
         assert warning in test_result.output
 
     def test_metadata_update_change_online_key_to_one_of_root_keys(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, tmp_update_payload_path
     ):
         input_step1, input_step2, input_step3, _ = md_update_input
         input_step4 = [
@@ -545,6 +579,7 @@ class TestMetadataUpdate:
 
         test_result = client.invoke(
             metadata.update,
+            ["-s", "-f", tmp_update_payload_path],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -610,7 +645,7 @@ class TestMetadataUpdateOptions:
         assert finish_msg in result.output
 
     def test_metadata_update_passing_current_root(
-        self, client, test_context, md_update_input
+        self, client, test_context, md_update_input, tmp_update_payload_path
     ):
         input_step1, input_step2, input_step3, input_step4 = md_update_input
 
@@ -619,7 +654,13 @@ class TestMetadataUpdateOptions:
 
         test_result = client.invoke(
             metadata.update,
-            ["--current-root-uri", "tests/files/root.json"],
+            [
+                "-s",
+                "-f",
+                tmp_update_payload_path,
+                "--current-root-uri",
+                "tests/files/root.json",
+            ],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
@@ -636,7 +677,7 @@ class TestMetadataUpdateOptions:
         custom_payload = "custom_md_payload_name"
         test_result = client.invoke(
             metadata.update,
-            ["--file", custom_payload],
+            ["-s", "--file", custom_payload],
             input="\n".join(
                 input_step1 + input_step2 + input_step3 + input_step4
             ),
