@@ -20,6 +20,22 @@ repository\_service\_tuf.cli.artifact.delete module
    :undoc-members:
    :show-inheritance:
 
+repository\_service\_tuf.cli.artifact.download module
+-----------------------------------------------------
+
+.. automodule:: repository_service_tuf.cli.artifact.download
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+repository\_service\_tuf.cli.artifact.repository module
+-------------------------------------------------------
+
+.. automodule:: repository_service_tuf.cli.artifact.repository
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 
