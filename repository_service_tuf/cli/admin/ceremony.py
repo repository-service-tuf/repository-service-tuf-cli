@@ -23,7 +23,6 @@ from repository_service_tuf.helpers.tuf import (
     BootstrapSetup,
     Roles,
     RSTUFKey,
-    ServiceSettings,
     TUFManagement,
     _conform_rsa_key,
     get_key,
@@ -236,12 +235,12 @@ setup = BootstrapSetup(
         Roles.TIMESTAMP: 1,
         Roles.BINS: 1,
     },
-    services=ServiceSettings(),
     number_of_keys={Roles.ROOT: 2, Roles.TARGETS: 1},
     threshold={
         Roles.ROOT: 1,
         Roles.TARGETS: 1,
     },
+    number_of_delegated_bins=256,
     root_keys={},
     online_key=RSTUFKey(),
 )
@@ -270,7 +269,7 @@ def _configure_role_target():
         with console.pager(links=True):
             console.print(markdown.Markdown(HASH_BINS_EXAMPLE), width=100)
 
-    setup.services.number_of_delegated_bins = prompt.IntPrompt.ask(
+    setup.number_of_delegated_bins = prompt.IntPrompt.ask(
         "\nChoose the number of delegated hash bin roles",
         default=256,
         choices=[str(2**i) for i in range(1, 15)],  # choices must be str
@@ -540,7 +539,7 @@ def _run_user_validation():
                         "\n[orange1]DELEGATIONS[/]"
                         f"\n[aquamarine3]{role.value} -> bins[/]"
                         "\nNumber of bins: "
-                        f"[yellow]{setup.services.number_of_delegated_bins}[/]"
+                        f"[yellow]{setup.number_of_delegated_bins}[/]"
                     ),
                     "",
                 )
