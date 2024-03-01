@@ -18,7 +18,6 @@ from repository_service_tuf.helpers.tuf import (
     MetadataInfo,
     Roles,
     RSTUFKey,
-    ServiceSettings,
     TUFManagement,
 )
 
@@ -46,12 +45,12 @@ def test_setup() -> BootstrapSetup:
             Roles.TIMESTAMP: 1,
             Roles.BINS: 1,
         },
-        services=ServiceSettings(),
         number_of_keys={Roles.ROOT: 2, Roles.TARGETS: 1},
         threshold={
             Roles.ROOT: 1,
             Roles.TARGETS: 1,
         },
+        number_of_delegated_bins=256,
         root_keys={},
         online_key=RSTUFKey(),
     )
@@ -75,7 +74,6 @@ def test_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
         "",  # What is the metadata expiration for the targets role?(Days) (365)?  # noqa
         "y",  # Show example?
         "16",  # Choose the number of delegated hash bin roles
-        "http://www.example.com/repository",  # What is the targets base URL
         "",  # What is the metadata expiration for the snapshot role?(Days) (365)?  # noqa
         "",  # What is the metadata expiration for the timestamp role?(Days) (365)?  # noqa
         "",  # What is the metadata expiration for the bins role?(Days) (365)?
