@@ -691,6 +691,11 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     show_default=True,
     is_flag=True,
 )
+@click.option(
+    "-t",
+    "--timeout",
+    default=300,
+)
 @click.pass_context
 def ceremony(
     context: Any,
@@ -699,6 +704,7 @@ def ceremony(
     upload: bool,
     save: bool,
     api_server: str,
+    timeout: int,
 ) -> None:
     """
     Start a new Metadata Ceremony.
@@ -747,6 +753,8 @@ def ceremony(
     # option ceremony: runs the ceremony, save the payload
     else:
         bootstrap_payload = _run_ceremony_steps(save)
+        if timeout:
+            bootstrap_payload["timeout"] = timeout
         save_payload(file, bootstrap_payload)
         console.print(
             f"\nCeremony done. 🔐 🎉. Bootstrap payload ({file}) saved."
