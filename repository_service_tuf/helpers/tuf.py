@@ -5,7 +5,7 @@
 import base64
 import copy
 import json
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Tuple
@@ -48,16 +48,6 @@ class Roles(Enum):
 
 
 @dataclass
-class ServiceSettings:
-    number_of_delegated_bins: int = 256
-    targets_base_url: str = ""
-    targets_online_key: bool = True
-
-    def to_dict(self):
-        return asdict(self)
-
-
-@dataclass
 class RSTUFKey:
     key: dict = field(default_factory=dict)
     key_path: Optional[str] = None
@@ -81,17 +71,26 @@ class RSTUFKey:
 @dataclass
 class BootstrapSetup:
     expiration: Dict[Roles, int]
-    services: ServiceSettings
     number_of_keys: Dict[Literal[Roles.ROOT, Roles.TARGETS], int]
     threshold: Dict[Literal[Roles.ROOT, Roles.TARGETS], int]
+    number_of_delegated_bins: int = 256
     root_keys: Dict[str, RSTUFKey] = field(default_factory=Dict)
     online_key: RSTUFKey = field(default_factory=RSTUFKey)
 
-    def to_dict(self):
-        return {
-            "expiration": {k.value: v for k, v in self.expiration.items()},
-            "services": self.services.to_dict(),
-        }
+    def to_dict(self) -> Dict[str, Any]:
+        result: Dict[str, Any] = {"roles": {}}
+        for role in Roles:
+            if role.value == BINS:
+                result["roles"][BINS] = {
+                    "expiration": self.expiration[role],
+                    "number_of_delegated_bins": self.number_of_delegated_bins,
+                }
+            else:
+                result["roles"][role.value] = {
+                    "expiration": self.expiration[role],
+                }
+
+        return result
 
 
 class MetadataInfo:
