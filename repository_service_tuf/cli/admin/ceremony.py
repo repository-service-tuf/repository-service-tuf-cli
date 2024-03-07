@@ -23,7 +23,6 @@ from repository_service_tuf.helpers.tuf import (
     BootstrapSetup,
     Roles,
     RSTUFKey,
-    ServiceSettings,
     TUFManagement,
     _conform_rsa_key,
     get_key,
@@ -236,12 +235,12 @@ setup = BootstrapSetup(
         Roles.TIMESTAMP: 1,
         Roles.BINS: 1,
     },
-    services=ServiceSettings(),
     number_of_keys={Roles.ROOT: 2, Roles.TARGETS: 1},
     threshold={
         Roles.ROOT: 1,
         Roles.TARGETS: 1,
     },
+    number_of_delegated_bins=256,
     root_keys={},
     online_key=RSTUFKey(),
 )
@@ -270,22 +269,13 @@ def _configure_role_target():
         with console.pager(links=True):
             console.print(markdown.Markdown(HASH_BINS_EXAMPLE), width=100)
 
-    setup.services.number_of_delegated_bins = prompt.IntPrompt.ask(
+    setup.number_of_delegated_bins = prompt.IntPrompt.ask(
         "\nChoose the number of delegated hash bin roles",
         default=256,
         choices=[str(2**i) for i in range(1, 15)],  # choices must be str
         show_default=True,
         show_choices=True,
     )
-
-    targets_base_url = click.prompt(
-        "\nWhat is the targets base URL? (i.e.: "
-        "https://www.example.com/downloads/)"
-    )
-    if targets_base_url.endswith("/") is False:
-        targets_base_url = targets_base_url + "/"
-
-    setup.services.targets_base_url = targets_base_url
 
 
 def _configure_role_root():
@@ -544,15 +534,12 @@ def _run_user_validation():
                 )
 
             if role == Roles.TARGETS:
-                base_url = setup.services.targets_base_url
                 role_table.add_row(
                     (
-                        f"\n[white]Base URL:[/] [yellow]{base_url}[/]"
-                        "\n"
                         "\n[orange1]DELEGATIONS[/]"
                         f"\n[aquamarine3]{role.value} -> bins[/]"
                         "\nNumber of bins: "
-                        f"[yellow]{setup.services.number_of_delegated_bins}[/]"
+                        f"[yellow]{setup.number_of_delegated_bins}[/]"
                     ),
                     "",
                 )
@@ -704,6 +691,11 @@ def _run_ceremony_steps(save: bool) -> Dict[str, Any]:
     show_default=True,
     is_flag=True,
 )
+@click.option(
+    "-t",
+    "--timeout",
+    default=300,
+)
 @click.pass_context
 def ceremony(
     context: Any,
@@ -712,6 +704,7 @@ def ceremony(
     upload: bool,
     save: bool,
     api_server: str,
+    timeout: int,
 ) -> None:
     """
     Start a new Metadata Ceremony.
@@ -760,6 +753,8 @@ def ceremony(
     # option ceremony: runs the ceremony, save the payload
     else:
         bootstrap_payload = _run_ceremony_steps(save)
+        if timeout:
+            bootstrap_payload["timeout"] = timeout
         save_payload(file, bootstrap_payload)
         console.print(
             f"\nCeremony done. 🔐 🎉. Bootstrap payload ({file}) saved."
