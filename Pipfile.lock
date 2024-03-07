@@ -904,7 +904,7 @@
                 "sha256:4805911c3a4ec7c3966410053e9ec6a1fecd629117df5adee56dfc9432a1081e",
                 "sha256:f238736bb06590ae52ac1fab06a3a9ef1d8dce2b7a35b5ab329371d6c8f5d2cc"
             ],
-            "markers": "python_full_version < '3.10.2'",
+            "markers": "python_version < '3.10'",
             "version": "==7.0.1"
         },
         "iniconfig": {
@@ -1400,12 +1400,12 @@
         },
         "tox": {
             "hashes": [
-                "sha256:286807f8a581e55785dc30ff956a81583016625f6dd296948aa7a43001c1bb00",
-                "sha256:35976739e39e60e913bef4cf8226be64eb9eed6fdb9a44c6924265ebe11cbcae"
+                "sha256:b03754b6ee6dadc70f2611da82b4ed8f625fcafd247e15d1d0cb056f90a06d3b",
+                "sha256:f0ad758c3bbf7e237059c929d3595479363c3cdd5a06ac3e49d1dd020ffbee45"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.8'",
-            "version": "==4.14.0"
+            "version": "==4.14.1"
         },
         "types-requests": {
             "hashes": [
