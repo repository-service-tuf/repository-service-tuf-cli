@@ -442,20 +442,19 @@ def _print_root(root: Root):
 def _filter_root_verification_results(
     root_result: RootVerificationResult,
 ) -> list[VerificationResult]:
-    """Filter unverified results with distinct (missing, unsigned) fields."""
+    """Filter unverified results with distinct relevant fields."""
 
-    results: list[VerificationResult] = []
-    if not root_result.first.verified:
-        results.append(root_result.first)
+    # 1. Filter unverified
+    results: list[VerificationResult] = [
+        r for r in (root_result.first, root_result.second) if not r.verified
+    ]
 
-    if not root_result.second.verified and (
-        root_result.first.verified
-        or (
-            (root_result.first.unsigned, root_result.first.missing)
-            != (root_result.second.unsigned, root_result.second.missing)
-        )
-    ):
-        results.append(root_result.second)
+    # 2. Filter distinct by 'unsigned' and 'missing' properties
+    if len(results) == 2:
+        if (root_result.first.unsigned == root_result.second.unsigned) and (
+            root_result.first.missing == root_result.second.missing
+        ):
+            results = results[:1]
 
     return results
 
