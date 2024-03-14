@@ -46,10 +46,3 @@ repos:
       language: system
       pass_filenames: false
       verbose: true
-    - id: tox-precommit
-      name: run pre-commit version check from tox
-      description: Checks if `pre-commit autoupdate` is up-to-date
-      entry: tox -e precommit
-      language: system
-      pass_filenames: false
-      verbose: true
