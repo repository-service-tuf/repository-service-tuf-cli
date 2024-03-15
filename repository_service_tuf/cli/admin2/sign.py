@@ -27,14 +27,14 @@ from repository_service_tuf.cli.admin2.helpers import (
 @click.argument("root_in", type=click.File("rb"))
 @click.argument("prev_root_in", type=click.File("rb"), required=False)
 @click.option(
-    "--payload-out",
-    "-o",
+    "--save",
+    "-s",
     is_flag=False,
     flag_value="sign-payload.json",
     help="Write json result to FILENAME (default: 'sign-payload.json')",
     type=click.File("w"),
 )
-def sign(root_in, prev_root_in, payload_out) -> None:
+def sign(root_in, prev_root_in, save) -> None:
     """Add one signature to root metadata."""
     console.print("\n", Markdown("# Metadata Signing Tool"))
 
@@ -75,6 +75,6 @@ def sign(root_in, prev_root_in, payload_out) -> None:
     ###########################################################################
     # Dump payload
     # TODO: post to API
-    if payload_out:
+    if save:
         payload = SignPayload(signature=signature.to_dict())
-        json.dump(asdict(payload), payload_out, indent=2)
+        json.dump(asdict(payload), save, indent=2)

@@ -29,14 +29,14 @@ from repository_service_tuf.cli.admin2.helpers import (
 
 @admin2.command()  # type: ignore
 @click.option(
-    "--payload-out",
-    "-o",
+    "--save",
+    "-s",
     is_flag=False,
     flag_value="ceremony-payload.json",
     help="Write json result to FILENAME (default: 'ceremony-payload.json')",
     type=click.File("w"),
 )
-def ceremony(payload_out) -> None:
+def ceremony(save) -> None:
     """Bootstrap Ceremony to create initial root metadata and RSTUF config."""
     console.print("\n", Markdown("# Metadata Bootstrap Tool"))
 
@@ -78,8 +78,8 @@ def ceremony(payload_out) -> None:
     ###########################################################################
     # Dump payload
     # TODO: post to API
-    if payload_out:
+    if save:
         metadatas = Metadatas(root_md.to_dict())
         settings = Settings(expiration_settings, service_settings)
         payload = CeremonyPayload(settings, metadatas)
-        json.dump(asdict(payload), payload_out, indent=2)
+        json.dump(asdict(payload), save, indent=2)

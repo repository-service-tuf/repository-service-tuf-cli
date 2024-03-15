@@ -31,14 +31,14 @@ from repository_service_tuf.cli.admin2.helpers import (
 @admin2.command()  # type: ignore
 @click.argument("root_in", type=click.File("rb"))
 @click.option(
-    "--payload-out",
-    "-o",
+    "--save",
+    "-s",
     is_flag=False,
     flag_value="update-payload.json",
     help="Write json result to FILENAME (default: 'update-payload.json')",
     type=click.File("w"),
 )
-def update(root_in, payload_out) -> None:
+def update(root_in, save) -> None:
     """Update root metadata and bump version."""
     console.print("\n", Markdown("# Metadata Update Tool"))
 
@@ -102,5 +102,5 @@ def update(root_in, payload_out) -> None:
     # Dump payload
     # TODO: post to API
     payload = UpdatePayload(Metadatas(root_md.to_dict()))
-    if payload_out:
-        json.dump(asdict(payload), payload_out, indent=2)
+    if save:
+        json.dump(asdict(payload), save, indent=2)

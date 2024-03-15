@@ -79,12 +79,12 @@ class TestCLI:
 
     @staticmethod
     def _invoke(client, cmd, inputs, args):
-        """Invoke cli command and return content of `-o <output>` result."""
+        """Invoke cli command and return content of `-s <output>` result."""
         out_fn = "out"
         with client.isolated_filesystem():
             client.invoke(
                 cmd,
-                args=args + ["-o", out_fn],
+                args=args + ["-s", out_fn],
                 input="\n".join(inputs),
                 catch_exceptions=False,
             )
