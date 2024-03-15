@@ -9,7 +9,6 @@
     },
     "services": {
       "number_of_delegated_bins": 256,
-      "targets_base_url": "https://yolo.wtf/",
       "targets_online_key": true
     }
   },

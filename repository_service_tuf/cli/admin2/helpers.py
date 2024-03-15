@@ -80,7 +80,6 @@ class ExpirationSettings:
 @dataclass
 class ServiceSettings:
     number_of_delegated_bins: int = 256
-    targets_base_url: Optional[str] = None
     targets_online_key: bool = True
 
 
@@ -211,11 +210,7 @@ def _service_settings_prompt() -> ServiceSettings:
         show_default=True,
         show_choices=True,
     )
-    # TODO: validate url
-    targets_base_url = Prompt.ask("Please enter targets base URL")
-    if not targets_base_url.endswith("/"):
-        targets_base_url += "/"
-    return ServiceSettings(number_of_bins, targets_base_url)
+    return ServiceSettings(number_of_bins)
 
 
 def _root_threshold_prompt() -> int:

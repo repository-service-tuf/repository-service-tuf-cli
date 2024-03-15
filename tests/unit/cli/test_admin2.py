@@ -101,7 +101,6 @@ class TestCLI:
             "",  # Please enter days until expiry for targets role (365)
             "",  # Please enter days until expiry for bins role (1)
             "",  # Please enter number of delegated hash bins [2/4/8/16/32/64/128/256/512/1024/2048/4096/8192/16384] (256)
-            "https://yolo.wtf",  # Please enter targets base URL
             "2",  # Please enter root threshold
             f"{_PEMS / 'rsa.pub'}",  # Please enter path to public key
             "my rsa key",  # Please enter key name
@@ -289,18 +288,12 @@ class TestHelpers:
     def test_service_settings_prompt(self):
         data = [
             (
-                ("", "example.com"),
-                (
-                    helpers.ServiceSettings.number_of_delegated_bins,
-                    "example.com/",
-                ),
+                ("",),
+                (helpers.ServiceSettings.number_of_delegated_bins,),
             ),
             (
-                ("2", "example.org/"),
-                (
-                    2,
-                    "example.org/",
-                ),
+                ("2",),
+                (2,),
             ),
         ]
         for inputs, expected in data:
