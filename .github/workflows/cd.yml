@@ -44,7 +44,7 @@ jobs:
 
       - id: gh-release
         name: Publish GitHub release candidate
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
+        uses: softprops/action-gh-release@9d7c94cfd0a1f3ed45544c887983e9fa900f0564
         with:
           name: ${{ github.ref_name }}-rc
           tag_name: ${{ github.ref }}
@@ -70,7 +70,7 @@ jobs:
       id-token: write  # IMPORTANT: this permission is mandatory for trusted publishing
     steps:
       - name: Fetch build artifacts
-        uses: actions/download-artifact@87c55149d96e628cc2ef7e6fc2aab372015aec85
+        uses: actions/download-artifact@c850b930e6ba138125429b7e5c93fc707a7f8427
         with:
           name: build-artifacts
           path: dist
@@ -91,7 +91,7 @@ jobs:
           name: testpypi
           url: https://pypi.org/p/repository-service-tuf
         if: github.repository == 'repository-service-tuf/repository-service-tuf-cli'
-        uses: pypa/gh-action-pypi-publish@e53eb8b103ffcb59469888563dc324e3c8ba6f06
+        uses: pypa/gh-action-pypi-publish@81e9d935c883d0b210363ab89cf05f3894778450
         with:
           repository-url: https://test.pypi.org/legacy/
 
@@ -101,4 +101,4 @@ jobs:
           url: https://pypi.org/p/repository-service-tuf
         # Only attempt PyPI upload in upstream repository
         if: github.repository == 'repository-service-tuf/repository-service-tuf-cli'
-        uses: pypa/gh-action-pypi-publish@e53eb8b103ffcb59469888563dc324e3c8ba6f06
+        uses: pypa/gh-action-pypi-publish@81e9d935c883d0b210363ab89cf05f3894778450
