@@ -83,3 +83,4 @@ def ceremony(save) -> None:
         settings = Settings(expiration_settings, service_settings)
         payload = CeremonyPayload(settings, metadatas)
         json.dump(asdict(payload), save, indent=2)
+        console.print(f"Saved result to '{save.name}'")

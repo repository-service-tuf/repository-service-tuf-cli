@@ -104,3 +104,4 @@ def update(root_in, save) -> None:
     payload = UpdatePayload(Metadatas(root_md.to_dict()))
     if save:
         json.dump(asdict(payload), save, indent=2)
+        console.print(f"Saved result to '{save.name}'")

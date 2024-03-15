@@ -78,3 +78,4 @@ def sign(root_in, prev_root_in, save) -> None:
     if save:
         payload = SignPayload(signature=signature.to_dict())
         json.dump(asdict(payload), save, indent=2)
+        console.print(f"Saved result to '{save.name}'")
