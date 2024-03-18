@@ -67,8 +67,7 @@ def sign(root_in, prev_root_in, save) -> None:
         root_md.signatures,
     )
     if root_result.verified:
-        console.print("Metadata is fully signed.")
-        return
+        raise click.ClickException("Metadata already fully signed.")
 
     ###########################################################################
     # Review metadata

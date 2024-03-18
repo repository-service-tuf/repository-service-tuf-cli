@@ -189,6 +189,27 @@ class TestSignError:
             sign.main([f"{_ROOTS / 'v2.json'}"], standalone_mode=False)
         assert "v1 needed" in str(e)
 
+    def test_sign_already_signed(self, client):
+        # Construct fake root metadata with "verified" fake verification result
+        fake_result = stub(verified=True)
+        fake_root = stub(
+            version=1, get_root_verification_result=lambda *a: fake_result
+        )
+        fake_metadata = stub(
+            signed=fake_root, signed_bytes=None, signatures=None
+        )
+
+        # Click still needs a real file passed, even if it is ignored
+        args = [f"{_ROOTS / 'v1.json'}"]
+        with patch(
+            "repository_service_tuf.cli.admin2.sign.Metadata.from_bytes",
+            side_effect=lambda x: fake_metadata,
+        ):
+            with pytest.raises(click.ClickException) as e:
+                sign.main(args, standalone_mode=False)
+
+            assert "fully signed" in str(e)
+
 
 class TestHelpers:
     def test_load_signer_from_file_prompt(self, ed25519_key):
