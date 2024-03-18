@@ -113,6 +113,7 @@ class TestCLI:
             "1",  # Please press 0 to add key, or remove key by entering its index. Press enter to contiue
             "",  # Please press 0 to add key, or remove key by entering its index. Press enter to contiue
             f"{_PEMS / 'rsa.pub'}",  #  Please enter path to public key
+            "my rsa online key",  # Please enter a key name
             "2",  # Please enter signing key index
             f"{_PEMS / 'ed25519'}",  # Please enter path to encrypted private key
             "1",  # Please enter signing key index
@@ -142,6 +143,7 @@ class TestCLI:
             "",  # Please press 0 to add key, or remove key by entering its index. Press enter to continue:
             "",  # Do you want to change the online key? [y/n] (y)
             f"{_PEMS / 'ecdsa.pub'}",  # Please enter path to public key
+            "my ecdsa online key",  # Please enter a key name
             "1",  # Please enter signing key index
             f"{_PEMS / 'ed25519'}",  # Please enter path to encrypted private key
             "1",  # Please enter signing key index
@@ -364,11 +366,15 @@ class TestHelpers:
                 root.keys[id_].unrecognized_fields[helpers.KEY_URI_FIELD]
                 == f"fn:{id_}"
             )
+            assert (
+                root.keys[id_].unrecognized_fields[helpers.KEY_NAME_FIELD]
+                == "foo"
+            )
 
         # Add new key (no user choice)
-        with patch(
-            f"{_HELPERS}._load_key_prompt",
-            return_value=ed25519_key,
+        with (
+            patch(f"{_HELPERS}._load_key_prompt", return_value=ed25519_key),
+            patch(f"{_HELPERS}._key_name_prompt", return_value="foo"),
         ):
             helpers._configure_online_key_prompt(root)
 
@@ -386,6 +392,7 @@ class TestHelpers:
                 f"{_HELPERS}._load_key_prompt",
                 side_effect=[None, key2],
             ),
+            patch(f"{_HELPERS}._key_name_prompt", return_value="foo"),
         ):
             helpers._configure_online_key_prompt(root)
 

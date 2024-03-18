@@ -298,7 +298,10 @@ def _configure_online_key_prompt(root: Root) -> None:
     current_key = _get_online_key(root)
     if current_key:
         # TODO: Is the info even helpful?
-        console.print(f"Current online key is: '{current_key.keyid}'")
+        name = current_key.unrecognized_fields.get(
+            KEY_NAME_FIELD, current_key.keyid
+        )
+        console.print(f"Current online key is: '{name}'")
         if not Confirm.ask(
             "Do you want to change the online key?", default=True
         ):
@@ -308,14 +311,18 @@ def _configure_online_key_prompt(root: Root) -> None:
         if new_key := _load_key_prompt(root):
             break
 
+    name = _key_name_prompt(root)
+    new_key.unrecognized_fields[KEY_NAME_FIELD] = name
+
     uri = f"fn:{new_key.keyid}"
     new_key.unrecognized_fields[KEY_URI_FIELD] = uri
+
     for role_name in ONLINE_ROLE_NAMES:
         if current_key:
             root.revoke_key(current_key.keyid, role_name)
         root.add_key(new_key, role_name)
 
-    console.print(f"Configured file-based online key: '{new_key.keyid}'")
+    console.print(f"Configured file-based online key: '{name}'")
     console.print(f"Expected private key file name is: '{new_key.keyid}'")
 
 
