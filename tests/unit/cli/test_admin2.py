@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
 
+import click
 import pytest
 from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
@@ -179,6 +180,14 @@ class TestCLI:
 
         assert result["role"] == "root"
         assert result["signature"]["keyid"] == expected["signature"]["keyid"]
+
+
+class TestSignError:
+
+    def test_sign_missing_previous(self, client):
+        with pytest.raises(click.ClickException) as e:
+            sign.main([f"{_ROOTS / 'v2.json'}"], standalone_mode=False)
+        assert "v1 needed" in str(e)
 
 
 class TestHelpers:

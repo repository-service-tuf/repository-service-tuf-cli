@@ -47,9 +47,17 @@ def sign(root_in, prev_root_in, save) -> None:
     # TODO: load from API
     root_md = Metadata[Root].from_bytes(root_in.read())
 
-    prev_root = None
     if prev_root_in:
         prev_root = Metadata[Root].from_bytes(prev_root_in.read()).signed
+
+    else:
+        prev_root = None
+        version = root_md.signed.version
+        if version > 1:
+            raise click.ClickException(
+                f"Previous root v{version-1} needed "
+                f"to sign root v{version}."
+            )
 
     ###########################################################################
     # Verify signatures
