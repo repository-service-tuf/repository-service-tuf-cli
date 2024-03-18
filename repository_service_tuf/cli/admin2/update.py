@@ -70,7 +70,7 @@ def update(root_in, save) -> None:
 
     threshold_str = f"Root signature threshold is {root_role.threshold}."
     if Confirm.ask(
-        f"{threshold_str} Do you want to change the threshold?", default="y"
+        f"{threshold_str} Do you want to change the threshold?", default=False
     ):
         root_role.threshold = _root_threshold_prompt()
 

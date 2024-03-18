@@ -133,7 +133,7 @@ class TestCLI:
     def test_update(self, client, patch_getpass, patch_utcnow):
         inputs = [
             "",  # Please enter days until expiry for root role (365)
-            "",  # Do you want to change the threshold? [y/n] (y)
+            "y",  # Do you want to change the threshold? [y/n] (n)
             "1",  # Please enter root threshold
             "2",  # Please press 0 to add key, or remove key by entering its index. Press enter to continue
             "1",  # Please press 0 to add key, or remove key by entering its index. Press enter to continue
