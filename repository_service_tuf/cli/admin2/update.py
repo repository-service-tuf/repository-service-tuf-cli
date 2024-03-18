@@ -25,6 +25,7 @@ from repository_service_tuf.cli.admin2.helpers import (
     _expiry_prompt,
     _print_root,
     _root_threshold_prompt,
+    _warn_no_save,
 )
 
 
@@ -41,6 +42,9 @@ from repository_service_tuf.cli.admin2.helpers import (
 def update(root_in, save) -> None:
     """Update root metadata and bump version."""
     console.print("\n", Markdown("# Metadata Update Tool"))
+
+    if not save:
+        _warn_no_save()
 
     ###########################################################################
     # Load root

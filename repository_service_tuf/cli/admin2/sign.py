@@ -20,6 +20,7 @@ from repository_service_tuf.cli.admin2.helpers import (
     _filter_root_verification_results,
     _print_keys_for_signing,
     _print_root,
+    _warn_no_save,
 )
 
 
@@ -37,6 +38,9 @@ from repository_service_tuf.cli.admin2.helpers import (
 def sign(root_in, prev_root_in, save) -> None:
     """Add one signature to root metadata."""
     console.print("\n", Markdown("# Metadata Signing Tool"))
+
+    if not save:
+        _warn_no_save()
 
     ###########################################################################
     # Load roots

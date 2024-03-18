@@ -24,6 +24,7 @@ from repository_service_tuf.cli.admin2.helpers import (
     _print_root,
     _root_threshold_prompt,
     _service_settings_prompt,
+    _warn_no_save,
 )
 
 
@@ -39,6 +40,9 @@ from repository_service_tuf.cli.admin2.helpers import (
 def ceremony(save) -> None:
     """Bootstrap Ceremony to create initial root metadata and RSTUF config."""
     console.print("\n", Markdown("# Metadata Bootstrap Tool"))
+
+    if not save:
+        _warn_no_save()
 
     root = Root()
 

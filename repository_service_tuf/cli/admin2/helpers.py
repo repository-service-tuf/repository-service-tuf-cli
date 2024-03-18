@@ -508,3 +508,13 @@ def _print_missing_key_info(threshold: int, missing: int) -> None:
         console.print(f"{missing} key{s} missing for threshold {threshold}.")
     else:
         console.print(f"Threshold {threshold} is met, more keys can be added.")
+
+
+def _warn_no_save():
+    console.print(
+        ":warning: ",
+        "metadata result not sent to rstuf worker, use `-s` to save locally ",
+        ":warning:",
+        justify="center",
+        style="italic",
+    )
