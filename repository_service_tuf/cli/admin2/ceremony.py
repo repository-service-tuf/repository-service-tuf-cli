@@ -14,16 +14,19 @@ from tuf.api.metadata import Metadata, Root
 from repository_service_tuf.cli import console
 from repository_service_tuf.cli.admin2 import admin2
 from repository_service_tuf.cli.admin2.helpers import (
+    BinsRole,
     CeremonyPayload,
     Metadatas,
+    Role,
+    Roles,
     Settings,
     _add_root_signatures_prompt,
     _configure_online_key_prompt,
     _configure_root_keys_prompt,
-    _expiration_settings_prompt,
+    _expiry_prompt,
+    _online_settings_prompt,
     _print_root,
     _root_threshold_prompt,
-    _service_settings_prompt,
     _warn_no_save,
 )
 
@@ -47,13 +50,21 @@ def ceremony(save) -> None:
     root = Root()
 
     ###########################################################################
-    # Configure expiration and online service settings
-    console.print(Markdown("##  Metadata Expiration"))
-    expiration_settings, root_expires = _expiration_settings_prompt()
-    root.expires = root_expires
+    # Configure online role settings
+    console.print(Markdown("##  Online role settings"))
+    online = _online_settings_prompt()
 
-    console.print(Markdown("## Artifacts"))
-    service_settings = _service_settings_prompt()
+    console.print(Markdown("##  Root expiry"))
+    root_days, root_date = _expiry_prompt("root")
+    root.expires = root_date
+
+    roles = Roles(
+        Role(root_days),
+        Role(online.timestamp_expiry),
+        Role(online.snapshot_expiry),
+        Role(online.targets_expiry),
+        BinsRole(online.bins_expiry, online.bins_number),
+    )
 
     ###########################################################################
     # Configure Root Keys
@@ -84,7 +95,7 @@ def ceremony(save) -> None:
     # TODO: post to API
     if save:
         metadatas = Metadatas(root_md.to_dict())
-        settings = Settings(expiration_settings, service_settings)
+        settings = Settings(roles)
         payload = CeremonyPayload(settings, metadatas)
         json.dump(asdict(payload), save, indent=2)
         console.print(f"Saved result to '{save.name}'")

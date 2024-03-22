@@ -96,12 +96,12 @@ class TestCLI:
 
     def test_ceremony(self, client, patch_getpass, patch_utcnow):
         inputs = [
-            "",  # Please enter days until expiry for root role (365)
             "",  # Please enter days until expiry for timestamp role (1)
             "",  # Please enter days until expiry for snapshot role (1)
             "",  # Please enter days until expiry for targets role (365)
             "",  # Please enter days until expiry for bins role (1)
             "",  # Please enter number of delegated hash bins [2/4/8/16/32/64/128/256/512/1024/2048/4096/8192/16384] (256)
+            "",  # Please enter days until expiry for root role (365)
             "2",  # Please enter root threshold
             f"{_PEMS / 'rsa.pub'}",  # Please enter path to public key
             "my rsa key",  # Please enter key name
@@ -297,42 +297,38 @@ class TestHelpers:
             datetime(2024, 1, 11, 0, 0, 0),  # see patch_utcnow
         )
 
-        # Assert bump per-role default expiry
+        # Assert prompt per-role default expiry
         for role in ["root", "timestamp", "snapshot", "targets", "bins"]:
-            expected_days = getattr(helpers.ExpirationSettings, role)
-            days_input = ""
-            with patch(_PROMPT, side_effect=[days_input]):
+            with patch(_PROMPT, side_effect=[""]):
                 days, _ = helpers._expiry_prompt(role)
 
-            assert days == expected_days
+            assert days == helpers.DEFAULT_EXPIRY[role]
 
-    def test_expiration_settings_prompt(self, patch_utcnow):
-        inputs = [""] * 5
-        with patch(_PROMPT, side_effect=inputs):
-            result = helpers._expiration_settings_prompt()
+    def test_online_settings_prompt(self):
 
-        # Assert default ExpirationSettings and default root expiration date
-        assert result == (
-            helpers.ExpirationSettings(),
-            datetime(2024, 12, 31, 0, 0),
-        )
-
-    def test_service_settings_prompt(self):
-        data = [
+        test_data = [
             (
-                ("",),
-                (helpers.ServiceSettings.number_of_delegated_bins,),
+                [""] * 5,
+                (
+                    helpers._OnlineSettings(
+                        helpers.DEFAULT_EXPIRY["timestamp"],
+                        helpers.DEFAULT_EXPIRY["snapshot"],
+                        helpers.DEFAULT_EXPIRY["targets"],
+                        helpers.DEFAULT_EXPIRY["bins"],
+                        helpers.DEFAULT_BINS_NUMBER,
+                    )
+                ),
             ),
             (
-                ("2",),
-                (2,),
+                ["1", "2", "3", "4", "2048"],
+                helpers._OnlineSettings(1, 2, 3, 4, 2048),
             ),
         ]
-        for inputs, expected in data:
+        for inputs, expected in test_data:
             with patch(_PROMPT, side_effect=inputs):
-                result = helpers._service_settings_prompt()
+                result = helpers._online_settings_prompt()
 
-            assert result == helpers.ServiceSettings(*expected)
+        assert result == expected
 
     def test_root_threshold_prompt(self):
         # prompt for threshold until positive integer
