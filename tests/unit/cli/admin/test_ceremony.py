@@ -511,6 +511,56 @@ class TestCeremonyInteraction:
         )
         assert "Ceremony done. 🔐 🎉." in test_result.output
 
+    def test_ceremony_keys_less_than_a_threshold(
+        self, client, test_context, test_inputs, test_setup
+    ):
+        ceremony.setup = test_setup
+        input_step1, input_step2, input_step3, input_step4 = test_inputs
+        # Setting threshold to a high value to guarantee there are stil
+        # signatures needed to finish the bootstrap process
+        input_step1 = [
+            "y",  # Do you want more information about roles and responsibilities?  # noqa
+            "y",  # Do you want to start the ceremony?
+            "",  # What is the metadata expiration for the root role?(Days)
+            "",  # What is the number of keys for the root role? (2)
+            "3",  # What is the key threshold for root role signing?
+            "",  # What is the metadata expiration for the targets role?(Days) (365)?  # noqa
+            "y",  # Show example?
+            "16",  # Choose the number of delegated hash bin roles
+            "http://www.example.com/repository",  # What is the targets base URL  # noqa
+            "",  # What is the metadata expiration for the snapshot role?(Days) (365)?  # noqa
+            "",  # What is the metadata expiration for the timestamp role?(Days) (365)?  # noqa
+            "",  # What is the metadata expiration for the bins role?(Days) (365)?  # noqa
+        ]
+        input_step3 = [
+            "y",  # Ready to start loading the root keys? [y/n]
+            "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
+            "strongPass",  # Enter the root`s private key password
+            "",  # [Optional] Give a name/tag to the root`s key
+            "",  # Select to use private key or public? [private/public] (public)  # noqa
+            "",  # Choose root`s key type [ed25519/ecdsa/rsa] (ed25519)
+            "fake_id",  # # Enter root`s key id
+            "fake_hash",  # Enter root`s public key hash
+            "root key 2",  # [Optional] Give a name/tag to the root`s key
+            "",
+        ]
+        test_result = client.invoke(
+            ceremony.ceremony,
+            "--save",
+            input="\n".join(
+                input_step1 + input_step2 + input_step3 + input_step4
+            ),
+            obj=test_context,
+        )
+
+        assert test_result.exit_code == 0, test_result.output
+        assert (
+            "Not enough keys set for root, 1 more key(s) left to reach threshold."  # noqa
+            in test_result.output
+        )
+        assert "Ceremony done. 🔐 🎉." in test_result.output
+
 
 class TestCeremonyOptions:
     """Test the options"""
@@ -554,7 +604,49 @@ class TestCeremonyOptions:
         ]
         assert ceremony._run_ceremony_steps.calls == [pretend.call(True)]
         assert ceremony.save_payload.calls == [
-            pretend.call("payload.json", {"k": "v"})
+            pretend.call("payload.json", {"k": "v", "timeout": 300})
+        ]
+
+    def test_ceremony_option_timeout(
+        self, client, test_context, test_inputs, test_setup, monkeypatch
+    ):
+        ceremony.setup = test_setup
+        input_step1, input_step2, input_step3, input_step4 = test_inputs
+
+        monkeypatch.setattr(
+            ceremony,
+            "os",
+            pretend.stub(
+                makedirs=pretend.call_recorder(lambda *a, **kw: None)
+            ),
+        )
+
+        # mock ceremony process steps.
+        # the process is tested in previous the test
+        ceremony._run_ceremony_steps = pretend.call_recorder(
+            lambda *a: {"k": "v"}
+        )
+        ceremony.save_payload = pretend.call_recorder(lambda *a: None)
+
+        test_result = client.invoke(
+            ceremony.ceremony,
+            ["--save", "--timeout", "100"],
+            input="\n".join(
+                input_step1 + input_step2 + input_step3 + input_step4
+            ),
+            obj=test_context,
+            catch_exceptions=False,
+        )
+
+        assert test_result.exit_code == 0, test_result.output
+        assert "Ceremony done. 🔐 🎉." in test_result.output
+        assert "Bootstrap payload (payload.json) saved." in test_result.output
+        assert ceremony.os.makedirs.calls == [
+            pretend.call("metadata", exist_ok=True)
+        ]
+        assert ceremony._run_ceremony_steps.calls == [pretend.call(True)]
+        assert ceremony.save_payload.calls == [
+            pretend.call("payload.json", {"k": "v", "timeout": 100})
         ]
 
     def test_ceremony_option_save_OSError(
@@ -622,14 +714,14 @@ class TestCeremonyOptions:
             pretend.call(
                 settings=test_context["settings"],
                 url=URL.BOOTSTRAP.value,
-                payload={"k": "v"},
+                payload={"k": "v", "timeout": 300},
                 expected_msg="Bootstrap accepted.",
                 command_name="Bootstrap",
             )
         ]
         assert ceremony._run_ceremony_steps.calls == [pretend.call(False)]
         assert ceremony.save_payload.calls == [
-            pretend.call("payload.json", {"k": "v"})
+            pretend.call("payload.json", {"k": "v", "timeout": 300})
         ]
         assert ceremony.task_status.calls == [
             pretend.call(
