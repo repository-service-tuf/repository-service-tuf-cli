@@ -278,7 +278,7 @@ class TestImportArtifactsGroupCLI:
         import_artifacts._import_csv_to_rstuf = pretend.call_recorder(
             lambda *a: None
         )
-        import_artifacts.publish_targets = pretend.call_recorder(
+        import_artifacts.publish_artifacts = pretend.call_recorder(
             lambda *a: "fake_task_id"
         )
         import_artifacts.task_status = pretend.call_recorder(
@@ -312,7 +312,7 @@ class TestImportArtifactsGroupCLI:
         assert import_artifacts._check_csv_files.calls == [
             pretend.call(csv_files=("artifacts1of2.csv", "artifacts2of2.csv"))
         ]
-        assert import_artifacts.publish_targets.calls == [
+        assert import_artifacts.publish_artifacts.calls == [
             pretend.call(test_context["settings"])
         ]
         assert import_artifacts.task_status.calls == [
@@ -340,7 +340,9 @@ class TestImportArtifactsGroupCLI:
         assert result.exit_code == 1, result.output
         assert "Requires '--api-server' " in result.output
 
-    def test_import_artifacts_skip_publish_targets(self, client, test_context):
+    def test_import_artifacts_skip_publish_artifacts(
+        self, client, test_context
+    ):
         # Required to properly mock functions imported inside import_artifacts
         import sqlalchemy
 
@@ -370,7 +372,7 @@ class TestImportArtifactsGroupCLI:
         import_artifacts._import_csv_to_rstuf = pretend.call_recorder(
             lambda *a: None
         )
-        import_artifacts.publish_targets = pretend.call_recorder(
+        import_artifacts.publish_artifacts = pretend.call_recorder(
             lambda *a: "fake_task_id"
         )
         import_artifacts.task_status = pretend.call_recorder(
@@ -406,7 +408,7 @@ class TestImportArtifactsGroupCLI:
         assert import_artifacts._check_csv_files.calls == [
             pretend.call(csv_files=("artifacts1of2.csv", "artifacts2of2.csv"))
         ]
-        assert import_artifacts.publish_targets.calls == []
+        assert import_artifacts.publish_artifacts.calls == []
         assert import_artifacts.task_status.calls == []
 
     def test_import_artifacts_sqlalchemy_import_fails(

@@ -63,7 +63,7 @@ class TestCLIHelpers:
         path = "/fake/path/"
 
         expected_artifact_payload = {
-            "targets": [
+            "artifacts": [
                 {
                     "info": {
                         "length": os.path.getsize(temp_file),
@@ -76,7 +76,7 @@ class TestCLIHelpers:
                 }
             ],
             "add_task_id_to_custom": False,
-            "publish_targets": True,
+            "publish_artifacts": True,
         }
 
         assert (
@@ -99,7 +99,7 @@ class TestCLIHelpers:
         path = "/fake/path/"
 
         expected_artifact_payload = {
-            "targets": [f"{path}{temp_file.split('/')[-1]}"]
+            "artifacts": [f"{path}{temp_file.split('/')[-1]}"]
         }
 
         result = create_artifact_delete_payload_from_filepath(
@@ -120,7 +120,7 @@ class TestCLIHelpers:
         path = None
 
         expected_artifact_payload = {
-            "targets": [f"{temp_file.split('/')[-1]}"]
+            "artifacts": [f"{temp_file.split('/')[-1]}"]
         }
 
         result = create_artifact_delete_payload_from_filepath(

@@ -16,7 +16,7 @@ class TestDeleteArtifactInteraction:
         """
 
         artifact_path = "dummy-artifact"
-        path = "target/path"
+        path = "artifact/path"
 
         input = [
             artifact_path,
@@ -43,7 +43,7 @@ class TestDeleteArtifactInteraction:
                 settings=test_context["settings"],
                 url=URL.ARTIFACTS_DELETE.value,
                 payload={
-                    "targets": [
+                    "artifacts": [
                         f"{path}/{artifact_path}",
                     ],
                 },
@@ -83,7 +83,7 @@ class TestDeleteArtifactInteraction:
                 settings=test_context["settings"],
                 url=URL.ARTIFACTS_DELETE.value,
                 payload={
-                    "targets": [
+                    "artifacts": [
                         artifact_path,
                     ],
                 },
@@ -101,7 +101,7 @@ class TestDeleteArtifactInteraction:
         settings.SERVER = "fake-server"
 
         artifact_path = "dummy-artifact"
-        path = "target/path"
+        path = "artifact/path"
 
         input = [
             artifact_path,
@@ -126,7 +126,7 @@ class TestDeleteArtifactInteraction:
                 settings=settings,
                 url=URL.ARTIFACTS_DELETE.value,
                 payload={
-                    "targets": [
+                    "artifacts": [
                         f"{path}/{artifact_path}",
                     ],
                 },
@@ -141,7 +141,7 @@ class TestDeleteArtifactInteraction:
         expected arguments/options in the CLI.
         """
         artifact_path = "dummy-artifact"
-        path = "target/path"
+        path = "artifact/path"
         prompt_api_server_input = "fake-server"
 
         options_input = [
@@ -172,7 +172,7 @@ class TestDeleteArtifactInteraction:
                 settings=test_context["settings"],
                 url=URL.ARTIFACTS_DELETE.value,
                 payload={
-                    "targets": [
+                    "artifacts": [
                         f"{path}/{artifact_path}",
                     ],
                 },
