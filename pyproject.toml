@@ -31,7 +31,7 @@ dependencies = [
   "rich",
   "rich-click",
   "securesystemslib[crypto]==0.31.0",
-  "tuf==3.1.0",
+  "tuf @ git+https://github.com/theupdateframework/python-tuf@be55b87"
 ]
 dynamic = ["version"]
 
@@ -39,11 +39,14 @@ dynamic = ["version"]
 exclude = "docs/"
 
 [[tool.mypy.overrides]]
-module = ["dynaconf", "pretend"]
+module = ["dynaconf", "pretend", "securesystemslib.*",]
 ignore_missing_imports = true
 
 [tool.hatch.version]
 path = "repository_service_tuf/__version__.py"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [project.optional-dependencies]
 psycopg2 = ["psycopg2>=2.9.5"]  # required by import-artifacts sub-command
