@@ -20,12 +20,12 @@ repos:
   - id: isort
     args: [-l79, --profile, black, --check, --diff]
 - repo: https://github.com/psf/black
-  rev: '24.2.0'
+  rev: '24.3.0'
   hooks:
   - id: black
     args: [-l79, --check, --diff, .]
 - repo: https://github.com/PyCQA/bandit
-  rev: '1.7.7'
+  rev: '1.7.8'
   hooks:
   - id: bandit
     args: ["-r", "repository_service_tuf"]
