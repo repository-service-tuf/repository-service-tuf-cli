@@ -12,7 +12,7 @@ from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,
     bootstrap_status,
-    publish_targets,
+    publish_artifacts,
     request_server,
     task_status,
 )
@@ -214,7 +214,7 @@ def import_artifacts(
         )
     else:
         console.print("Import status: Submitting action publish artifacts")
-        task_id = publish_targets(settings)
+        task_id = publish_artifacts(settings)
         console.print(f"Import status: Publish artifacts task id is {task_id}")
         # monitor task status
         result = task_status(task_id, settings, "Import status: task ")

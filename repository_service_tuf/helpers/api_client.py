@@ -20,7 +20,7 @@ class URL(Enum):
     CONFIG = "api/v1/config/"
     METADATA = "api/v1/metadata/"
     TASK = "api/v1/task/?task_id="
-    PUBLISH_TARGETS = "api/v1/artifacts/publish/"
+    PUBLISH_ARTIFACTS = "api/v1/artifacts/publish/"
     METADATA_SIGN = "api/v1/metadata/sign/"
     METADATA_SIGN_DELETE = "api/v1/metadata/sign/delete"
     ARTIFACTS = "api/v1/artifacts/"
@@ -159,18 +159,18 @@ def task_status(
         time.sleep(2)
 
 
-def publish_targets(settings: LazySettings) -> str:
-    publish_targets = request_server(
+def publish_artifacts(settings: LazySettings) -> str:
+    publish_artifacts = request_server(
         settings.SERVER,
-        URL.PUBLISH_TARGETS.value,
+        URL.PUBLISH_ARTIFACTS.value,
         Methods.POST,
     )
-    if publish_targets.status_code != 202:
+    if publish_artifacts.status_code != 202:
         raise click.ClickException(
-            f"Failed to publish artifacts. {publish_targets.status_code} "
-            f"{publish_targets.text}"
+            f"Failed to publish artifacts. {publish_artifacts.status_code} "
+            f"{publish_artifacts.text}"
         )
-    task_id = publish_targets.json()["data"]["task_id"]
+    task_id = publish_artifacts.json()["data"]["task_id"]
 
     return task_id
 
