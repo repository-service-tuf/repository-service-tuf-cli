@@ -5,7 +5,7 @@
 import copy
 import json
 import unittest.mock
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List
 
 import pretend
@@ -557,9 +557,16 @@ class TestTUFManagement:
         fake_role = pretend.stub(
             signed=pretend.stub(expires=0),
         )
-        fake_time = datetime(2019, 6, 16, 9, 5, 1)
+        fake_time = datetime(2019, 6, 16, 9, 5, 1, tzinfo=timezone.utc)
+        fake_replace = pretend.stub(
+            replace=pretend.call_recorder(lambda **kw: fake_time)
+        )
         fake_datetime = pretend.stub(
-            now=pretend.call_recorder(lambda: fake_time)
+            now=pretend.call_recorder(lambda *a: fake_replace)
+        )
+        # fake_time = datetime(2019, 6, 16, 9, 5, 1, tzinfo=timezone.utc)
+        fake_datetime = pretend.stub(
+            now=pretend.call_recorder(lambda a: fake_replace)
         )
         monkeypatch.setattr(
             "repository_service_tuf.helpers.tuf.datetime",
@@ -567,7 +574,7 @@ class TestTUFManagement:
         )
         test_tuf_management._bump_expiry(fake_role, "timestamp")
         assert fake_role.signed.expires == fake_time + timedelta(days=1)
-        assert fake_datetime.now.calls == [pretend.call()]
+        assert fake_datetime.now.calls == [pretend.call(timezone.utc)]
 
     def test__validate_root_payload_exist(
         self, test_tuf_management: TUFManagement

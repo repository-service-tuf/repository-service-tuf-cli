@@ -393,6 +393,7 @@ class TestDownloadArtifacInteractionWithoutConfig:
                 ARTIFACT_URL,
             ],
             obj=test_context,
+            catch_exceptions=False,
         )
 
         assert "Using 'tofu' to Trust-On-First-Use" in test_result.output
