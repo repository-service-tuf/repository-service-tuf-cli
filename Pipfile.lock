@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "ab2c554a81d8fc85b9fb2b2e6034090782dbae0581eb488a997b90789d1aa68a"
+            "sha256": "9a48585d6fe4bed9930a31c3e1ffd3b3b7e86b0b44a4d4a2b8f1e26b0ea78ade"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -516,9 +516,13 @@
             "version": "==2.0.29"
         },
         "tuf": {
-            "git": "git+https://github.com/theupdateframework/python-tuf",
+            "hashes": [
+                "sha256:87df89e5e50b0bf85ec84b7aabdac41a54cddaa8c6ce85ac5fae38ea786a12f6",
+                "sha256:a22ab5fa6daf910b3052929fdce42ccad8a300e5e85715daaff9592aed980f7a"
+            ],
+            "index": "pypi",
             "markers": "python_version >= '3.8'",
-            "ref": "be55b871dade1c1cb7686312ca9388f2484f8c68"
+            "version": "==4.0.0"
         },
         "typing-extensions": {
             "hashes": [
@@ -1436,14 +1440,6 @@
             ],
             "markers": "python_version >= '3.7'",
             "version": "==20.25.1"
-        },
-        "zipp": {
-            "hashes": [
-                "sha256:206f5a15f2af3dbaee80769fb7dc6f249695e940acca08dfb2a4769fe61e538b",
-                "sha256:2884ed22e7d8961de1c9a05142eb69a247f120291bc0206a00a7642f09b5b715"
-            ],
-            "markers": "python_version >= '3.8'",
-            "version": "==3.18.1"
         }
     }
 }
