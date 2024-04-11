@@ -1,4 +1,5 @@
 import datetime
+from datetime import timezone
 
 import pretend
 import pytest
@@ -70,9 +71,11 @@ class TestImportArtifactsFunctions:
             import_artifacts.__builtins__, "open", lambda *a: fake_file_obj
         )
 
-        fake_time = datetime.datetime(2019, 6, 16, 9, 5, 1)
+        fake_time = datetime.datetime(
+            2019, 6, 16, 9, 5, 1, tzinfo=timezone.utc
+        )
         fake_datetime = pretend.stub(
-            now=pretend.call_recorder(lambda: fake_time)
+            now=pretend.call_recorder(lambda a: fake_time)
         )
         monkeypatch.setattr(
             "repository_service_tuf.cli.admin.import_artifacts.datetime",
@@ -93,7 +96,7 @@ class TestImportArtifactsFunctions:
                 "targets_role": 15,
                 "published": False,
                 "action": "ADD",
-                "last_update": datetime.datetime(2019, 6, 16, 9, 5, 1),
+                "last_update": fake_time,
             },
             {
                 "path": "path/file2",
@@ -101,7 +104,7 @@ class TestImportArtifactsFunctions:
                 "targets_role": 15,
                 "published": False,
                 "action": "ADD",
-                "last_update": datetime.datetime(2019, 6, 16, 9, 5, 1),
+                "last_update": fake_time,
             },
         ]
         assert db.execute.calls == [pretend.call(True), pretend.call(True)]
@@ -278,7 +281,7 @@ class TestImportArtifactsGroupCLI:
         import_artifacts._import_csv_to_rstuf = pretend.call_recorder(
             lambda *a: None
         )
-        import_artifacts.publish_targets = pretend.call_recorder(
+        import_artifacts.publish_artifacts = pretend.call_recorder(
             lambda *a: "fake_task_id"
         )
         import_artifacts.task_status = pretend.call_recorder(
@@ -312,7 +315,7 @@ class TestImportArtifactsGroupCLI:
         assert import_artifacts._check_csv_files.calls == [
             pretend.call(csv_files=("artifacts1of2.csv", "artifacts2of2.csv"))
         ]
-        assert import_artifacts.publish_targets.calls == [
+        assert import_artifacts.publish_artifacts.calls == [
             pretend.call(test_context["settings"])
         ]
         assert import_artifacts.task_status.calls == [
@@ -340,7 +343,9 @@ class TestImportArtifactsGroupCLI:
         assert result.exit_code == 1, result.output
         assert "Requires '--api-server' " in result.output
 
-    def test_import_artifacts_skip_publish_targets(self, client, test_context):
+    def test_import_artifacts_skip_publish_artifacts(
+        self, client, test_context
+    ):
         # Required to properly mock functions imported inside import_artifacts
         import sqlalchemy
 
@@ -370,7 +375,7 @@ class TestImportArtifactsGroupCLI:
         import_artifacts._import_csv_to_rstuf = pretend.call_recorder(
             lambda *a: None
         )
-        import_artifacts.publish_targets = pretend.call_recorder(
+        import_artifacts.publish_artifacts = pretend.call_recorder(
             lambda *a: "fake_task_id"
         )
         import_artifacts.task_status = pretend.call_recorder(
@@ -406,7 +411,7 @@ class TestImportArtifactsGroupCLI:
         assert import_artifacts._check_csv_files.calls == [
             pretend.call(csv_files=("artifacts1of2.csv", "artifacts2of2.csv"))
         ]
-        assert import_artifacts.publish_targets.calls == []
+        assert import_artifacts.publish_artifacts.calls == []
         assert import_artifacts.task_status.calls == []
 
     def test_import_artifacts_sqlalchemy_import_fails(

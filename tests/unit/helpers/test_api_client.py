@@ -423,7 +423,7 @@ class TestAPIClient:
             ),
         ]
 
-    def test_publish_targets(self, test_context):
+    def test_publish_artifacts(self, test_context):
         test_context["settings"].SERVER = "http://server"
         api_client.request_server = pretend.call_recorder(
             lambda *a, **kw: pretend.stub(
@@ -434,18 +434,18 @@ class TestAPIClient:
             )
         )
 
-        result = api_client.publish_targets(test_context["settings"])
+        result = api_client.publish_artifacts(test_context["settings"])
 
         assert result == "213sferer"
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
-                api_client.URL.PUBLISH_TARGETS.value,
+                api_client.URL.PUBLISH_ARTIFACTS.value,
                 api_client.Methods.POST,
             )
         ]
 
-    def test_publish_targets_unexpected_error(self, test_context):
+    def test_publish_artifacts_unexpected_error(self, test_context):
         test_context["settings"].SERVER = "http://server"
 
         api_client.request_server = pretend.call_recorder(
@@ -455,14 +455,14 @@ class TestAPIClient:
         )
 
         with pytest.raises(api_client.click.ClickException) as err:
-            api_client.publish_targets(test_context["settings"])
+            api_client.publish_artifacts(test_context["settings"])
 
         assert "Failed to publish artifacts. 500 Internal Error" in str(err)
 
         assert api_client.request_server.calls == [
             pretend.call(
                 test_context["settings"].SERVER,
-                api_client.URL.PUBLISH_TARGETS.value,
+                api_client.URL.PUBLISH_ARTIFACTS.value,
                 api_client.Methods.POST,
             )
         ]

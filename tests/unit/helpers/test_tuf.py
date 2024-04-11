@@ -5,7 +5,7 @@
 import copy
 import json
 import unittest.mock
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List
 
 import pretend
@@ -135,7 +135,8 @@ class TestTUFHelperFunctions:
             close=pretend.call_recorder(lambda: None),
             write=pretend.call_recorder(lambda: fake_data),
         )
-        monkeypatch.setitem(tuf.__builtins__, "open", lambda *a: fake_file_obj)
+        fake_open = pretend.call_recorder(lambda *a: fake_file_obj)
+        monkeypatch.setitem(tuf.__builtins__, "open", fake_open)
         monkeypatch.setattr(
             tuf.json,
             "dumps",
@@ -145,6 +146,30 @@ class TestTUFHelperFunctions:
         result = tuf.save_payload("new_file", {"k": "v"})
         assert result is None
         assert tuf.json.dumps.calls == [pretend.call({"k": "v"}, indent=2)]
+        assert fake_open.calls == [pretend.call("new_file.json", "w")]
+
+    def test_save_payload_file_with_json_suffix(self, monkeypatch):
+        fake_data = pretend.stub(
+            write=pretend.call_recorder(lambda *a: "{'k': 'v'}")
+        )
+        fake_file_obj = pretend.stub(
+            __enter__=pretend.call_recorder(lambda: fake_data),
+            __exit__=pretend.call_recorder(lambda *a: None),
+            close=pretend.call_recorder(lambda: None),
+            write=pretend.call_recorder(lambda: fake_data),
+        )
+        fake_open = pretend.call_recorder(lambda *a: fake_file_obj)
+        monkeypatch.setitem(tuf.__builtins__, "open", fake_open)
+        monkeypatch.setattr(
+            tuf.json,
+            "dumps",
+            pretend.call_recorder(lambda *a, **kw: "{'k': 'v'}"),
+        )
+
+        result = tuf.save_payload("new_file.json", {"k": "v"})
+        assert result is None
+        assert tuf.json.dumps.calls == [pretend.call({"k": "v"}, indent=2)]
+        assert fake_open.calls == [pretend.call("new_file.json", "w")]
 
     def test_save_payload_OSError(self, monkeypatch):
         monkeypatch.setitem(
@@ -450,7 +475,7 @@ class TestMetadataInfo:
         ]
 
 
-class TestTUFHelper:
+class TestTUFManagement:
     def _setup_load(self, filenames: List[str]) -> Dict[str, str]:
         result = {}
         for filename in filenames:
@@ -460,25 +485,20 @@ class TestTUFHelper:
 
     def test__signers_root_keys(self, test_tuf_management: TUFManagement):
         test_tuf_management.setup.root_keys = {
-            "id1": RSTUFKey({"a": "b"}),
-            "id2": RSTUFKey({"c": "d"}),
+            "id1": RSTUFKey({"a": "b", "keyval": {"private": "foo"}}),
+            "id2": RSTUFKey({"c": "d", "keyval": {"private": "foo"}}),
         }
         tuf.SSlibSigner = pretend.call_recorder(lambda *a: None)
         result = test_tuf_management._signers(Roles.ROOT)
         assert result == [None, None]
         assert tuf.SSlibSigner.calls == [
-            pretend.call({"a": "b"}),
-            pretend.call({"c": "d"}),
+            pretend.call({"a": "b", "keyval": {"private": "foo"}}),
+            pretend.call({"c": "d", "keyval": {"private": "foo"}}),
         ]
 
-    def test__signers_online_key(self, test_tuf_management: TUFManagement):
-        test_tuf_management.setup.online_key = RSTUFKey({"a": "b"})
-        tuf.SSlibSigner = pretend.call_recorder(lambda *a: None)
+    def test__signers_other_role(self, test_tuf_management: TUFManagement):
         result = test_tuf_management._signers(Roles.TIMESTAMP)
-        assert result == [None]
-        assert tuf.SSlibSigner.calls == [
-            pretend.call({"a": "b"}),
-        ]
+        assert result == []
 
     def test__sign(self, test_tuf_management: TUFManagement):
         fake_role = pretend.stub(
@@ -537,9 +557,16 @@ class TestTUFHelper:
         fake_role = pretend.stub(
             signed=pretend.stub(expires=0),
         )
-        fake_time = datetime(2019, 6, 16, 9, 5, 1)
+        fake_time = datetime(2019, 6, 16, 9, 5, 1, tzinfo=timezone.utc)
+        fake_replace = pretend.stub(
+            replace=pretend.call_recorder(lambda **kw: fake_time)
+        )
         fake_datetime = pretend.stub(
-            now=pretend.call_recorder(lambda: fake_time)
+            now=pretend.call_recorder(lambda *a: fake_replace)
+        )
+        # fake_time = datetime(2019, 6, 16, 9, 5, 1, tzinfo=timezone.utc)
+        fake_datetime = pretend.stub(
+            now=pretend.call_recorder(lambda a: fake_replace)
         )
         monkeypatch.setattr(
             "repository_service_tuf.helpers.tuf.datetime",
@@ -547,7 +574,7 @@ class TestTUFHelper:
         )
         test_tuf_management._bump_expiry(fake_role, "timestamp")
         assert fake_role.signed.expires == fake_time + timedelta(days=1)
-        assert fake_datetime.now.calls == [pretend.call()]
+        assert fake_datetime.now.calls == [pretend.call(timezone.utc)]
 
     def test__validate_root_payload_exist(
         self, test_tuf_management: TUFManagement
@@ -709,18 +736,14 @@ class TestTUFHelper:
         assert key.unrecognized_fields["name"] == "my-key"
 
     def test_initialize_metadata(self, test_tuf_management: TUFManagement):
-        signers_mock = unittest.mock.Mock()
-        root_signer = pretend.stub(key_dict="root")
-        timestamp_signer = pretend.stub(key_dict="timestamp")
-        snapshot_signer = pretend.stub(key_dict="snapshot")
-        targets_signer = pretend.stub(key_dict="targets")
-        signers_mock.side_effect = [
-            [root_signer],
-            [timestamp_signer],
-            [snapshot_signer],
-            [targets_signer],
+        public_keys_mock = unittest.mock.Mock()
+        public_keys_mock.side_effect = [
+            ["root"],
+            ["timestamp"],
+            ["snapshot"],
+            ["targets"],
         ]
-        test_tuf_management._signers = signers_mock
+        test_tuf_management._public_keys = public_keys_mock
         tuf.Role = pretend.call_recorder(lambda *a: "role")
 
         key_from_securesystemslib_mock = pretend.call_recorder(
@@ -740,7 +763,7 @@ class TestTUFHelper:
         result = test_tuf_management.initialize_metadata()
 
         assert result == test_tuf_management.repository_metadata
-        signers_mock.assert_has_calls(
+        public_keys_mock.assert_has_calls(
             [
                 unittest.mock.call(Roles.ROOT),
                 unittest.mock.call(Roles.TIMESTAMP),

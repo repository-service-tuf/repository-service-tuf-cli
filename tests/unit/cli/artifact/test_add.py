@@ -16,7 +16,7 @@ class TestAddArtifactInteraction:
         """
 
         artifact_path = "dummy-artifact"
-        path = "target/path"
+        path = "artifact/path"
 
         input = [
             artifact_path,  # artifact filepath
@@ -43,7 +43,7 @@ class TestAddArtifactInteraction:
                 settings=test_context["settings"],
                 url=URL.ARTIFACTS.value,
                 payload={
-                    "targets": [
+                    "artifacts": [
                         {
                             "info": {
                                 "length": 14,
@@ -56,14 +56,14 @@ class TestAddArtifactInteraction:
                         }
                     ],
                     "add_task_id_to_custom": False,
-                    "publish_targets": True,
+                    "publish_artifacts": True,
                 },
                 expected_msg="New Artifact(s) successfully submitted.",
                 command_name="Artifact Addition",
             )
         ]
 
-    def test_without_path(self, client, test_context):
+    def test_add_without_path(self, client, test_context):
         """
         Test that the add artifact command works as expected given the
         expected arguments/options in the CLI.
@@ -94,7 +94,7 @@ class TestAddArtifactInteraction:
                 settings=test_context["settings"],
                 url=URL.ARTIFACTS.value,
                 payload={
-                    "targets": [
+                    "artifacts": [
                         {
                             "info": {
                                 "length": 14,
@@ -107,7 +107,7 @@ class TestAddArtifactInteraction:
                         }
                     ],
                     "add_task_id_to_custom": False,
-                    "publish_targets": True,
+                    "publish_artifacts": True,
                 },
                 expected_msg="New Artifact(s) successfully submitted.",
                 command_name="Artifact Addition",
@@ -116,7 +116,7 @@ class TestAddArtifactInteraction:
 
     def test_add_without_api_server(self, client, test_context):
         artifact_path = "dummy-artifact"
-        path = "target/path"
+        path = "artifact/path"
 
         input = [
             artifact_path,  # artifact filepath

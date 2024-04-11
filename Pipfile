@@ -5,17 +5,17 @@ name = "pypi"
 
 [packages]
 rich-click = "*"
-securesystemslib = {extras = ["crypto"], version = "==0.28.0"}
+securesystemslib = "*"
 click = "*"
 rich = "*"
 auto-click-auto = "*"
 PyNaCl = "==1.5.0"
 requests = "*"
-tuf = "==3.1.0"
 dynaconf = {extras = ["yaml"], version = "*"}
 isort = "*"
 sqlalchemy = "*"
 psycopg2 = "*"
+tuf = "*"
 
 [dev-packages]
 black = "*"

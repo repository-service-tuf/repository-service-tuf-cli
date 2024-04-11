@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from math import log
 from typing import Any, Dict, List
 
@@ -12,7 +12,7 @@ from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,
     bootstrap_status,
-    publish_targets,
+    publish_artifacts,
     request_server,
     task_status,
 )
@@ -58,7 +58,7 @@ def _parse_csv_data(
                             == succinct_roles.get_role_for_target(path)
                         )
                     ).one()[0],
-                    "last_update": datetime.now(),
+                    "last_update": datetime.now(timezone.utc),
                 }
             )
 
@@ -214,7 +214,7 @@ def import_artifacts(
         )
     else:
         console.print("Import status: Submitting action publish artifacts")
-        task_id = publish_targets(settings)
+        task_id = publish_artifacts(settings)
         console.print(f"Import status: Publish artifacts task id is {task_id}")
         # monitor task status
         result = task_status(task_id, settings, "Import status: task ")

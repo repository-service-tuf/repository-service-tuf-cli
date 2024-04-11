@@ -5,8 +5,8 @@
 import base64
 import copy
 import json
-from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
@@ -48,16 +48,6 @@ class Roles(Enum):
 
 
 @dataclass
-class ServiceSettings:
-    number_of_delegated_bins: int = 256
-    targets_base_url: str = ""
-    targets_online_key: bool = True
-
-    def to_dict(self):
-        return asdict(self)
-
-
-@dataclass
 class RSTUFKey:
     key: dict = field(default_factory=dict)
     key_path: Optional[str] = None
@@ -81,17 +71,26 @@ class RSTUFKey:
 @dataclass
 class BootstrapSetup:
     expiration: Dict[Roles, int]
-    services: ServiceSettings
     number_of_keys: Dict[Literal[Roles.ROOT, Roles.TARGETS], int]
     threshold: Dict[Literal[Roles.ROOT, Roles.TARGETS], int]
+    number_of_delegated_bins: int = 256
     root_keys: Dict[str, RSTUFKey] = field(default_factory=Dict)
     online_key: RSTUFKey = field(default_factory=RSTUFKey)
 
-    def to_dict(self):
-        return {
-            "expiration": {k.value: v for k, v in self.expiration.items()},
-            "services": self.services.to_dict(),
-        }
+    def to_dict(self) -> Dict[str, Any]:
+        result: Dict[str, Any] = {"roles": {}}
+        for role in Roles:
+            if role.value == BINS:
+                result["roles"][BINS] = {
+                    "expiration": self.expiration[role],
+                    "number_of_delegated_bins": self.number_of_delegated_bins,
+                }
+            else:
+                result["roles"][role.value] = {
+                    "expiration": self.expiration[role],
+                }
+
+        return result
 
 
 class MetadataInfo:
@@ -298,12 +297,21 @@ class TUFManagement:
 
     def _signers(self, role: Roles) -> List[Signer]:
         """Returns all Signers from the settings for a specific role name"""
+        result: List[Signer] = []
         if role == Roles.ROOT:
-            return [
-                SSlibSigner(key.key) for key in self.setup.root_keys.values()
-            ]
+            for key in self.setup.root_keys.values():
+                # Make sure this key was loaded, not just described.
+                if key.key["keyval"].get("private"):
+                    result.append(SSlibSigner(key.key))
+
+        return result
+
+    def _public_keys(self, role: Roles) -> List[Dict[str, Any]]:
+        """Get public keys for the role 'role'."""
+        if role == Roles.ROOT:
+            return [key.key for key in self.setup.root_keys.values()]
         else:
-            return [SSlibSigner(self.setup.online_key.key)]
+            return [self.setup.online_key.key]
 
     def _sign(self, role: Metadata, role_name: str) -> None:
         """Re-signs metadata with role-specific key from global key store.
@@ -337,7 +345,7 @@ class TUFManagement:
         # PEP 458 is unspecific about when to bump expiration, e.g. in the
         # course of a consistent snapshot only 'timestamp' is bumped:
         # https://www.python.org/dev/peps/pep-0458/#producing-consistent-snapshots
-        role.signed.expires = datetime.now().replace(
+        role.signed.expires = datetime.now(timezone.utc).replace(
             microsecond=0
         ) + timedelta(days=self.setup.expiration[Roles[role_name.upper()]])
 
@@ -417,12 +425,11 @@ class TUFManagement:
             else:
                 threshold = 1
 
-            signers = self._signers(Roles[role_name.upper()])
-
+            public_keys = self._public_keys(Roles[role_name.upper()])
             add_key_args[role_name] = []
             roles[role_name] = Role([], threshold)
-            for signer in signers:
-                key = Key.from_securesystemslib_key(signer.key_dict)
+            for securesystemslib_key in public_keys:
+                key = Key.from_securesystemslib_key(securesystemslib_key)
                 self._setup_key_name(key, role_name)
                 add_key_args[role_name].append(key)
 
@@ -521,6 +528,9 @@ def load_payload(path: str) -> Dict[str, Any]:
 
 def save_payload(file_path: str, payload: Dict[str, Any]):
     """Save the 'payload' into a file with path 'file_path'"""
+    # Add .json extension if not there
+    if not file_path.endswith(".json"):
+        file_path += ".json"
     try:
         with open(file_path, "w") as f:
             f.write(json.dumps(payload, indent=2))

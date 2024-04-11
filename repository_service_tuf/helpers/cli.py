@@ -7,8 +7,8 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 
-class PayloadTargetsHashes(str, Enum):
-    """The supported hashes of `TargetsInfo`"""
+class PayloadArtifactsHashes(str, Enum):
+    """The supported hashes of `ArtifactsInfo`"""
 
     # TODO: Update if needed after https://github.com/repository-service-tuf/repository-service-tuf-api/issues/379  # noqa: E501
 
@@ -16,21 +16,21 @@ class PayloadTargetsHashes(str, Enum):
 
 
 @dataclass
-class TargetsInfo:
-    """The target information of `Targets`"""
+class ArtifactInfo:
+    """The target information of a `Targets` role."""
 
     # An integer length in bytes
     # https://theupdateframework.github.io/specification/latest/#metapath-length
     length: int
-    hashes: Dict[PayloadTargetsHashes, str]
+    hashes: Dict[PayloadArtifactsHashes, str]
     custom: Optional[Dict[str, Any]]
 
 
 @dataclass
-class Targets:
-    """A target of `AddPayload`"""
+class Artifact:
+    """An artifact of `AddPayload`"""
 
-    info: TargetsInfo
+    info: ArtifactInfo
     path: str
 
 
@@ -38,11 +38,21 @@ class Targets:
 class AddPayload:
     """The `POST /api/v1/artifacts/` required payload."""
 
-    targets: List[Targets]
+    artifacts: List[Artifact]
     # Whether to add the id of the task in custom
     add_task_id_to_custom: bool = False
-    # Whether to publish the targets
-    publish_targets: bool = True
+    # Whether to publish the artifacts
+    publish_artifacts: bool = True
+
+    def to_dict(self):
+        return asdict(self)
+
+
+@dataclass
+class DeletePayload:
+    """The `POST /api/v1/artifacts/delete` required payload."""
+
+    artifacts: List[str]
 
     def to_dict(self):
         return asdict(self)
@@ -69,7 +79,7 @@ def calculate_blake2b_256(filepath: str) -> str:
     return hasher.hexdigest()
 
 
-def create_artifact_payload_from_filepath(
+def create_artifact_add_payload_from_filepath(
     filepath: str, path: Optional[str]
 ) -> Dict[str, Any]:
     """
@@ -77,7 +87,7 @@ def create_artifact_payload_from_filepath(
     The blake2b-256 cryptographic hash function is used to hash the file.
 
     :param filepath: The file path to calculate the hash.
-    :param path: The path defined in the metadata for the target.
+    :param path: The path defined in the metadata for the artifact.
     """
 
     length: int = os.path.getsize(filepath)
@@ -89,12 +99,12 @@ def create_artifact_payload_from_filepath(
         payload_path = f"{filepath.split('/')[-1]}"
 
     payload = AddPayload(
-        targets=[
-            Targets(
-                info=TargetsInfo(
+        artifacts=[
+            Artifact(
+                info=ArtifactInfo(
                     length=length,
                     hashes={
-                        PayloadTargetsHashes.blake2b_256: blake2b_256_hash
+                        PayloadArtifactsHashes.blake2b_256: blake2b_256_hash
                     },
                     custom=None,
                 ),
@@ -102,5 +112,22 @@ def create_artifact_payload_from_filepath(
             )
         ]
     )
+
+    return payload.to_dict()
+
+
+def create_artifact_delete_payload_from_filepath(
+    filepath: str, path: Optional[str]
+) -> Dict[str, Any]:
+    """
+    Create the payload for the API request of `POST api/v1/artifacts/delete`.
+    """
+
+    if path:
+        payload_path = f"{path.rstrip('/')}/{filepath.split('/')[-1]}"
+    else:
+        payload_path = f"{filepath.split('/')[-1]}"
+
+    payload = DeletePayload(artifacts=[payload_path])
 
     return payload.to_dict()
