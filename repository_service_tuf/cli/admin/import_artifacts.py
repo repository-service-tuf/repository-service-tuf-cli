@@ -1,6 +1,6 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from math import log
 from typing import Any, Dict, List
 
@@ -58,7 +58,7 @@ def _parse_csv_data(
                             == succinct_roles.get_role_for_target(path)
                         )
                     ).one()[0],
-                    "last_update": datetime.now(),
+                    "last_update": datetime.now(timezone.utc),
                 }
             )
 

@@ -31,7 +31,7 @@ dependencies = [
   "rich",
   "rich-click",
   "securesystemslib[crypto]==0.31.0",
-  "tuf @ git+https://github.com/theupdateframework/python-tuf@be55b87"
+  "tuf"
 ]
 dynamic = ["version"]
 

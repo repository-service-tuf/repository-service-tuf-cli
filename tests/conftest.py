@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, List, Tuple
 
@@ -110,7 +110,7 @@ def test_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
 
 @pytest.fixture
 def root() -> Metadata[Root]:
-    return Metadata(Root(expires=datetime.now()))
+    return Metadata(Root(expires=datetime.now(timezone.utc)))
 
 
 @pytest.fixture
