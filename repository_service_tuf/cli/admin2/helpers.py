@@ -11,7 +11,7 @@ Advantages
 """
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Tuple
 
 # Magic import to unbreak `load_pem_private_key` - pyca/cryptography#10315
@@ -202,7 +202,8 @@ def _expiry_prompt(role: str) -> Tuple[int, datetime]:
         f"Please enter days until expiry for {role} role",
         default=DEFAULT_EXPIRY[role],
     )
-    date = datetime.utcnow() + timedelta(days=days)
+    today = datetime.now(timezone.utc).replace(microsecond=0)
+    date = today + timedelta(days=days)
     console.print(f"New expiry date is: {date:{EXPIRY_FORMAT}}")
 
     return days, date

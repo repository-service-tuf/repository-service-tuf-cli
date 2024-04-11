@@ -1,6 +1,6 @@
 import json
 from copy import copy
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -47,13 +47,13 @@ def patch_getpass(monkeypatch):
 @pytest.fixture
 def patch_utcnow(monkeypatch):
     """Patch `utcnow` in helpers module for reproducible results."""
-
-    class FakeTime(datetime):
-        @classmethod
-        def utcnow(cls):
-            return datetime(2024, 1, 1, 0, 0, 0)
-
-    monkeypatch.setattr(f"{_HELPERS}.datetime", FakeTime)
+    fake_replace = stub(
+        replace=call_recorder(
+            lambda **kw: datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        )
+    )
+    fake_datetime = stub(now=call_recorder(lambda *a: fake_replace))
+    monkeypatch.setattr(f"{_HELPERS}.datetime", fake_datetime)
 
 
 @pytest.fixture
@@ -121,6 +121,22 @@ class TestCLI:
             f"{_PEMS / 'ecdsa'}",  # Please enter path to encrypted private key
         ]
 
+        datetime.now(timezone.utc).replace(microsecond=0)
+        fake_replace = stub(
+            replace=call_recorder(
+                lambda a: datetime.now(
+                    2024, 12, 31, 0, 0, 0, tzinfo=timezone.utc
+                )
+            )
+        )
+        fake_datetime = stub(now=call_recorder(lambda a: fake_replace))
+        # fake_date = datetime.now(2024, 12, 31, 0, 0, 0, tzinfo=timezone.utc)
+        # with patch(
+        #     f"{_HELPERS}._expiry_prompt", return_value=fake_date
+        # ):
+        # with patch(
+        #     f"{_HELPERS}._expiry_prompt", return_value=fake_date
+        # ):
         result = self._invoke(client, ceremony, inputs, [])
 
         with open(_PAYLOADS / "ceremony.json") as f:
@@ -292,9 +308,11 @@ class TestHelpers:
         with patch(_PROMPT, side_effect=[str(days_input)]):
             result = helpers._expiry_prompt("root")
 
+        date = datetime(2024, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        expected = date + timedelta(days=days_input)
         assert result == (
             days_input,
-            datetime(2024, 1, 11, 0, 0, 0),  # see patch_utcnow
+            expected,  # see patch_utcnow
         )
 
         # Assert prompt per-role default expiry

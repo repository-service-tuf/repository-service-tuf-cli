@@ -6,7 +6,7 @@ import base64
 import copy
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional, Tuple
 
@@ -345,7 +345,7 @@ class TUFManagement:
         # PEP 458 is unspecific about when to bump expiration, e.g. in the
         # course of a consistent snapshot only 'timestamp' is bumped:
         # https://www.python.org/dev/peps/pep-0458/#producing-consistent-snapshots
-        role.signed.expires = datetime.now().replace(
+        role.signed.expires = datetime.now(timezone.utc).replace(
             microsecond=0
         ) + timedelta(days=self.setup.expiration[Roles[role_name.upper()]])
 

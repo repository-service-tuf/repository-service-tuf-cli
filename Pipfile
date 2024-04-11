@@ -15,7 +15,7 @@ dynaconf = {extras = ["yaml"], version = "*"}
 isort = "*"
 sqlalchemy = "*"
 psycopg2 = "*"
-tuf = {ref = "be55b87", git = "git+https://github.com/theupdateframework/python-tuf"}
+tuf = "*"
 
 [dev-packages]
 black = "*"

@@ -1,4 +1,5 @@
 import datetime
+from datetime import timezone
 
 import pretend
 import pytest
@@ -70,9 +71,11 @@ class TestImportArtifactsFunctions:
             import_artifacts.__builtins__, "open", lambda *a: fake_file_obj
         )
 
-        fake_time = datetime.datetime(2019, 6, 16, 9, 5, 1)
+        fake_time = datetime.datetime(
+            2019, 6, 16, 9, 5, 1, tzinfo=timezone.utc
+        )
         fake_datetime = pretend.stub(
-            now=pretend.call_recorder(lambda: fake_time)
+            now=pretend.call_recorder(lambda a: fake_time)
         )
         monkeypatch.setattr(
             "repository_service_tuf.cli.admin.import_artifacts.datetime",
@@ -93,7 +96,7 @@ class TestImportArtifactsFunctions:
                 "targets_role": 15,
                 "published": False,
                 "action": "ADD",
-                "last_update": datetime.datetime(2019, 6, 16, 9, 5, 1),
+                "last_update": fake_time,
             },
             {
                 "path": "path/file2",
@@ -101,7 +104,7 @@ class TestImportArtifactsFunctions:
                 "targets_role": 15,
                 "published": False,
                 "action": "ADD",
-                "last_update": datetime.datetime(2019, 6, 16, 9, 5, 1),
+                "last_update": fake_time,
             },
         ]
         assert db.execute.calls == [pretend.call(True), pretend.call(True)]

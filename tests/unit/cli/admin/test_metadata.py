@@ -4,7 +4,7 @@
 
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pretend  # type: ignore
 import pytest
@@ -60,7 +60,7 @@ class TestMetadataUpdate:
         # Verify the changes in the new root
         assert root.signed.version == 2
 
-        expected = datetime.now() + timedelta(days=365)
+        expected = datetime.now(timezone.utc) + timedelta(days=365)
         assert root.signed.expires.date() == expected.date()
 
         is_steven_key_found = False
@@ -243,9 +243,9 @@ class TestMetadataUpdate:
         md_update_input,
         tmp_update_payload_path,
     ):
-        fake_date = datetime(2050, 6, 16, 9, 5, 1)
+        fake_date = datetime(2050, 6, 16, 9, 5, 1, tzinfo=timezone.utc)
         fake_datetime = pretend.stub(
-            now=pretend.call_recorder(lambda: fake_date)
+            now=pretend.call_recorder(lambda a: fake_date)
         )
         monkeypatch.setattr(
             "repository_service_tuf.cli.admin.metadata.datetime",
