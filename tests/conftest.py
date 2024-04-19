@@ -208,11 +208,10 @@ def patch_getpass(monkeypatch):
     also uses getpass, does receive them)
     """
 
-    def mock_getpass(prompt, stream=None):
-        # no need to mock prompt output, rich prompts independently
-        return "hunter2"
-
-    monkeypatch.setattr("rich.console.getpass", mock_getpass)
+    fake_click = pretend.stub(
+        prompt=pretend.call_recorder(lambda *a, **kw: "hunter2")
+    )
+    monkeypatch.setattr(f"{_HELPERS}.click", fake_click)
 
 
 @pytest.fixture
