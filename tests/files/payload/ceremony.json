@@ -15,7 +15,7 @@
       },
       "bins": {
         "expiration": 1,
-        "number_of_delegated_bins": 256
+        "number_of_delegated_bins": 4
       }
     }
   },
@@ -24,69 +24,69 @@
       "signatures": [
         {
           "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",
-          "sig": "2647ef6acccd10873daf0f868a811765c816f7ee0c2120bae5957f6f13420d9c5ec26a79c4e8620685eb157fc916ef4686c62086d4161d4419a55a53ebdc5d0e"
+          "sig": "828a659bc34972504b9dab16bc44818b8a7d49ffee2a9021df6a6be4dd3b7a026d1f890b952303d1cf32dda90fbdf60e9fcfeb5f0af6498f0f55cad31c750a02"
         },
         {
           "keyid": "50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3",
-          "sig": "3045022054df4f9a285c7109e808c5578d355af30583702858da3e126df58ecce46ea9e0022100e13ee9ff6920ec99a99ee6ff0a75608033f3929da0dd8d4f38bfc3d3d6ca46c7"
+          "sig": "3045022100bcce9491bd23530674a014c4af202f59047de039ab8dee0bf177220b7c045c52022017d74c26be9d525ab65a81403e48fa826a1f6c79db910a601c524e8228f61df9"
         }
       ],
       "signed": {
         "_type": "root",
         "version": 1,
         "spec_version": "1.0.31",
-        "expires": "2024-12-31T00:00:00Z",
+        "expires": "2025-12-31T23:59:59Z",
         "consistent_snapshot": true,
         "keys": {
-          "50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3": {
-            "keytype": "ecdsa",
-            "scheme": "ecdsa-sha2-nistp256",
-            "keyval": {
-              "public": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEcLYSZyFGeKdWNt5dWFbnv6N9NyHC\noUNLcG6GZIxLwN8Q8MUdHdOOxGkDnyBRSJpIZ/r/oDECSTwfCYhdogweLA==\n-----END PUBLIC KEY-----\n"
-            },
-            "x-rstuf-key-name": "my ec key"
-          },
           "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc": {
             "keytype": "ed25519",
             "scheme": "ed25519",
             "keyval": {
               "public": "4f66dabebcf30628963786001984c0b75c175cdcf3bc4855933a2628f0cd0a0f"
             },
-            "x-rstuf-key-name": "my ed key"
+            "x-rstuf-key-name": "JimiHendrix's Key"
           },
-          "2f685fa7546f1856b123223ab086b3def14c89d24eef18f49c32508c2f60e241": {
+          "50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3": {
+            "keytype": "ecdsa",
+            "scheme": "ecdsa-sha2-nistp256",
+            "keyval": {
+              "public": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEcLYSZyFGeKdWNt5dWFbnv6N9NyHC\noUNLcG6GZIxLwN8Q8MUdHdOOxGkDnyBRSJpIZ/r/oDECSTwfCYhdogweLA==\n-----END PUBLIC KEY-----\n"
+            },
+            "x-rstuf-key-name": "JanisJoplin's Key"
+          },
+          "0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043": {
             "keytype": "rsa",
             "scheme": "rsassa-pss-sha256",
             "keyval": {
-              "public": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwhX6rioiL/cX5Ys32InF\nU52H8tL14QeX0tacZdb+AwcH6nIh97h3RSHvGD7Xy6uaMRmGldAnSVYwJHqoJ5j2\nynVzU/RFpr+6n8Ps0QFg5GmlEqZboFjLbS0bsRQcXXnqJNsVLEPT3ULvu1rFRbWz\nAMFjNtNNk5W/u0GEzXn3D03jIdhD8IKAdrTRf0VMD9TRCXLdMmEU2vkf1NVUnOTb\n/dRX5QA8TtBylVnouZknbavQ0J/pPlHLfxUgsKzodwDlJmbPG9BWwXqQCmP0DgOG\nNIZ1X281MOBaGbkNVEuntNjCSaQxQjfALVVU5NAfal2cwMINtqaoc7Wa+TWvpFEI\nWwIDAQAB\n-----END PUBLIC KEY-----\n"
+              "public": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwJNtmJy0bky0VZHhJoVw\nVR0oIto8ndLLicnaHPDUfFsv2dTP50uLiYuYhU/RLTh+PIMm9dU5gvfSQ0YIUFHO\nfdcDCBaMNYR9z9c9kvWkfgxP4H7cMdy9ev3yh4pL+ua64AT1598QxmF0RSp9p8P4\nUDPJC4XsgVz3kKeCSQAgz02MJ+KdHyTDP+rgOuWQfVL8bz53puMSSFojiaEJTmZQ\n7eBnI2n6UF6AAV6eo6Dc4cgPQLSjhDqcfoHCyk/AzpTQO5EV+ahofYmV/kQQtr7g\nz8MQXoKRwCbfIcWhPyfPNReOo7fqVK3uK3kkD1ouoNSr9DFRcnUbsX4QR/CQLcoP\nXwIDAQAB\n-----END PUBLIC KEY-----\n"
             },
-            "x-rstuf-key-name": "my rsa online key",
-            "x-rstuf-online-key-uri": "fn:2f685fa7546f1856b123223ab086b3def14c89d24eef18f49c32508c2f60e241"
+            "x-rstuf-key-name": "Online Key",
+            "x-rstuf-online-key-uri": "fn:0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043"
           }
         },
         "roles": {
-          "targets": {
-            "keyids": [
-              "2f685fa7546f1856b123223ab086b3def14c89d24eef18f49c32508c2f60e241"
-            ],
-            "threshold": 1
-          },
-          "snapshot": {
-            "keyids": [
-              "2f685fa7546f1856b123223ab086b3def14c89d24eef18f49c32508c2f60e241"
-            ],
-            "threshold": 1
-          },
           "root": {
             "keyids": [
-              "50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3",
-              "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc"
+              "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",
+              "50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3"
             ],
             "threshold": 2
           },
           "timestamp": {
             "keyids": [
-              "2f685fa7546f1856b123223ab086b3def14c89d24eef18f49c32508c2f60e241"
+              "0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043"
+            ],
+            "threshold": 1
+          },
+          "snapshot": {
+            "keyids": [
+              "0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043"
+            ],
+            "threshold": 1
+          },
+          "targets": {
+            "keyids": [
+              "0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043"
             ],
             "threshold": 1
           }
