@@ -30,7 +30,7 @@ from repository_service_tuf.helpers.tuf import (
 
 _FILES = Path(os.path.dirname(__file__)) / "files"
 _ROOTS = _FILES / "root"
-_PEMS = _FILES / "pem"
+_PEMS = _FILES / "key_storage"
 _PAYLOADS = _FILES / "payload"
 
 # Constants for mocking:
@@ -232,7 +232,7 @@ def patch_utcnow(monkeypatch):
 
 @pytest.fixture
 def ed25519_key():
-    with open(f"{_PEMS / 'ed25519.pub'}", "rb") as f:
+    with open(f"{_PEMS / 'JH.pub'}", "rb") as f:
         public_pem = f.read()
 
     public_key = load_pem_public_key(public_pem)
@@ -241,7 +241,7 @@ def ed25519_key():
 
 @pytest.fixture
 def ed25519_signer(ed25519_key):
-    with open(f"{_PEMS / 'ed25519'}", "rb") as f:
+    with open(f"{_PEMS / 'JH.ed25519'}", "rb") as f:
         private_pem = f.read()
 
     private_key = load_pem_private_key(private_pem, b"hunter2")

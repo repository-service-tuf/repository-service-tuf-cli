@@ -19,19 +19,19 @@ class TestHelpers:
         monkeypatch.setattr(f"{_HELPERS}.click", fake_click)
 
         # success
-        inputs = [f"{_PEMS / 'ed25519'}"]
+        inputs = [f"{_PEMS / 'JH.ed25519'}"]
         with patch(_PROMPT, side_effect=inputs):
             signer = helpers._load_signer_from_file_prompt(ed25519_key)
 
         assert isinstance(signer, CryptoSigner)
-        inputs = [f"{_PEMS / 'ed25519'}"]
+        inputs = [f"{_PEMS / 'JH.ed25519'}"]
         with patch(_PROMPT, side_effect=inputs):
             signer = helpers._load_signer_from_file_prompt(ed25519_key)
 
         assert isinstance(signer, CryptoSigner)
 
         # fail with wrong file for key
-        inputs = [f"{_PEMS / 'rsa'}"]
+        inputs = [f"{_PEMS / 'JC.rsa'}"]
         with patch(_PROMPT, side_effect=inputs):
             with pytest.raises(ValueError):
                 signer = helpers._load_signer_from_file_prompt(ed25519_key)
@@ -39,21 +39,21 @@ class TestHelpers:
         # fail with bad password
         fake_click.prompt = pretend.call_recorder(lambda *a, **kw: "hunter1")
         monkeypatch.setattr(f"{_HELPERS}.click", fake_click)
-        inputs = [f"{_PEMS / 'ed25519'}"]
+        inputs = [f"{_PEMS / 'JH.ed25519'}"]
         with patch(_PROMPT, side_effect=inputs):
             with pytest.raises(ValueError):
                 signer = helpers._load_signer_from_file_prompt(ed25519_key)
 
     def test_load_key_from_file_prompt(self):
         # success
-        inputs = [f"{_PEMS / 'ed25519.pub'}"]
+        inputs = [f"{_PEMS / 'JH.pub'}"]
         with patch(_PROMPT, side_effect=inputs):
             key = helpers._load_key_from_file_prompt()
 
         assert isinstance(key, SSlibKey)
 
         # fail with wrong file
-        inputs = [f"{_PEMS / 'ed25519'}"]
+        inputs = [f"{_PEMS / 'JH.ed25519'}"]
         with patch(_PROMPT, side_effect=inputs):
             with pytest.raises(ValueError):
                 _ = helpers._load_key_from_file_prompt()

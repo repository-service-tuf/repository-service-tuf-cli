@@ -14,7 +14,7 @@ class TestSign:
     def test_sign(self, client, patch_getpass):
         inputs = [
             "2",  # Please enter signing key index
-            f"{_PEMS / 'rsa'}",  # Please enter path to encrypted private key
+            f"{_PEMS / 'JC.rsa'}",  # Please enter path to encrypted private key  # noqa
         ]
         args = [
             f"{_ROOTS / 'v2.json'}",
