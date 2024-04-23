@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional, Tuple
 
+import click
+
 # Magic import to unbreak `load_pem_private_key` - pyca/cryptography#10315
 import cryptography.hazmat.backends.openssl.backend  # noqa: F401
 from cryptography.hazmat.primitives.serialization import (
@@ -138,7 +140,7 @@ def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
     with open(path, "rb") as f:
         private_pem = f.read()
 
-    password = Prompt.ask("Please enter password", password=True)
+    password = click.prompt("Please enter password", hide_input=True)
     private_key = load_pem_private_key(private_pem, password.encode())
     return CryptoSigner(private_key, public_key)
 
@@ -444,8 +446,9 @@ def _print_root(root: Root):
         key_table.add_row("Root", key.keyid, name, key.scheme, public_value)
 
     key = _get_online_key(root)
+    name = key.unrecognized_fields.get(KEY_NAME_FIELD)
     key_table.add_row(
-        "Online", key.keyid, "", key.scheme, key.keyval["public"]
+        "Online", key.keyid, name, key.scheme, key.keyval["public"]
     )
 
     root_table = Table("Infos", "Keys", title="Root Metadata")
