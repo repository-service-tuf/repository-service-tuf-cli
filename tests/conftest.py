@@ -2,15 +2,22 @@
 #
 # SPDX-License-Identifier: MIT
 
+import json
 import os
 from datetime import datetime, timezone
+from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, List, Tuple
 
+import pretend
 import pytest  # type: ignore
-from click.testing import CliRunner  # type: ignore
+from click.testing import CliRunner, Result  # type: ignore
+from cryptography.hazmat.primitives.serialization import (
+    load_pem_private_key,
+    load_pem_public_key,
+)
 from dynaconf import Dynaconf
-from securesystemslib.signer import SSlibKey as Key
+from securesystemslib.signer import CryptoSigner, SSlibKey
 from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.helpers.tuf import (
@@ -20,6 +27,15 @@ from repository_service_tuf.helpers.tuf import (
     RSTUFKey,
     TUFManagement,
 )
+
+_FILES = Path(os.path.dirname(__file__)) / "files"
+_ROOTS = _FILES / "root"
+_PEMS = _FILES / "key_storage"
+_PAYLOADS = _FILES / "payload"
+
+# Constants for mocking:
+_HELPERS = "repository_service_tuf.cli.admin2.helpers"
+_PROMPT = "rich.console.Console.input"
 
 
 @pytest.fixture
@@ -116,13 +132,13 @@ def root() -> Metadata[Root]:
 @pytest.fixture
 def root_info(root: Metadata[Root]) -> MetadataInfo:
     root_keys = [
-        Key("id1", "ed25519", "", {"sha256": "abc"}),
-        Key("id2", "ed25519", "", {"sha256": "foo"}),
+        SSlibKey("id1", "ed25519", "", {"sha256": "abc"}),
+        SSlibKey("id2", "ed25519", "", {"sha256": "foo"}),
     ]
     for key in root_keys:
         root.signed.add_key(key, "root")
 
-    online_key = Key("id3", "ed25519", "", {"sha256": "doo"})
+    online_key = SSlibKey("id3", "ed25519", "", {"sha256": "doo"})
     for online_role in ["timestamp", "snapshot", "targets"]:
         root.signed.add_key(online_key, online_role)
 
@@ -181,3 +197,68 @@ def metadata_sign_input() -> List[str]:
     ]
 
     return input
+
+
+@pytest.fixture
+def patch_getpass(monkeypatch):
+    """Fixture to mock password prompt return value for encrypted test keys.
+
+    NOTE: we need this, because getpass does not receive the inputs passed to
+    click's invoke method (interestingly, click's own password prompt, which
+    also uses getpass, does receive them)
+    """
+
+    fake_click = pretend.stub(
+        prompt=pretend.call_recorder(lambda *a, **kw: "hunter2")
+    )
+    monkeypatch.setattr(f"{_HELPERS}.click", fake_click)
+
+
+@pytest.fixture
+def patch_utcnow(monkeypatch):
+    """Patch `utcnow` in helpers module for reproducible results."""
+    fake_replace = pretend.stub(
+        replace=pretend.call_recorder(
+            lambda **kw: datetime(
+                2024, 12, 31, 23, 59, 59, tzinfo=timezone.utc
+            )
+        )
+    )
+    fake_datetime = pretend.stub(
+        now=pretend.call_recorder(lambda *a: fake_replace)
+    )
+    monkeypatch.setattr(f"{_HELPERS}.datetime", fake_datetime)
+
+
+@pytest.fixture
+def ed25519_key():
+    with open(f"{_PEMS / 'JH.pub'}", "rb") as f:
+        public_pem = f.read()
+
+    public_key = load_pem_public_key(public_pem)
+    return SSlibKey.from_crypto(public_key, "fake_keyid")
+
+
+@pytest.fixture
+def ed25519_signer(ed25519_key):
+    with open(f"{_PEMS / 'JH.ed25519'}", "rb") as f:
+        private_pem = f.read()
+
+    private_key = load_pem_private_key(private_pem, b"hunter2")
+    return CryptoSigner(private_key, ed25519_key)
+
+
+def invoke_command(client, cmd, inputs, args) -> Result:
+    out_file_name = "out_file_.json"
+    with client.isolated_filesystem():
+        result_obj = client.invoke(
+            cmd,
+            args=args + ["-s", out_file_name],
+            input="\n".join(inputs),
+            catch_exceptions=False,
+        )
+
+        with open(out_file_name) as f:
+            result_obj.data = json.load(f)
+
+    return result_obj

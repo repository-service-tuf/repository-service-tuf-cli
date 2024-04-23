@@ -12,7 +12,7 @@ from tuf.api.metadata import Metadata, Root
 # https://rich.readthedocs.io/en/stable/console.html#console-api
 # https://rich.readthedocs.io/en/stable/console.html#capturing-output
 from repository_service_tuf.cli import console
-from repository_service_tuf.cli.admin2 import admin2
+from repository_service_tuf.cli.admin2 import metadata
 from repository_service_tuf.cli.admin2.helpers import (
     SignPayload,
     _add_signature_prompt,
@@ -24,7 +24,7 @@ from repository_service_tuf.cli.admin2.helpers import (
 )
 
 
-@admin2.command()  # type: ignore
+@metadata.command()  # type: ignore
 @click.argument("root_in", type=click.File("rb"))
 @click.argument("prev_root_in", type=click.File("rb"), required=False)
 @click.option(
