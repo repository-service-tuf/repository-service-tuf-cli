@@ -2,18 +2,18 @@
   "signatures": [
     {
       "keyid": "1cebe343e35f0213f6136758e6c3a8f8e1f9eeb7e47a07d5cb336462ed31dcb7",
-      "sig": "84736f782c6f2677668a4cb180dc7fa3e02e892b946006e7598763a0797273e9aea908c6ff2d82c339ba3658810a61998189e3094c429cf72cc4e6226b4f0b0f"
+      "sig": "3df34be90191055393723730da292c14f0d4c7e360012d5f499bf5e9a802bb4dfb149198c147f259369a9bfa16fdb467fce19f718aa7909f76a2baef7c16e106"
     },
     {
       "keyid": "800dfb5a1982b82b7893e58035e19f414f553fc08cbb1130cfbae302a7b7fee5",
-      "sig": "754c1ec44f85bb364e7424a99058d1b24caa2e79de1f3b5b0127f22b31f232760ff785a8e5e2fd70c22b3ffa9054e4651baaf5411d0994d993c99bc218a84a0c"
+      "sig": "7745a99b5622e84cf278eef8aa1f1914bb226fc99edd5f592b39c71727a6482ba4a0c24f1bfdee72cf2aa0ca33078108205b4eb41295428e9b8b04f05eb76606"
     }
   ],
   "signed": {
     "_type": "root",
     "version": 1,
-    "spec_version": "1.0.30",
-    "expires": "2024-04-30T18:51:44Z",
+    "spec_version": "1.0.31",
+    "expires": "2027-05-10T12:28:20Z",
     "consistent_snapshot": true,
     "keys": {
       "1cebe343e35f0213f6136758e6c3a8f8e1f9eeb7e47a07d5cb336462ed31dcb7": {
@@ -22,7 +22,7 @@
         "keyval": {
           "public": "ad1709b3cb419b99c5cd7427d6411522e5a93aec6767453e91af921a73d22a3c"
         },
-        "name": "Martin's Key"
+        "name": "Janis Joplin"
       },
       "800dfb5a1982b82b7893e58035e19f414f553fc08cbb1130cfbae302a7b7fee5": {
         "keytype": "ed25519",
@@ -30,7 +30,7 @@
         "keyval": {
           "public": "7098f769f6ab8502b50f3b58686b8a042d5d3bb75d8b3a48a2fcbc15a0223501"
         },
-        "name": "Steven's Key"
+        "name": "Jimi Hendrix"
       },
       "f7a6872f297634219a80141caa2ec9ae8802098b07b67963272603e36cc19fd8": {
         "keytype": "ed25519",

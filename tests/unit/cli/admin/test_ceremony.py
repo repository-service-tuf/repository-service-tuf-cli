@@ -304,8 +304,8 @@ class TestCeremonyInteraction:
 
         # update all: [Optional] Give a name/tag to the root`s key
         input_step2[-1] = "Online key"
-        input_step3[4] = "Martin's Key"
-        input_step3[9] = "Steven's Key"
+        input_step3[4] = "Janis Joplin"
+        input_step3[9] = "Jimi Hendrix"
 
         test_result = client.invoke(
             ceremony.ceremony,

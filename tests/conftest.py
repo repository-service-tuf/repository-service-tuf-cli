@@ -163,7 +163,7 @@ def md_update_input() -> Tuple[List[str], List[str], List[str], List[str]]:
         "y",  # Do you want to modify root keys? [y/n]
         "",  # What should be the root role threshold? (CURRENT_KEY_THRESHOLD)
         "y",  # Do you want to remove a key [y/n]
-        "Martin's Key",  # Name/Tag/ID prefix of the key to remove
+        "Janis Joplin",  # Name/Tag/ID prefix of the key to remove
         "n",  # Do you want to remove a key [y/n]
         "y",  # Do you want to add a new key? [y/n]
         "",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
