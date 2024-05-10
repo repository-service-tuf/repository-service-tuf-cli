@@ -248,7 +248,8 @@ def ed25519_signer(ed25519_key):
     return CryptoSigner(private_key, ed25519_key)
 
 
-def invoke_command(client, cmd, inputs, args) -> Result:
+def invoke_command(client, cmd, inputs, args, std_err_empty=True) -> Result:
+    #
     out_file_name = "out_file_.json"
     with client.isolated_filesystem():
         result_obj = client.invoke(
@@ -258,7 +259,9 @@ def invoke_command(client, cmd, inputs, args) -> Result:
             catch_exceptions=False,
         )
 
-        with open(out_file_name) as f:
-            result_obj.data = json.load(f)
+        if std_err_empty:
+            assert result_obj.stderr == ""
+            with open(out_file_name) as f:
+                result_obj.data = json.load(f)
 
     return result_obj
