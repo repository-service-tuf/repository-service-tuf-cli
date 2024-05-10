@@ -34,7 +34,7 @@ _PEMS = _FILES / "key_storage"
 _PAYLOADS = _FILES / "payload"
 
 # Constants for mocking:
-_HELPERS = "repository_service_tuf.cli.admin2.helpers"
+_HELPERS = "repository_service_tuf.cli.admin.helpers"
 _PROMPT = "rich.console.Console.input"
 
 

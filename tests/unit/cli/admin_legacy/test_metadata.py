@@ -1,3 +1,4 @@
+# SPDX-FileCopyrightText: 2023-2024 Repository Service for TUF Contributors
 # SPDX-FileCopyrightText: 2022-2023 VMware Inc
 #
 # SPDX-License-Identifier: MIT
@@ -10,7 +11,7 @@ import pretend  # type: ignore
 import pytest
 from tuf.api.metadata import Metadata, Root
 
-from repository_service_tuf.cli.admin import metadata
+from repository_service_tuf.cli.admin_legacy import metadata
 from repository_service_tuf.helpers.api_client import URL
 
 
@@ -248,7 +249,7 @@ class TestMetadataUpdate:
             now=pretend.call_recorder(lambda a: fake_date)
         )
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.metadata.datetime",
+            "repository_service_tuf.cli.admin_legacy.metadata.datetime",
             fake_datetime,
         )
         input_step1, _, input_step3, input_step4 = md_update_input
@@ -595,7 +596,7 @@ class TestMetadataUpdate:
 class TestMetadataUpdateOptions:
     """Test the metadata update command with options."""
 
-    path = "repository_service_tuf.cli.admin.metadata"
+    path = "repository_service_tuf.cli.admin_legacy.metadata"
 
     def test_metadata_update_send_payload_to_api_server(
         self, client, test_context
