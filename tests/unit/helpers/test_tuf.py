@@ -212,7 +212,7 @@ class TestMetadataInfo:
         with open("tests/files/das-root.json", "r") as f:
             das_root = json.loads(f.read())
 
-        md_info = MetadataInfo(Metadata.from_dict(das_root["root"]))
+        md_info = MetadataInfo(Metadata.from_dict(das_root))
         used_keys_info, pending_keys = md_info._get_pending_and_used_keys()
         assert len(used_keys_info) == 1
         assert used_keys_info[0] == {

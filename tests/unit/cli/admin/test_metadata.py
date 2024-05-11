@@ -67,7 +67,7 @@ class TestMetadataUpdate:
         is_kairo_key_found = False
         for root_key_id in root.signed.roles["root"].keyids:
             root_key = root.signed.keys[root_key_id]
-            if root_key.unrecognized_fields["name"] == "Steven's Key":
+            if root_key.unrecognized_fields["name"] == "Jimi Hendrix":
                 is_steven_key_found = True
             elif root_key.unrecognized_fields["name"] == "Kairo's Key":
                 is_kairo_key_found = True
@@ -87,7 +87,7 @@ class TestMetadataUpdate:
             "y",  # Do you want to modify root keys? [y/n]
             "",  # What should be the root role threshold? (CURRENT_KEY_THRESHOLD)  # noqa
             "y",  # Do you want to remove a key [y/n]
-            "Martin's Key",  # Name/Tag/ID prefix of the key to remove
+            "Janis Joplin",  # Name/Tag/ID prefix of the key to remove
             "n",  # Do you want to remove a key [y/n]
             "y",  # Do you want to add a new key? [y/n]
             "",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
@@ -125,10 +125,10 @@ class TestMetadataUpdate:
 
         for root_id in root.signed.roles["root"].keyids:
             root_key = root.signed.keys[root_id]
-            # Only "Steven's key" is left which existed from the initial root.
+            # Only "Jimi Hendrix" is left which existed from the initial root.
             # For the rest of the keys there is no input and we expect them to
             # have a default name.
-            if root_key.unrecognized_fields.get("name") != "Steven's Key":
+            if root_key.unrecognized_fields.get("name") != "Jimi Hendrix":
                 assert root_key.unrecognized_fields.get("name") == root_id[:7]
 
         online_roles = ["timestamp", "snapshot", "targets"]
@@ -377,9 +377,9 @@ class TestMetadataUpdate:
             "y",  # Do you want to modify root keys? [y/n]
             "",  # What should be the root role threshold? (CURRENT_KEY_THRESHOLD)  # noqa
             "y",  # Do you want to remove a key [y/n]
-            "Martin's Key",  # Name/Tag/ID prefix of the key to remove
+            "Janis Joplin",  # Name/Tag/ID prefix of the key to remove
             "y",  # Do you want to remove a key [y/n]
-            "Steven's Key",  # Name/Tag/ID prefix of the key to remove
+            "Jimi Hendrix",  # Name/Tag/ID prefix of the key to remove
             "y",  # Do you want to add a new key? [y/n]
             "",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
             "tests/files/key_storage/JanisJoplin.key",  # Enter the root`s private key path  # noqa
@@ -447,7 +447,7 @@ class TestMetadataUpdate:
             "y",  # Do you want to modify root keys? [y/n]
             "",  # What should be the root role threshold? (CURRENT_KEY_THRESHOLD)  # noqa
             "y",  # Do you want to remove a key [y/n]
-            "Martin's Key",  # Name/Tag/ID prefix of the key to remove
+            "Janis Joplin",  # Name/Tag/ID prefix of the key to remove
             "n",  # Do you want to remove a key [y/n]
             "rsa",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
             "tests/files/key_storage/online-rsa.key",  # Enter the root`s private key path  # noqa
@@ -518,7 +518,7 @@ class TestMetadataUpdate:
             "",  # Choose root key type [ed25519/ecdsa/rsa] (ed25519)
             "tests/files/key_storage/JimiHendrix.key",  # Enter the root`s private key path  # noqa
             "strongPass",  # Enter the root`s private key password
-            "Steven's Key",  # [Optional] Give a name/tag to the key
+            "Jimi Hendrix",  # [Optional] Give a name/tag to the key
             "n",  # Do you want to add a new key? [y/n]
             "n",  # Do you want to modify root keys? [y/n]
         ]
@@ -753,7 +753,9 @@ class TestMetadataSign:
         with open("tests/files/das-root.json", "r") as f:
             das_root = f.read()
 
-        fake_response_data = {"data": {"metadata": json.loads(das_root)}}
+        fake_response_data = {
+            "data": {"metadata": {"root": json.loads(das_root)}}
+        }
         fake_response = pretend.stub(
             json=pretend.call_recorder(lambda: fake_response_data),
             status_code=200,
@@ -768,6 +770,7 @@ class TestMetadataSign:
             metadata.sign,
             input="\n".join(input_step),
             obj=test_context,
+            catch_exceptions=False,
         )
         assert test_result.exit_code == 0, test_result.output
         assert "Metadata Signed! 🔑" in test_result.output
@@ -788,7 +791,7 @@ class TestMetadataSign:
                     "role": "root",
                     "signature": {
                         "keyid": "800dfb5a1982b82b7893e58035e19f414f553fc08cbb1130cfbae302a7b7fee5",  # noqa
-                        "sig": "0bb8b18a626e24b5dd7cdfb6bf6a26fc79d40b2b3737a92604d484105374f1431cebc76814cedff7179e8d5a1cec54246a7eccd509213ef33bcc12312f4d0f01",  # noqa
+                        "sig": "7745a99b5622e84cf278eef8aa1f1914bb226fc99edd5f592b39c71727a6482ba4a0c24f1bfdee72cf2aa0ca33078108205b4eb41295428e9b8b04f05eb76606",  # noqa
                     },
                 },
                 "Metadata sign accepted.",
@@ -904,7 +907,9 @@ class TestMetadataSign:
         with open("tests/files/das-root.json", "r") as f:
             das_root = f.read()
 
-        fake_response_data = {"data": {"metadata": json.loads(das_root)}}
+        fake_response_data = {
+            "data": {"metadata": {"root": json.loads(das_root)}}
+        }
         fake_response = pretend.stub(
             json=pretend.call_recorder(lambda: fake_response_data),
             status_code=200,
@@ -938,7 +943,7 @@ class TestMetadataSign:
                     "role": "root",
                     "signature": {
                         "keyid": "800dfb5a1982b82b7893e58035e19f414f553fc08cbb1130cfbae302a7b7fee5",  # noqa
-                        "sig": "0bb8b18a626e24b5dd7cdfb6bf6a26fc79d40b2b3737a92604d484105374f1431cebc76814cedff7179e8d5a1cec54246a7eccd509213ef33bcc12312f4d0f01",  # noqa
+                        "sig": "7745a99b5622e84cf278eef8aa1f1914bb226fc99edd5f592b39c71727a6482ba4a0c24f1bfdee72cf2aa0ca33078108205b4eb41295428e9b8b04f05eb76606",  # noqa
                     },
                 },
                 "Metadata sign accepted.",
@@ -963,7 +968,9 @@ class TestMetadataSign:
         with open("tests/files/das-root.json", "r") as f:
             das_root = f.read()
 
-        fake_response_data = {"data": {"metadata": json.loads(das_root)}}
+        fake_response_data = {
+            "data": {"metadata": {"root": json.loads(das_root)}}
+        }
         fake_response = pretend.stub(
             json=pretend.call_recorder(lambda: fake_response_data),
             status_code=200,
@@ -1006,7 +1013,9 @@ class TestMetadataSign:
         with open("tests/files/das-root.json", "r") as f:
             das_root = f.read()
 
-        fake_response_data = {"data": {"metadata": json.loads(das_root)}}
+        fake_response_data = {
+            "data": {"metadata": {"root": json.loads(das_root)}}
+        }
         fake_response = pretend.stub(
             json=pretend.call_recorder(lambda: fake_response_data),
             status_code=200,
@@ -1039,7 +1048,7 @@ class TestMetadataSign:
                     "role": "root",
                     "signature": {
                         "keyid": "800dfb5a1982b82b7893e58035e19f414f553fc08cbb1130cfbae302a7b7fee5",  # noqa
-                        "sig": "0bb8b18a626e24b5dd7cdfb6bf6a26fc79d40b2b3737a92604d484105374f1431cebc76814cedff7179e8d5a1cec54246a7eccd509213ef33bcc12312f4d0f01",  # noqa
+                        "sig": "7745a99b5622e84cf278eef8aa1f1914bb226fc99edd5f592b39c71727a6482ba4a0c24f1bfdee72cf2aa0ca33078108205b4eb41295428e9b8b04f05eb76606",  # noqa
                     },
                 },
                 "Metadata sign accepted.",
@@ -1065,7 +1074,9 @@ class TestMetadataSign:
         with open("tests/files/das-root.json", "r") as f:
             das_root = f.read()
 
-        fake_response_data = {"data": {"metadata": json.loads(das_root)}}
+        fake_response_data = {
+            "data": {"metadata": {"root": json.loads(das_root)}}
+        }
         fake_response = pretend.stub(
             json=pretend.call_recorder(lambda: fake_response_data),
             status_code=200,
@@ -1099,7 +1110,9 @@ class TestMetadataSign:
         with open("tests/files/das-root.json", "r") as f:
             das_root = f.read()
 
-        fake_response_data = {"data": {"metadata": json.loads(das_root)}}
+        fake_response_data = {
+            "data": {"metadata": {"root": json.loads(das_root)}}
+        }
         fake_response = pretend.stub(
             json=pretend.call_recorder(lambda: fake_response_data),
             status_code=200,
@@ -1144,7 +1157,9 @@ class TestMetadataSignOptions:
         with open("tests/files/das-root.json", "r") as f:
             das_root = f.read()
 
-        fake_response_data = {"data": {"metadata": json.loads(das_root)}}
+        fake_response_data = {
+            "data": {"metadata": {"root": json.loads(das_root)}}
+        }
         fake_response = pretend.stub(
             json=pretend.call_recorder(lambda: fake_response_data),
             status_code=200,
@@ -1181,7 +1196,7 @@ class TestMetadataSignOptions:
                     "role": "root",
                     "signature": {
                         "keyid": "800dfb5a1982b82b7893e58035e19f414f553fc08cbb1130cfbae302a7b7fee5",  # noqa
-                        "sig": "0bb8b18a626e24b5dd7cdfb6bf6a26fc79d40b2b3737a92604d484105374f1431cebc76814cedff7179e8d5a1cec54246a7eccd509213ef33bcc12312f4d0f01",  # noqa
+                        "sig": "7745a99b5622e84cf278eef8aa1f1914bb226fc99edd5f592b39c71727a6482ba4a0c24f1bfdee72cf2aa0ca33078108205b4eb41295428e9b8b04f05eb76606",  # noqa
                     },
                 },
                 "Metadata sign accepted.",
@@ -1205,7 +1220,9 @@ class TestMetadataSignOptions:
         with open("tests/files/das-root.json", "r") as f:
             das_root = f.read()
 
-        fake_response_data = {"data": {"metadata": json.loads(das_root)}}
+        fake_response_data = {
+            "data": {"metadata": {"root": json.loads(das_root)}}
+        }
         fake_response = pretend.stub(
             json=pretend.call_recorder(lambda: fake_response_data),
             status_code=200,
