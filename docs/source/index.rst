@@ -13,6 +13,7 @@ Documentation List
    :maxdepth: 1
 
    guide/index
+   guide/admin_legacy
    devel/index
 
 

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023-2024 Repository Service for TUF Contributors
+#
+# SPDX-License-Identifier: MIT
+
 import json
 from dataclasses import asdict
 
@@ -12,8 +16,8 @@ from tuf.api.metadata import Metadata, Root
 # https://rich.readthedocs.io/en/stable/console.html#console-api
 # https://rich.readthedocs.io/en/stable/console.html#capturing-output
 from repository_service_tuf.cli import console
-from repository_service_tuf.cli.admin2 import metadata
-from repository_service_tuf.cli.admin2.helpers import (
+from repository_service_tuf.cli.admin import metadata
+from repository_service_tuf.cli.admin.helpers import (
     SignPayload,
     _add_signature_prompt,
     _choose_signing_key_prompt,

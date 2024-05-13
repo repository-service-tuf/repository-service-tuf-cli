@@ -1,3 +1,4 @@
+# SPDX-FileCopyrightText: 2023-2024 Repository Service for TUF Contributors
 # SPDX-FileCopyrightText: 2022-2023 VMware Inc
 #
 # SPDX-License-Identifier: MIT
@@ -13,7 +14,7 @@ from tuf.api.metadata import Metadata, Root
 from tuf.api.serialization import DeserializationError
 
 from repository_service_tuf.cli import click, console
-from repository_service_tuf.cli.admin import admin
+from repository_service_tuf.cli.admin_legacy import admin_legacy as admin
 from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,

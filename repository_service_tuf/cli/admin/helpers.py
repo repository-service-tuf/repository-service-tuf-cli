@@ -1,14 +1,6 @@
-"""Alternative admin cli
-
-Provides alternative ceremony, metadata update, and sign admin cli commands.
-
-Advantages
-----------
-- use state-of-the-art securesystemslib Signer API only
-- simplify (e.g. avoid custom/redundant abstractions over Metadata API)
-- configure online signer location via uri attached to public key
-
-"""
+# SPDX-FileCopyrightText: 2023-2024 Repository Service for TUF Contributors
+#
+# SPDX-License-Identifier: MIT
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone

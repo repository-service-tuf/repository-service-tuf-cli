@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023-2024 Repository Service for TUF Contributors
+# SPDX-FileCopyrightText: 2022-2023 VMware Inc
+#
+# SPDX-License-Identifier: MIT
 import json
 import os
 from datetime import datetime, timezone
@@ -7,7 +11,7 @@ from typing import Any, Dict, List
 from tuf.api.metadata import SuccinctRoles
 
 from repository_service_tuf.cli import click, console
-from repository_service_tuf.cli.admin import admin
+from repository_service_tuf.cli.admin import admin as admin
 from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,

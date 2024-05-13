@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2023-2024 Repository Service for TUF Contributors
+#
+# SPDX-License-Identifier: MIT
+
 import copy
 from datetime import datetime, timezone
 from unittest.mock import patch
@@ -7,7 +11,7 @@ import pytest
 from securesystemslib.signer import CryptoSigner, SSlibKey
 from tuf.api.metadata import Metadata, Root
 
-from repository_service_tuf.cli.admin2 import helpers
+from repository_service_tuf.cli.admin import helpers
 from tests.conftest import _HELPERS, _PEMS, _PROMPT
 
 

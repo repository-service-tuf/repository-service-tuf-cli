@@ -1,4 +1,7 @@
+# SPDX-FileCopyrightText: 2023-2024 Repository Service for TUF Contributors
+#
 # SPDX-License-Identifier: MIT
+
 import json
 from unittest.mock import patch
 
@@ -6,7 +9,7 @@ import click
 import pretend
 import pytest
 
-from repository_service_tuf.cli.admin2 import sign
+from repository_service_tuf.cli.admin import sign
 from tests.conftest import _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 
@@ -50,7 +53,7 @@ class TestSignError:
         # Click still needs a real file passed, even if it is ignored
         args = [f"{_ROOTS / 'v1.json'}"]
         with patch(
-            "repository_service_tuf.cli.admin2.sign.Metadata.from_bytes",
+            "repository_service_tuf.cli.admin.sign.Metadata.from_bytes",
             side_effect=lambda x: fake_metadata,
         ):
             with pytest.raises(click.ClickException) as e:

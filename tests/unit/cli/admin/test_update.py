@@ -1,6 +1,10 @@
+# SPDX-FileCopyrightText: 2023-2024 Repository Service for TUF Contributors
+#
+# SPDX-License-Identifier: MIT
+
 import json
 
-from repository_service_tuf.cli.admin2 import update
+from repository_service_tuf.cli.admin import update
 from tests.conftest import _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 
