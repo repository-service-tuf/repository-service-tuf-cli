@@ -11,7 +11,7 @@ from typing import Any, Dict, List
 from tuf.api.metadata import SuccinctRoles
 
 from repository_service_tuf.cli import click, console
-from repository_service_tuf.cli.admin_legacy import admin_legacy as admin
+from repository_service_tuf.cli.admin import admin as admin
 from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,

@@ -9,7 +9,7 @@ from datetime import timezone
 import pretend
 import pytest
 
-from repository_service_tuf.cli.admin_legacy import import_artifacts
+from repository_service_tuf.cli.admin import import_artifacts
 
 
 class TestImportArtifactsFunctions:
@@ -83,7 +83,7 @@ class TestImportArtifactsFunctions:
             now=pretend.call_recorder(lambda a: fake_time)
         )
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin_legacy.import_artifacts.datetime",  # noqa
+            "repository_service_tuf.cli.admin.import_artifacts.datetime",
             fake_datetime,
         )
         succinct_roles = pretend.stub(
