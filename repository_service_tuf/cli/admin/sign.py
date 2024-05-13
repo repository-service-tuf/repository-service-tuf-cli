@@ -4,9 +4,11 @@
 
 import json
 from dataclasses import asdict
+from typing import Any, Dict, Optional
 
 import click
 from rich.markdown import Markdown
+from rich.prompt import Prompt
 from tuf.api.metadata import Metadata, Root
 
 # TODO: Should we use the global rstuf console exclusively? We do use it for
@@ -24,13 +26,53 @@ from repository_service_tuf.cli.admin.helpers import (
     _filter_root_verification_results,
     _print_keys_for_signing,
     _print_root,
-    _warn_no_save,
+)
+from repository_service_tuf.helpers.api_client import (
+    URL,
+    Methods,
+    request_server,
+    send_payload,
+    task_status,
 )
 
 
+def _get_pending_roles(
+    settings: Any, api_server: Optional[str] = None
+) -> Dict[str, Dict[str, Any]]:
+    if api_server:
+        settings.SERVER = api_server
+
+    if settings.get("SERVER") is None:
+        api_server = Prompt.ask("\n[cyan]API[/] URL address")
+        settings.SERVER = api_server
+
+    response = request_server(
+        settings.SERVER, URL.METADATA_SIGN.value, Methods.GET
+    )
+    if response.status_code != 200:
+        raise click.ClickException(
+            f"Failed to retrieve metadata for signing. Error: {response.text}"
+        )
+
+    response_data: Dict[str, Any] = response.json().get("data")
+    if response_data is None:
+        raise click.ClickException(response.text)
+
+    pending_roles: Dict[str, Dict[str, Any]] = response_data.get(
+        "metadata", {}
+    )
+    if len(pending_roles) == 0:
+        raise click.ClickException("No metadata available for signing")
+
+    return pending_roles
+
+
 @metadata.command()  # type: ignore
-@click.argument("root_in", type=click.File("rb"))
-@click.argument("prev_root_in", type=click.File("rb"), required=False)
+@click.option(
+    "--api-server",
+    help="URL to an RSTUF API.",
+    required=False,
+)
 @click.option(
     "--save",
     "-s",
@@ -39,20 +81,34 @@ from repository_service_tuf.cli.admin.helpers import (
     help="Write json result to FILENAME (default: 'sign-payload.json')",
     type=click.File("w"),
 )
-def sign(root_in, prev_root_in, save) -> None:
+@click.pass_context
+def sign(
+    context: Any, api_server: Optional[str], save: Optional[click.File]
+) -> None:
     """Add one signature to root metadata."""
     console.print("\n", Markdown("# Metadata Signing Tool"))
-
-    if not save:
-        _warn_no_save()
-
     ###########################################################################
     # Load roots
-    # TODO: load from API
-    root_md = Metadata[Root].from_bytes(root_in.read())
+    settings = context.obj["settings"]
+    pending_roles = _get_pending_roles(settings, api_server)
+    roles = list(pending_roles.keys())
+    # Choose a role from a list of non trusted pending roles as each role
+    # has it's own trusted counterpart which adds to the total number of roles.
+    non_trusted = list(filter(lambda r: not r.startswith("trusted"), roles))
+    if len(non_trusted) > 1:
+        rolename = Prompt.ask(
+            "\nChoose a metadata to sign",
+            choices=[role for role in non_trusted],
+        )
+    else:
+        rolename = "root"
 
-    if prev_root_in:
-        prev_root = Metadata[Root].from_bytes(prev_root_in.read()).signed
+    root_md = Metadata[Root].from_dict(pending_roles[rolename])
+
+    if pending_roles.get(f"trusted_{rolename}"):
+        trusted_role = f"trusted_{rolename}"
+        trusted_role_name_data: Dict[str, Any] = pending_roles[trusted_role]
+        prev_root = Metadata[Root].from_dict(trusted_role_name_data)
 
     else:
         prev_root = None
@@ -66,7 +122,7 @@ def sign(root_in, prev_root_in, save) -> None:
     ###########################################################################
     # Verify signatures
     root_result = root_md.signed.get_root_verification_result(
-        prev_root,
+        prev_root.signed if prev_root is not None else None,
         root_md.signed_bytes,
         root_md.signatures,
     )
@@ -88,9 +144,22 @@ def sign(root_in, prev_root_in, save) -> None:
     signature = _add_signature_prompt(root_md, key)
 
     ###########################################################################
-    # Dump payload
-    # TODO: post to API
+    # Send payload to the API and save it locally
     if save:
         payload = SignPayload(signature=signature.to_dict())
-        json.dump(asdict(payload), save, indent=2)
+        with open(save.name, "w") as save_file:
+            json.dump(asdict(payload), save_file, indent=2)
+
         console.print(f"Saved result to '{save.name}'")
+
+    result_payload = {"role": rolename, "signature": signature.to_dict()}
+    console.print("\nSending signature")
+    task_id = send_payload(
+        settings,
+        URL.METADATA_SIGN.value,
+        result_payload,
+        "Metadata sign accepted.",
+        "Metadata sign",
+    )
+    task_status(task_id, settings, "Metadata sign status:")
+    console.print("\nMetadata Signed and sent to the API! 🔑\n")
