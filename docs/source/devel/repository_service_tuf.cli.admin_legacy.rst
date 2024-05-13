@@ -12,14 +12,6 @@ repository\_service\_tuf.cli.admin\_legacy.ceremony module
    :undoc-members:
    :show-inheritance:
 
-repository\_service\_tuf.cli.admin\_legacy.import\_artifacts module
--------------------------------------------------------------------
-
-.. automodule:: repository_service_tuf.cli.admin_legacy.import_artifacts
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 repository\_service\_tuf.cli.admin\_legacy.metadata module
 ----------------------------------------------------------
 
