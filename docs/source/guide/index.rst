@@ -51,19 +51,21 @@ It executes administrative commands to the Repository Service for TUF.
 
 .. code:: shell
 
-    ❯ rstuf admin -h
+    ❯ rstuf admin
 
     Usage: rstuf admin [OPTIONS] COMMAND [ARGS]...
 
-    Administrative (Legacy) Commands
+    Administrative Commands
 
-    ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ --help  -h    Show this message and exit.                                                                            │
-    ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-    ╭─ Commands ───────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ ceremony       Bootstrap Ceremony to create initial root metadata and RSTUF config.                                  │
-    │ metadata       Metadata management.                                                                                  │
-    ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+    ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --help  -h    Show this message and exit.                                                                             │
+    ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+    ╭─ Commands ────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ ceremony                 Bootstrap Ceremony to create initial root metadata and RSTUF config.                         │
+    │ import-artifacts         Import artifacts to RSTUF from exported CSV file.                                            │
+    │ metadata                 Metadata management.                                                                         │
+    ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
 
 .. rstuf-cli-admin-ceremony
 
