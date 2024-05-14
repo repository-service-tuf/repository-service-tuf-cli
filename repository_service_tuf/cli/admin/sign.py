@@ -91,24 +91,11 @@ def sign(
     # Load roots
     settings = context.obj["settings"]
     pending_roles = _get_pending_roles(settings, api_server)
-    roles = list(pending_roles.keys())
-    # Choose a role from a list of non trusted pending roles as each role
-    # has it's own trusted counterpart which adds to the total number of roles.
-    non_trusted = list(filter(lambda r: not r.startswith("trusted"), roles))
-    if len(non_trusted) > 1:
-        rolename = Prompt.ask(
-            "\nChoose a metadata to sign",
-            choices=[role for role in non_trusted],
-        )
-    else:
-        rolename = "root"
+    root_md = Metadata[Root].from_dict(pending_roles[Root.type])
 
-    root_md = Metadata[Root].from_dict(pending_roles[rolename])
-
-    if pending_roles.get(f"trusted_{rolename}"):
-        trusted_role = f"trusted_{rolename}"
-        trusted_role_name_data: Dict[str, Any] = pending_roles[trusted_role]
-        prev_root = Metadata[Root].from_dict(trusted_role_name_data)
+    if pending_roles.get(f"trusted_{Root.type}"):
+        trusted_role = f"trusted_{Root.type}"
+        prev_root = Metadata[Root].from_dict(pending_roles[trusted_role])
 
     else:
         prev_root = None

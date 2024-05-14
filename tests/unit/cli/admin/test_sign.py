@@ -19,7 +19,6 @@ class TestSign:
     ):
         inputs = [
             "http://127.0.0.1",  # API URL address
-            "root",
             "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
@@ -90,7 +89,6 @@ class TestSign:
     def test_sign_bootstap_root(self, client, test_context, patch_getpass):
         inputs = [
             "http://127.0.0.1",  # API URL address
-            "root",
             "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
@@ -151,80 +149,6 @@ class TestSign:
             )
         ]
 
-    def test_sign_multiple_roles_waiting_for_signatures(
-        self, client, test_context, patch_getpass
-    ):
-        inputs = [
-            "http://127.0.0.1",  # API URL address
-            "root",
-            "1",  # Please enter signing key index
-            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-        ]
-
-        with open(f"{_ROOTS / 'v2.json'}") as f:
-            v2_das_root = f.read()
-
-        with open(f"{_ROOTS / 'v1.json'}") as f:
-            v1_das_root = f.read()
-
-        fake_response_data = {
-            "data": {
-                "metadata": {
-                    "root": json.loads(v1_das_root),
-                    "other": json.loads(v2_das_root),
-                }
-            }
-        }
-        fake_response = pretend.stub(
-            json=pretend.call_recorder(lambda: fake_response_data),
-            status_code=200,
-        )
-        sign.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
-        )
-        sign.send_payload = pretend.call_recorder(lambda *a: "fake-taskid")
-        sign.task_status = pretend.call_recorder(lambda *a: "OK")
-
-        result = invoke_command(client, sign.sign, inputs, [], test_context)
-
-        expected = {
-            "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # noqa
-            "sig": "828a659bc34972504b9dab16bc44818b8a7d49ffee2a9021df6a6be4dd3b7a026d1f890b952303d1cf32dda90fbdf60e9fcfeb5f0af6498f0f55cad31c750a02",  # noqa
-        }
-
-        assert result.data["role"] == "root"
-        assert result.data["signature"]["keyid"] == expected["keyid"]
-        assert "Metadata Signed and sent to the API! 🔑" in result.output
-        assert sign.request_server.calls == [
-            pretend.call(
-                "http://127.0.0.1",
-                "api/v1/metadata/sign/",
-                Methods.GET,
-            )
-        ]
-        assert sign.send_payload.calls == [
-            pretend.call(
-                test_context["settings"],
-                URL.METADATA_SIGN.value,
-                {
-                    "role": "root",
-                    "signature": {
-                        "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # noqa
-                        "sig": "828a659bc34972504b9dab16bc44818b8a7d49ffee2a9021df6a6be4dd3b7a026d1f890b952303d1cf32dda90fbdf60e9fcfeb5f0af6498f0f55cad31c750a02",  # noqa
-                    },
-                },
-                "Metadata sign accepted.",
-                "Metadata sign",
-            )
-        ]
-        assert sign.task_status.calls == [
-            pretend.call(
-                "fake-taskid",
-                test_context["settings"],
-                "Metadata sign status:",
-            )
-        ]
-
 
 class TestSignError:
     def test_sign_with_previous_root_but_wrong_version(
@@ -232,7 +156,6 @@ class TestSignError:
     ):
         inputs = [
             "http://127.0.0.1",  # API URL address
-            "root",
             "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
@@ -272,7 +195,6 @@ class TestSignError:
     ):
         inputs = [
             "http://127.0.0.1",  # API URL address
-            "root",
             "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
