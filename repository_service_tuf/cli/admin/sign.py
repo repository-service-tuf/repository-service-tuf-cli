@@ -145,19 +145,16 @@ def sign(
 
     ###########################################################################
     # Send payload to the API and save it locally
+    payload = SignPayload(signature=signature.to_dict())
     if save:
-        payload = SignPayload(signature=signature.to_dict())
-        with open(save.name, "w") as save_file:
-            json.dump(asdict(payload), save_file, indent=2)
-
+        json.dump(asdict(payload), save, indent=2)  # type: ignore
         console.print(f"Saved result to '{save.name}'")
 
-    result_payload = {"role": rolename, "signature": signature.to_dict()}
     console.print("\nSending signature")
     task_id = send_payload(
         settings,
         URL.METADATA_SIGN.value,
-        result_payload,
+        asdict(payload),
         "Metadata sign accepted.",
         "Metadata sign",
     )
