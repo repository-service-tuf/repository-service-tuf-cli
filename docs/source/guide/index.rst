@@ -37,22 +37,22 @@ Using pip:
     ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 
-RSTUF CLI config
+RSTUF CLI configuration file
 ================
 
 
-``rstuf`` reads the settings configuration from config file. See:
-``--config/-c``, default: ``$HOME/.rstuf.yml``.
+``rstuf`` will try to read the settings configuration from a configuration file. See:
+``--config/-c``, default path to the configuration file is: ``$HOME/.rstuf.yml``.
 
-This file contains the following settings:
+In this file, the following optional settings can be configured:
 
-* ``SERVER`` - The Repository Service for TUF API URL (optional).
+* ``SERVER`` - The Repository Service for TUF API URL.
 
-* ``REPOSITORIES`` - The TUF repositoreis used by ``rstuf artifact`` commands.
+* ``REPOSITORIES`` - TUF repositories used by ``rstuf artifact`` commands.
 
   .. note::
 
-    This settings can be automatically generated/updated by ``rstuf artifact repository`` commands.
+   You can generate or update this setting automatically by using ``rstuf artifact repository`` commands.
 
   This setting is a list of repositories with the following fields:
   ``name``, ``trusted_root`` (base64), ``metadata_url``, ``artifacts_url``
@@ -74,8 +74,7 @@ This file contains the following settings:
 
   .. note::
 
-    This settings can be automatically generated/updated by ``rstuf artifact repository set``
-    command.
+       You can generate or update this setting automatically by using ``rstuf artifact repository`` commands.
 
 .. rstuf-cli-admin
 

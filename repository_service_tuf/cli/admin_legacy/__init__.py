@@ -18,7 +18,7 @@ def admin_legacy():
     future versions of the RSTUF.
 
     Do not use this command unless you are testing with the legacy RSTUF.
-    Consider recreating your RSTUF using the new admin commands.
+    Consider redeploying RSTUF using the new admin commands.
 
     """
     click.echo(click.style(DEPRECATION_WARNING, bold=True, fg="red"))
