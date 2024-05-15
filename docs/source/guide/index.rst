@@ -36,6 +36,47 @@ Using pip:
     │ task                              Task Management Commands                                                           │
     ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
+
+RSTUF CLI config
+================
+
+
+``rstuf`` reads the settings configuration from config file. See:
+``--config/-c``, default: ``$HOME/.rstuf.yml``.
+
+This file contains the following settings:
+
+* ``SERVER`` - The Repository Service for TUF API URL (optional).
+
+* ``REPOSITORIES`` - The TUF repositoreis used by ``rstuf artifact`` commands.
+
+  .. note::
+
+    This settings can be automatically generated/updated by ``rstuf artifact repository`` commands.
+
+  This setting is a list of repositories with the following fields:
+  ``name``, ``trusted_root`` (base64), ``metadata_url``, ``artifacts_url``
+  (bool), and ``hash_prefix``.
+
+  Example:
+
+  .. code:: yaml
+
+    REPOSITORIES:
+        myrepo:
+            artifact_base_url: http://127.0.0.1:8081
+            hash_prefix: false
+            metadata_url: http://127.0.0.1:8080
+            trusted_root: aHR0cDovLzEyNy4wLjAuMTo4MDgwLzEucm9vdC5qc29u
+
+
+* ``DEFAULT_REPOSITORY`` - The default repository to be used by ``rstuf artifact`` commands.
+
+  .. note::
+
+    This settings can be automatically generated/updated by ``rstuf artifact repository set``
+    command.
+
 .. rstuf-cli-admin
 
 Administration (``admin``)
