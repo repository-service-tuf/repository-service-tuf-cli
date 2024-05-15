@@ -38,7 +38,7 @@ Using pip:
 
 
 RSTUF CLI configuration file
-================
+============================
 
 
 ``rstuf`` will try to read the settings configuration from a configuration file. See:
