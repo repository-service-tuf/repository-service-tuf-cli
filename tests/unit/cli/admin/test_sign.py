@@ -149,6 +149,68 @@ class TestSign:
             )
         ]
 
+    def test_sign_local_file_input_and_custom_save(
+        self, client, test_context, patch_getpass
+    ):
+        inputs = [
+            "1",  # Please enter signing key index
+            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
+        ]
+
+        args = [f"{_PAYLOADS / 'sign_pending_roles.json'}"]
+        custom_path = "custom_sign_path.json"
+        with client.isolated_filesystem():
+            result = client.invoke(
+                sign.sign,
+                args=args + ["-s", custom_path],
+                input="\n".join(inputs),
+                obj=test_context,
+                catch_exceptions=False,
+            )
+            with open(custom_path) as f:
+                result.data = json.load(f)
+
+        expected = {
+            "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # noqa
+            "sig": "917046f9076eae41876be7c031be149aa2a960fd21f0d52f72128f55d9c423e2ec1632f98c96693dd801bd064e37efd6e5a5d32712fd5701a42099ece6b88c05",  # noqa
+        }
+
+        assert result.data["role"] == "root"
+        assert result.data["signature"]["keyid"] == expected["keyid"]
+        assert result.data["signature"]["sig"] == expected["sig"]
+        assert f"Saved result to '{custom_path}'" in result.output
+
+    def test_sign_local_file_no_save_option_given(
+        self, client, test_context, patch_getpass
+    ):
+        inputs = [
+            "1",  # Please enter signing key index
+            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
+        ]
+
+        args = [f"{_PAYLOADS / 'sign_pending_roles.json'}"]
+        default_path = "sign-payload.json"
+        with client.isolated_filesystem():
+            result = client.invoke(
+                sign.sign,
+                args=args,
+                input="\n".join(inputs),
+                obj=test_context,
+                catch_exceptions=False,
+            )
+            with open(default_path) as f:
+                result.data = json.load(f)
+
+        expected = {
+            "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # noqa
+            "sig": "917046f9076eae41876be7c031be149aa2a960fd21f0d52f72128f55d9c423e2ec1632f98c96693dd801bd064e37efd6e5a5d32712fd5701a42099ece6b88c05",  # noqa
+        }
+
+        assert result.data["role"] == "root"
+        assert result.data["signature"]["keyid"] == expected["keyid"]
+        assert result.data["signature"]["sig"] == expected["sig"]
+        assert f"Saved result to '{default_path}'" in result.output
+
 
 class TestSignError:
     def test_sign_with_previous_root_but_wrong_version(
@@ -290,6 +352,24 @@ class TestHelpers:
         ]
         assert response.json.calls == [pretend.call()]
 
+    def test__get_pending_roles_provide_signing_input(self):
+        path = f"{_PAYLOADS}/sign_pending_roles.json"
+        with open(path) as f:
+            input = json.load(f)
+
+        result = sign._get_pending_roles(None, signing_input=input)
+        assert result == input["metadata"]
+
+    def test__get_pending_roles_provide_signing_input_no_metadata(self):
+        path = f"{_PAYLOADS / 'sign.json' }"
+        with open(path) as f:
+            input = json.load(f)
+
+        with pytest.raises(click.ClickException) as e:
+            sign._get_pending_roles(None, signing_input=input)
+
+        assert "No metadata available for signing" in str(e)
+
     def test__get_pending_roles_request_bad_status_code(self):
         fake_settings = pretend.stub(
             SERVER=None,
@@ -301,7 +381,7 @@ class TestHelpers:
         with pytest.raises(click.ClickException) as e:
             sign._get_pending_roles(fake_settings, api_server)
 
-        assert "Failed to retrieve metadata for signing" in str(e)
+        assert "Failed to fetch metadata for signing" in str(e)
         assert fake_settings.SERVER == api_server
         assert fake_settings.get.calls == [pretend.call("SERVER")]
         assert sign.request_server.calls == [

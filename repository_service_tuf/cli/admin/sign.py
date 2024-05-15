@@ -37,30 +37,35 @@ from repository_service_tuf.helpers.api_client import (
 
 
 def _get_pending_roles(
-    settings: Any, api_server: Optional[str] = None
+    settings: Any,
+    api_server: Optional[str] = None,
+    signing_input: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Dict[str, Any]]:
-    if api_server:
-        settings.SERVER = api_server
+    """Get dictionary of pending roles for signing."""
+    data: Dict[str, Any]
+    if signing_input:
+        data = signing_input
+    else:
+        if api_server:
+            settings.SERVER = api_server
 
-    if settings.get("SERVER") is None:
-        api_server = Prompt.ask("\n[cyan]API[/] URL address")
-        settings.SERVER = api_server
+        if settings.get("SERVER") is None:
+            api_server = Prompt.ask("\n[cyan]API[/] URL address")
+            settings.SERVER = api_server
 
-    response = request_server(
-        settings.SERVER, URL.METADATA_SIGN.value, Methods.GET
-    )
-    if response.status_code != 200:
-        raise click.ClickException(
-            f"Failed to retrieve metadata for signing. Error: {response.text}"
+        response = request_server(
+            settings.SERVER, URL.METADATA_SIGN.value, Methods.GET
         )
+        if response.status_code != 200:
+            raise click.ClickException(
+                f"Failed to fetch metadata for signing. Error: {response.text}"
+            )
 
-    response_data: Dict[str, Any] = response.json().get("data")
-    if response_data is None:
-        raise click.ClickException(response.text)
+        data = response.json().get("data")
+        if data is None:
+            raise click.ClickException(response.text)
 
-    pending_roles: Dict[str, Dict[str, Any]] = response_data.get(
-        "metadata", {}
-    )
+    pending_roles: Dict[str, Dict[str, Any]] = data.get("metadata", {})
     if len(pending_roles) == 0:
         raise click.ClickException("No metadata available for signing")
 
@@ -81,16 +86,47 @@ def _get_pending_roles(
     help="Write json result to FILENAME (default: 'sign-payload.json')",
     type=click.File("w"),
 )
+@click.argument(
+    "signing_json_input_file",
+    required=False,
+    type=click.File("rb"),
+)
 @click.pass_context
 def sign(
-    context: Any, api_server: Optional[str], save: Optional[click.File]
+    context: Any,
+    api_server: Optional[str],
+    save: Optional[click.File],
+    signing_json_input_file: Optional[click.File],
 ) -> None:
-    """Add one signature to root metadata."""
+    """
+    Add one signature to root metadata.
+
+    There are two ways to use this command:
+
+    1) utilizing access to the RSTUF API and signing pending metadata roles
+
+    2) provide a local file using the SIGNING_JSON_INPUT_FILE argument
+
+    When using method 2:
+
+    - 'SIGNING_JSON_INPUT_FILE' must be a file containing the JSON response
+    from the 'GET /api/v1/metadata/sign' API endpoint.
+
+    - '--api_server' will be ignored.
+
+    - the result of the command will be saved into the 'sign-payload.json' file
+    unless a different name is provided with '--save'.
+    """
     console.print("\n", Markdown("# Metadata Signing Tool"))
     ###########################################################################
     # Load roots
     settings = context.obj["settings"]
-    pending_roles = _get_pending_roles(settings, api_server)
+    signing_input: Optional[Dict[str, Any]] = None
+    if signing_json_input_file:
+        signing_input = json.load(signing_json_input_file)  # type: ignore
+
+    pending_roles = _get_pending_roles(settings, api_server, signing_input)
+
     root_md = Metadata[Root].from_dict(pending_roles[Root.type])
 
     if pending_roles.get(f"trusted_{Root.type}"):
@@ -136,14 +172,20 @@ def sign(
     if save:
         json.dump(asdict(payload), save, indent=2)  # type: ignore
         console.print(f"Saved result to '{save.name}'")
+    elif signing_json_input_file:
+        with open("sign-payload.json", "w") as out_file:
+            json.dump(asdict(payload), out_file, indent=2)
 
-    console.print("\nSending signature")
-    task_id = send_payload(
-        settings,
-        URL.METADATA_SIGN.value,
-        asdict(payload),
-        "Metadata sign accepted.",
-        "Metadata sign",
-    )
-    task_status(task_id, settings, "Metadata sign status:")
-    console.print("\nMetadata Signed and sent to the API! 🔑\n")
+        console.print("Saved result to 'sign-payload.json'")
+
+    if not signing_json_input_file:
+        console.print("\nSending signature")
+        task_id = send_payload(
+            settings,
+            URL.METADATA_SIGN.value,
+            asdict(payload),
+            "Metadata sign accepted.",
+            "Metadata sign",
+        )
+        task_status(task_id, settings, "Metadata sign status:")
+        console.print("\nMetadata Signed and sent to the API! 🔑\n")
