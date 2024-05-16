@@ -37,7 +37,7 @@ class TestGenerateInteraction:
 
         assert (
             "Please select one of the available options"
-            not in test_result.output
+            not in test_result.stderr
         )
 
         assert test_result.exit_code == 1
@@ -86,7 +86,9 @@ class TestGenerateInteraction:
                 catch_exceptions=False,
             )
 
-            mock_keypair.called_once()
+            mock_keypair.assert_called_once_with(
+                password=password, filepath=filename
+            )
             assert test_result.exit_code == 0
             assert generate.load_key.calls == [
                 pretend.call(filename, key_type, password, "")
@@ -176,7 +178,7 @@ class TestGenerateInteraction:
             in test_result.output
         )
 
-        assert "Key creation aborted." in test_result.output
+        assert "Key creation aborted." in test_result.stderr
 
         # password not shown in output
         assert password not in test_result.output

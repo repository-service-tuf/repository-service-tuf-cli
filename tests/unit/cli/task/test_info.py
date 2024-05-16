@@ -54,4 +54,4 @@ class TestTaskInfoInteraction:
         )
 
         assert result.exit_code == 1
-        assert output_message in result.output
+        assert output_message in result.stderr

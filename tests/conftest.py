@@ -47,7 +47,7 @@ def test_context() -> Dict[str, Any]:
 
 @pytest.fixture
 def client() -> CliRunner:
-    runner = CliRunner()
+    runner = CliRunner(mix_stderr=False)
     return runner
 
 

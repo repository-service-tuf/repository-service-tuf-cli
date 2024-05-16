@@ -67,7 +67,7 @@ class TestCeremonyInteraction:
             obj=test_context,
             catch_exceptions=False,
         )
-        assert "Ceremony aborted." in test_result.output
+        assert "Ceremony aborted." in test_result.stderr
         assert test_result.exit_code == 1
 
     def test_ceremony_start_not_ready_load_the_keys(
@@ -83,7 +83,7 @@ class TestCeremonyInteraction:
             obj=test_context,
             catch_exceptions=False,
         )
-        assert "Ceremony aborted." in test_result.output
+        assert "Ceremony aborted." in test_result.stderr
         assert test_result.exit_code == 1
 
     def test_ceremony_problem_loading_priv_key_fix_and_continue(
@@ -674,8 +674,8 @@ class TestCeremonyOptions:
             catch_exceptions=False,
         )
 
-        assert test_result.exit_code == 1, test_result.output
-        assert "permission denied" in test_result.output
+        assert test_result.exit_code == 1, test_result.stderr
+        assert "permission denied" in test_result.stderr
 
     def test_ceremony_option_bootstrap(
         self, client, test_context, test_inputs, test_setup
@@ -753,8 +753,8 @@ class TestCeremonyOptions:
             catch_exceptions=False,
         )
 
-        assert test_result.exit_code == 1, test_result.output
-        assert "System LOCKED for bootstrap" in test_result.output
+        assert test_result.exit_code == 1, test_result.stderr
+        assert "System LOCKED for bootstrap" in test_result.stderr
         assert ceremony.bootstrap_status.calls == [
             pretend.call(test_context["settings"])
         ]
@@ -814,8 +814,8 @@ class TestCeremonyOptions:
             catch_exceptions=False,
         )
 
-        assert test_result.exit_code == 1, test_result.output
-        assert "Requires '--api-server'" in test_result.output
+        assert test_result.exit_code == 1, test_result.stderr
+        assert "Requires '--api-server'" in test_result.stderr
 
     def test_ceremony_option_upload_missing_bootstrap(
         self, client, test_context, test_inputs, test_setup
@@ -836,5 +836,5 @@ class TestCeremonyOptions:
             catch_exceptions=False,
         )
 
-        assert test_result.exit_code == 1, test_result.output
-        assert "Requires '-b/--bootstrap' option." in test_result.output
+        assert test_result.exit_code == 1, test_result.stderr
+        assert "Requires '-b/--bootstrap' option." in test_result.stderr

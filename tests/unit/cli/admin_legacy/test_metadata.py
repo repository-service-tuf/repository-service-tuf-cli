@@ -643,7 +643,7 @@ class TestMetadataUpdateOptions:
         )
         finish_msg = "Requires '--api-server' when using '--upload/-u'."
         assert result.exit_code == 1
-        assert finish_msg in result.output
+        assert finish_msg in result.stderr
 
     def test_metadata_update_passing_current_root(
         self, client, test_context, md_update_input, tmp_update_payload_path
@@ -825,8 +825,8 @@ class TestMetadataSign:
             input="\n".join(input_step),
             obj=test_context,
         )
-        assert test_result.exit_code == 1, test_result.output
-        assert "Interal Server Error" in test_result.output
+        assert test_result.exit_code == 1, test_result.stderr
+        assert "Interal Server Error" in test_result.stderr
         assert metadata.request_server.calls == [
             pretend.call(
                 "http://127.0.0.1",
@@ -854,8 +854,8 @@ class TestMetadataSign:
             input="\n".join(input_step),
             obj=test_context,
         )
-        assert test_result.exit_code == 1, test_result.output
-        assert "No data for you" in test_result.output
+        assert test_result.exit_code == 1, test_result.stderr
+        assert "No data for you" in test_result.stderr
         assert metadata.request_server.calls == [
             pretend.call(
                 "http://127.0.0.1",
@@ -882,8 +882,8 @@ class TestMetadataSign:
             input="\n".join(input_step),
             obj=test_context,
         )
-        assert test_result.exit_code == 1, test_result.output
-        assert "No metadata available for signing" in test_result.output
+        assert test_result.exit_code == 1, test_result.stderr
+        assert "No metadata available for signing" in test_result.stderr
         assert metadata.request_server.calls == [
             pretend.call(
                 "http://127.0.0.1",
@@ -1093,8 +1093,8 @@ class TestMetadataSign:
             input="\n".join(input_step),
             obj=test_context,
         )
-        assert test_result.exit_code == 1, test_result.output
-        assert "Loaded key is not 'Jimi Hendrix'" in test_result.output
+        assert test_result.exit_code == 1, test_result.stderr
+        assert "Loaded key is not 'Jimi Hendrix'" in test_result.stderr
         assert metadata.request_server.calls == [
             pretend.call(
                 "http://127.0.0.1",
@@ -1133,8 +1133,8 @@ class TestMetadataSign:
             input="\n".join(input_step),
             obj=test_context,
         )
-        assert test_result.exit_code == 1, test_result.output
-        assert "Problem signing the metadata" in test_result.output
+        assert test_result.exit_code == 1, test_result.stderr
+        assert "Problem signing the metadata" in test_result.stderr
         assert metadata.request_server.calls == [
             pretend.call(
                 "http://127.0.0.1",
