@@ -5,7 +5,7 @@ name = "pypi"
 
 [packages]
 rich-click = "*"
-securesystemslib = "*"
+securesystemslib = ">=0.31.0,<1.0.0"
 click = "*"
 rich = "*"
 auto-click-auto = "*"
