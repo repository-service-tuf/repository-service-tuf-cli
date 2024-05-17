@@ -243,7 +243,7 @@ class TestSignError:
         )
 
         assert test_result.exit_code == 1, test_result.output
-        assert "Previous root v1 needed to sign root v2" in test_result.output
+        assert "Previous root v1 needed to sign root v2" in test_result.stderr
         assert sign.request_server.calls == [
             pretend.call(
                 "http://127.0.0.1",
@@ -282,7 +282,7 @@ class TestSignError:
         )
 
         assert test_result.exit_code == 1, test_result.output
-        assert "Metadata already fully signed." in test_result.output
+        assert "Metadata already fully signed." in test_result.stderr
         assert sign.request_server.calls == [
             pretend.call(
                 "http://127.0.0.1",
@@ -361,7 +361,7 @@ class TestHelpers:
         assert result == input["metadata"]
 
     def test__get_pending_roles_provide_signing_input_no_metadata(self):
-        path = f"{_PAYLOADS / 'sign.json' }"
+        path = f"{_PAYLOADS / 'sign.json'}"
         with open(path) as f:
             input = json.load(f)
 
