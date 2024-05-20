@@ -47,3 +47,37 @@ class TestCeremony:
         assert [s["keyid"] for s in sigs_r] == [s["keyid"] for s in sigs_e]
         assert result.data == expected
         assert "Key already in use." in result.stdout
+
+    def test_ceremony_try_setting_root_keys_less_than_threshold(
+        self, ceremony_inputs, patch_getpass, patch_utcnow
+    ):
+        input_step1, _, input_step3, input_step4 = ceremony_inputs
+        input_step2 = [  # Configure Root Keys
+            "2",  # Please enter root threshold
+            "0",  # Please press 0 to add key, or remove key by entering its index  # noqa
+            f"{_PEMS / 'JH.pub'}",  # Please enter path to public key
+            "JimiHendrix's Key",  # Please enter key name
+            # Try continuing even though threshold is not reached.
+            "",  # Please press 0 to add key, or remove key by entering its index.  # noqa
+            "0",  # Please press 0 to add key, or remove key by entering its index. # noqa
+            f"{_PEMS / 'JJ.pub'}",  # Please enter path to public key
+            "JanisJoplin's Key",  # Please enter key name
+            "",  # Please press 0 to add key, or remove key by entering its index. Press enter to contiue  # noqa
+        ]
+        result = invoke_command(
+            ceremony.ceremony,
+            input_step1 + input_step2 + input_step3 + input_step4,
+            [],
+        )
+
+        with open(_PAYLOADS / "ceremony.json") as f:
+            expected = json.load(f)
+
+        sigs_r = result.data["metadata"]["root"].pop("signatures")
+        sigs_e = expected["metadata"]["root"].pop("signatures")
+
+        assert [s["keyid"] for s in sigs_r] == [s["keyid"] for s in sigs_e]
+        assert result.data == expected
+        # Asser that at least root_threshold number of public keys are added.
+        root_role = result.data["metadata"]["root"]["signed"]["roles"]["root"]
+        assert len(root_role["keyids"]) <= root_role["threshold"]

@@ -148,7 +148,7 @@ def ceremony_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
         "0",  # Please press 0 to add key, or remove key by entering its index  # noqa
         f"{_PEMS / 'JH.pub'}",  # Please enter path to public key
         "JimiHendrix's Key",  # Please enter key name
-        "0",  # Please press 0 to add key, or remove key by entering its index. Press enter to contiue  # noqa
+        "0",  # Please press 0 to add key, or remove key by entering its index.  # noqa
         f"{_PEMS / 'JJ.pub'}",  # Please enter path to public key
         "JanisJoplin's Key",  # Please enter key name
         "1",  # Please press 0 to add key, or remove key by entering its index. Press enter to contiue  # noqa
