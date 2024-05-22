@@ -38,11 +38,15 @@ _HELPERS = "repository_service_tuf.cli.admin.helpers"
 _PROMPT = "rich.console.Console.input"
 
 
-@pytest.fixture
-def test_context() -> Dict[str, Any]:
+def _create_test_context() -> Dict[str, Any]:
     setting_file = os.path.join(TemporaryDirectory().name, "test_settings.yml")
     test_settings = Dynaconf(settings_files=[setting_file])
     return {"settings": test_settings, "config": setting_file}
+
+
+@pytest.fixture
+def test_context() -> Dict[str, Any]:
+    return _create_test_context()
 
 
 @pytest.fixture
@@ -248,17 +252,23 @@ def ed25519_signer(ed25519_key):
     return CryptoSigner(private_key, ed25519_key)
 
 
-def invoke_command(client, cmd, inputs, args) -> Result:
+def invoke_command(
+    client, cmd, inputs, args, test_context=None, std_err_empty=True
+) -> Result:
     out_file_name = "out_file_.json"
+    context = _create_test_context() if test_context is None else test_context
     with client.isolated_filesystem():
         result_obj = client.invoke(
             cmd,
             args=args + ["-s", out_file_name],
             input="\n".join(inputs),
+            obj=context,
             catch_exceptions=False,
         )
 
-        with open(out_file_name) as f:
-            result_obj.data = json.load(f)
+        if std_err_empty:
+            assert result_obj.stderr == ""
+            with open(out_file_name) as f:
+                result_obj.data = json.load(f)
 
     return result_obj
