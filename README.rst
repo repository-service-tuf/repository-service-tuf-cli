@@ -2,8 +2,10 @@
 Repository Service for TUF Command Line Interface
 #################################################
 
-|Tests and Lint| |Coverage|
+|OpenSSF Scorecard| |Tests and Lint| |Coverage|
 
+.. |OpenSSF Scorecard| image:: https://api.scorecard.dev/projects/github.com/repository-service-tuf/repository-service-tuf-cli/badge
+  :target: https://scorecard.dev/viewer/?uri=github.com/repository-service-tuf/repository-service-tuf-cli
 .. |Tests and Lint| image:: https://github.com/repository-service-tuf/repository-service-tuf-cli/actions/workflows/ci.yml/badge.svg
   :target: https://github.com/repository-service-tuf/repository-service-tuf-cli/actions/workflows/ci.yml
 .. |Coverage| image:: https://codecov.io/gh/repository-service-tuf/repository-service-tuf-cli/branch/main/graph/badge.svg
