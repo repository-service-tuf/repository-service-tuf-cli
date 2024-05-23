@@ -3,6 +3,9 @@ metadata/
 rstuf-umbrella/
 payload.json
 metadata-update-payload.json
+ceremony-payload.json
+sign-payload.json
+update-payload.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
