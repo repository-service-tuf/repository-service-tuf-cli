@@ -14,9 +14,7 @@ from tests.conftest import _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 
 class TestSign:
-    def test_sign_with_previous_root(
-        self, client, test_context, patch_getpass
-    ):
+    def test_sign_with_previous_root(self, client, patch_getpass):
         inputs = [
             "http://127.0.0.1",  # API URL address
             "1",  # Please enter signing key index
@@ -46,7 +44,7 @@ class TestSign:
         sign.send_payload = pretend.call_recorder(lambda *a: "fake-taskid")
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
 
-        result = invoke_command(client, sign.sign, inputs, [], test_context)
+        result = invoke_command(client, sign.sign, inputs, [])
 
         with open(_PAYLOADS / "sign.json") as f:
             expected = json.load(f)
@@ -65,7 +63,7 @@ class TestSign:
         ]
         assert sign.send_payload.calls == [
             pretend.call(
-                test_context["settings"],
+                result.context["settings"],
                 URL.METADATA_SIGN.value,
                 {
                     "role": "root",
@@ -81,12 +79,12 @@ class TestSign:
         assert sign.task_status.calls == [
             pretend.call(
                 "fake-taskid",
-                test_context["settings"],
+                result.context["settings"],
                 "Metadata sign status:",
             )
         ]
 
-    def test_sign_bootstap_root(self, client, test_context, patch_getpass):
+    def test_sign_bootstap_root(self, client, patch_getpass):
         inputs = [
             "http://127.0.0.1",  # API URL address
             "1",  # Please enter signing key index
@@ -109,7 +107,7 @@ class TestSign:
         sign.send_payload = pretend.call_recorder(lambda *a: "fake-taskid")
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
 
-        result = invoke_command(client, sign.sign, inputs, [], test_context)
+        result = invoke_command(client, sign.sign, inputs, [])
 
         expected = {
             "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # noqa
@@ -128,7 +126,7 @@ class TestSign:
         ]
         assert sign.send_payload.calls == [
             pretend.call(
-                test_context["settings"],
+                result.context["settings"],
                 URL.METADATA_SIGN.value,
                 {
                     "role": "root",
@@ -144,7 +142,7 @@ class TestSign:
         assert sign.task_status.calls == [
             pretend.call(
                 "fake-taskid",
-                test_context["settings"],
+                result.context["settings"],
                 "Metadata sign status:",
             )
         ]
@@ -214,7 +212,7 @@ class TestSign:
 
 class TestSignError:
     def test_sign_with_previous_root_but_wrong_version(
-        self, client, test_context, patch_getpass
+        self, client, patch_getpass
     ):
         inputs = [
             "http://127.0.0.1",  # API URL address
@@ -238,9 +236,7 @@ class TestSignError:
         sign.request_server = pretend.call_recorder(
             lambda *a, **kw: fake_response
         )
-        test_result = invoke_command(
-            client, sign.sign, inputs, [], test_context, False
-        )
+        test_result = invoke_command(client, sign.sign, inputs, [], False)
 
         assert test_result.exit_code == 1, test_result.output
         assert "Previous root v1 needed to sign root v2" in test_result.stderr
@@ -252,9 +248,7 @@ class TestSignError:
             )
         ]
 
-    def test_sign_fully_signed_metadata(
-        self, client, test_context, patch_getpass
-    ):
+    def test_sign_fully_signed_metadata(self, client, patch_getpass):
         inputs = [
             "http://127.0.0.1",  # API URL address
             "1",  # Please enter signing key index
@@ -277,9 +271,7 @@ class TestSignError:
         sign.request_server = pretend.call_recorder(
             lambda *a, **kw: fake_response
         )
-        test_result = invoke_command(
-            client, sign.sign, inputs, [], test_context, False
-        )
+        test_result = invoke_command(client, sign.sign, inputs, [], False)
 
         assert test_result.exit_code == 1, test_result.output
         assert "Metadata already fully signed." in test_result.stderr
