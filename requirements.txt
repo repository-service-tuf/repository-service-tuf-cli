@@ -22,5 +22,5 @@ ruamel.yaml.clib==0.2.8; python_version < '3.13' and platform_python_implementat
 securesystemslib[crypto]==0.31.0; python_version ~= '3.8'
 sqlalchemy==2.0.30; python_version >= '3.7'
 tuf==4.0.0; python_version >= '3.8'
-typing-extensions==4.11.0; python_version >= '3.8'
+typing-extensions==4.12.0; python_version >= '3.8'
 urllib3==2.2.1; python_version >= '3.8'
