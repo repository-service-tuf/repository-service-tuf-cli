@@ -147,6 +147,12 @@ def task_status(
                     raise click.ClickException(
                         f"Failed: {state_response.text}"
                     )
+                elif state == "ERRORED":
+                    # If task.state is "ERRORED" it means there is an internal
+                    # RSTUF error and data contains error information.
+                    raise click.ClickException(
+                        f"Errored: {data["result"]["error"]}"
+                    )
 
             else:
                 raise click.ClickException(
