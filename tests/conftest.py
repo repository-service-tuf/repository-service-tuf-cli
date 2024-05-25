@@ -49,10 +49,13 @@ def test_context() -> Dict[str, Any]:
     return _create_test_context()
 
 
+def _create_client() -> CliRunner:
+    return CliRunner(mix_stderr=False)
+
+
 @pytest.fixture
 def client() -> CliRunner:
-    runner = CliRunner(mix_stderr=False)
-    return runner
+    return _create_client()
 
 
 @pytest.fixture
@@ -252,7 +255,8 @@ def ed25519_signer(ed25519_key):
     return CryptoSigner(private_key, ed25519_key)
 
 
-def invoke_command(client, cmd, inputs, args, std_err_empty=True) -> Result:
+def invoke_command(cmd, inputs, args, std_err_empty=True) -> Result:
+    client = _create_client()
     out_file_name = "out_file_.json"
     context = _create_test_context()
     with client.isolated_filesystem():
