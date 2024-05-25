@@ -4,8 +4,9 @@
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
+import beaupy  # type: ignore
 import click
 
 # Magic import to unbreak `load_pem_private_key` - pyca/cryptography#10315
@@ -137,19 +138,20 @@ class _MoreThan1Prompt(IntPrompt):
 
 def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
     """Prompt for path to private key and password, return Signer."""
-    path = Prompt.ask("Please enter path to encrypted private key")
+    name = public_key.unrecognized_fields.get(KEY_NAME_FIELD)
+    path = Prompt.ask(f"\nPlease enter path to encrypted private key '{name}'")
 
     with open(path, "rb") as f:
         private_pem = f.read()
 
-    password = click.prompt("Please enter password", hide_input=True)
+    password = click.prompt("\nPlease enter password", hide_input=True)
     private_key = load_pem_private_key(private_pem, password.encode())
     return CryptoSigner(private_key, public_key)
 
 
 def _load_key_from_file_prompt() -> SSlibKey:
     """Prompt for path to public key, return Key."""
-    path = Prompt.ask("Please enter path to public key")
+    path = Prompt.ask("\nPlease enter path to public key")
     with open(path, "rb") as f:
         public_pem = f.read()
 
@@ -171,7 +173,7 @@ def _load_key_prompt(root: Root) -> Optional[Key]:
 
     # Disallow re-adding a key even if it is for a different role.
     if key.keyid in root.keys:
-        console.print("Key already in use.")
+        console.print("\nKey already in use.", style="bold red")
         return None
 
     return key
@@ -189,7 +191,7 @@ def _key_name_prompt(root) -> str:
             k.unrecognized_fields.get(KEY_NAME_FIELD)
             for k in root.keys.values()
         ]:
-            console.print("Key name already in use.")
+            console.print("\nKey name already in use.", style="bold red")
             continue
 
         break
@@ -240,31 +242,19 @@ def _root_threshold_prompt() -> int:
     return _MoreThan1Prompt.ask("Please enter root threshold")
 
 
-def _choose_add_remove_skip_key_prompt(
-    key_count: int, allow_skip: bool
-) -> int:
-    """Prompt for key config user choice, return:
+def _select(options: list[str]) -> str:
+    return beaupy.select(options=options, cursor=">", cursor_style="cyan")
 
-    -1: skip (only if `allow_skip` is true)
-     0: add key
-     i: remove key by index (starts at 1!)
-    """
 
-    prompt = "Please press 0 to add key, or remove key by entering its index"
-    choices = [str(i) for i in range(key_count + 1)]
-    default: Any = ...  # no default
+def _select_key(keys: List[Key]) -> Key:
+    key_choices = {
+        key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid): key
+        for key in keys
+    }
+    sign_options = list(key_choices.keys())
+    choice = _select(sign_options)
 
-    if allow_skip:
-        prompt += ". Press enter to continue"
-        default = -1
-
-    return IntPrompt.ask(
-        prompt,
-        choices=choices,
-        default=default,
-        show_choices=False,
-        show_default=False,
-    )
+    return key_choices[choice]
 
 
 def _configure_root_keys_prompt(root: Root) -> None:
@@ -273,9 +263,9 @@ def _configure_root_keys_prompt(root: Root) -> None:
     - Print if and how many root keys are missing to meet the threshold
     - Print current root keys
     - Prompt for user choice to add or remove key, or to skip (exit)
-        - "skip" choice is only available, if threshold is met
+        - "continue" choice is only available, if threshold is met
         - "remove" choice is only available, if keys exist
-        - "add" choice is only shown, if "remove" or "skip" is available,
+        - "add" choice is only shown, if "remove" or "continue" is available,
           otherwise, we branch right into "add" dialog
 
     """
@@ -286,33 +276,39 @@ def _configure_root_keys_prompt(root: Root) -> None:
         missing = max(0, threshold - len(keys))
         _print_missing_key_info(threshold, missing)
 
-        # Prompt for choice unless user must add keys
+        # build the action choices
+        action_options = ["add", "remove"]
+        if not missing:
+            action_options.insert(0, "continue")
+
+        # prompt for user choice
         if not keys:
-            choice = 0
+            action = "add"
 
         else:
-            allow_skip = not missing
-            choice = _choose_add_remove_skip_key_prompt(len(keys), allow_skip)
+            action = _select(action_options)
 
-        # Apply choice
-        if choice == -1:  # skip
-            break
+        # apply choice
+        match action:
+            case "continue":
+                break
 
-        elif choice == 0:  # add
-            new_key = _load_key_prompt(root)
-            if not new_key:
-                continue
+            case "add":
+                new_key = _load_key_prompt(root)
+                if not new_key:
+                    continue
 
-            name = _key_name_prompt(root)
-            new_key.unrecognized_fields[KEY_NAME_FIELD] = name
-            root.add_key(new_key, Root.type)
-            console.print(f"Added root key '{name}'")
+                name = _key_name_prompt(root)
+                new_key.unrecognized_fields[KEY_NAME_FIELD] = name
+                root.add_key(new_key, Root.type)
+                console.print(f"Added root key '{name}'")
 
-        else:  # remove
-            key = keys[choice - 1]
-            name = key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)
-            root.revoke_key(key.keyid, Root.type)
-            console.print(f"Removed root key '{name}'")
+            case "remove":
+                console.print("\nSelect a key to remove:")
+                key = _select_key(keys)
+                name = key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)
+                root.revoke_key(key.keyid, Root.type)
+                console.print(f"Removed root key '{name}'")
 
 
 def _configure_online_key_prompt(root: Root) -> None:
@@ -348,30 +344,6 @@ def _configure_online_key_prompt(root: Root) -> None:
     console.print(f"Expected private key file name is: '{new_key.keyid}'")
 
 
-def _choose_signing_key_prompt(key_count: int, allow_skip: bool) -> int:
-    """Prompt for signing key user choice, return:
-
-    -1: skip (only if `allow_skip` is true)
-     i: signing key by index (starts at 1!)
-    """
-
-    prompt = "Please enter signing key index"
-    choices = [str(i) for i in range(1, key_count + 1)]
-    default: Any = ...  # no default
-
-    if allow_skip:
-        prompt += ", or press enter to continue"
-        default = -1
-
-    return IntPrompt.ask(
-        prompt,
-        choices=choices,
-        default=default,
-        show_choices=False,
-        show_default=False,
-    )
-
-
 def _add_signature_prompt(metadata: Metadata, key: Key) -> Signature:
     """Prompt for signing key and add signature to metadata until success."""
     while True:
@@ -405,17 +377,24 @@ def _add_root_signatures_prompt(
 
         results = _filter_root_verification_results(root_result)
         keys = _print_keys_for_signing(results)
+        key_choices = {
+            key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid): key
+            for key in keys
+        }
+        sign_options = list(key_choices.keys())
+        or_continue = ":"
+        if bool(root_result.signed):
+            or_continue = " or continue:"
+            sign_options.insert(0, "continue")
 
-        choice = _choose_signing_key_prompt(
-            len(keys), allow_skip=bool(root_result.signed)
-        )
-        if choice == -1:
+        console.print(f"\nSelect one current key to sign{or_continue}")
+        choice = _select(sign_options)
+
+        if choice == "continue":
+            console.print("\nSelect one current key for sign")
             break
 
-        else:
-            key = keys[choice - 1]
-
-        _add_signature_prompt(root_md, key)
+        _add_signature_prompt(root_md, key_choices[choice])
 
 
 ##############################################################################
@@ -492,14 +471,14 @@ def _print_keys_for_signing(
     The indexed output can be used to choose a signing key (1-based).
     """
     keys: list[Key] = []
-    idx = 0
     for result in results:
         m = result.missing
         s = "s" if m > 1 else ""
-        console.print(f"{m} signature{s} missing from any of:")
-        for idx, key in enumerate(result.unsigned.values(), start=idx + 1):
-            name = key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)
-            console.print(f"{idx}. {name}")
+        console.print(f"Info: {m} signature{s} missing from any of:")
+        for key in result.unsigned.values():
+            console.print(
+                f"- '{key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)}'"
+            )
             keys.append(key)
 
     return keys
@@ -514,12 +493,12 @@ def _print_root_keys(root: Root) -> list[Key]:
     keyids = root.roles[Root.type].keyids
 
     if keyids:
-        console.print("Current signing keys:")
+        console.print("\nCurrent signing keys:")
 
-    for idx, keyid in enumerate(keyids, start=1):
+    for keyid in keyids:
         key = root.get_key(keyid)
         name = key.unrecognized_fields.get(KEY_NAME_FIELD, keyid)
-        console.print(f"{idx}. {name}")
+        console.print(f"- '{name}'")
         keys.append(key)
 
     return keys
@@ -528,9 +507,13 @@ def _print_root_keys(root: Root) -> list[Key]:
 def _print_missing_key_info(threshold: int, missing: int) -> None:
     if missing:
         s = "s" if missing > 1 else ""
-        console.print(f"{missing} key{s} missing for threshold {threshold}.")
+        console.print(
+            f"\nInfo: {missing} key{s} missing for threshold {threshold}."
+        )
     else:
-        console.print(f"Threshold {threshold} is met, more keys can be added.")
+        console.print(
+            f"\nInfo: Threshold {threshold} is met, more keys can be added."
+        )
 
 
 def _warn_no_save():

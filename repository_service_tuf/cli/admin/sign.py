@@ -21,10 +21,10 @@ from repository_service_tuf.cli.admin import metadata
 from repository_service_tuf.cli.admin.helpers import (
     SignPayload,
     _add_signature_prompt,
-    _choose_signing_key_prompt,
     _filter_root_verification_results,
     _print_keys_for_signing,
     _print_root,
+    _select_key,
 )
 from repository_service_tuf.helpers.api_client import (
     URL,
@@ -139,8 +139,7 @@ def sign(
     console.print(Markdown("## Sign"))
     results = _filter_root_verification_results(root_result)
     keys = _print_keys_for_signing(results)
-    key_idx = _choose_signing_key_prompt(len(keys), allow_skip=False)
-    key = keys[key_idx - 1]
+    key = _select_key(keys)
     signature = _add_signature_prompt(root_md, key)
 
     ###########################################################################
