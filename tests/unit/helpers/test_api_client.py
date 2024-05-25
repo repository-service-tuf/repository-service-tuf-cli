@@ -301,6 +301,53 @@ class TestAPIClient:
             ),
         ]
 
+    def test_task_status_state_errored(self, test_context):
+        test_context["settings"].SERVER = "http://server"
+        err_str = "Internal RSTUF error"
+        fake_json = Mock()
+        fake_json.side_effect = [
+            {"data": {"state": "STARTED", "k": "v"}},
+            {"data": {"state": "RUNNING", "k": "v"}},
+            {
+                "data": {
+                    "state": "ERRORED",
+                    "k": "v",
+                    "result": {"error": err_str},
+                }
+            },
+        ]
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=200,
+                json=fake_json,
+                text="{'data': {'state': 'ERRORED', 'k': 'v'}",
+            )
+        )
+
+        with pytest.raises(api_client.click.ClickException) as err:
+            api_client.task_status(
+                "task_id", test_context["settings"], "Test task: "
+            )
+
+        assert f"Errored: {err_str}" in str(err)
+        assert api_client.request_server.calls == [
+            pretend.call(
+                "http://server",
+                "api/v1/task/?task_id=task_id",
+                api_client.Methods.GET,
+            ),
+            pretend.call(
+                "http://server",
+                "api/v1/task/?task_id=task_id",
+                api_client.Methods.GET,
+            ),
+            pretend.call(
+                "http://server",
+                "api/v1/task/?task_id=task_id",
+                api_client.Methods.GET,
+            ),
+        ]
+
     def test_task_status_without_state(self, test_context):
         test_context["settings"].SERVER = "http://server"
         api_client.request_server = pretend.call_recorder(
