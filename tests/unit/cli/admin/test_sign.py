@@ -309,7 +309,9 @@ class TestSignError:
             lambda *a, **kw: fake_response
         )
         args = ["--api-server", "http://127.0.0.1"]
-        test_result = invoke_command(sign.sign, inputs, args, False)
+        test_result = invoke_command(
+            sign.sign, inputs, args, std_err_empty=False
+        )
 
         assert test_result.exit_code == 1, test_result.output
         assert "Previous root v1 needed to sign root v2" in test_result.stderr
@@ -344,7 +346,9 @@ class TestSignError:
             lambda *a, **kw: fake_response
         )
         args = ["--api-server", "http://127.0.0.1"]
-        test_result = invoke_command(sign.sign, inputs, args, False)
+        test_result = invoke_command(
+            sign.sign, inputs, args, std_err_empty=False
+        )
 
         assert test_result.exit_code == 1, test_result.output
         assert "Metadata already fully signed." in test_result.stderr

@@ -255,10 +255,12 @@ def ed25519_signer(ed25519_key):
     return CryptoSigner(private_key, ed25519_key)
 
 
-def invoke_command(cmd, inputs, args, std_err_empty=True) -> Result:
+def invoke_command(
+    cmd, inputs, args, std_err_empty=True, test_context=None
+) -> Result:
     client = _create_client()
     out_file_name = "out_file_.json"
-    context = _create_test_context()
+    context = _create_test_context() if test_context is None else test_context
     with client.isolated_filesystem():
         result_obj = client.invoke(
             cmd,
