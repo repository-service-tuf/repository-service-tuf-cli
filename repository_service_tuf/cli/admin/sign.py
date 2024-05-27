@@ -86,7 +86,7 @@ DEFAULT_PATH = "sign-payload.json"
 )
 @click.pass_context
 def sign(
-    context: Any,
+    context: click.Context,
     api_server: Optional[str],
     save: Optional[click.File],
     signing_json_input_file: Optional[click.File],

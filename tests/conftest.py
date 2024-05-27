@@ -7,10 +7,11 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import pretend
 import pytest  # type: ignore
+from click import Command, Context
 from click.testing import CliRunner, Result  # type: ignore
 from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
@@ -293,7 +294,11 @@ def ed25519_signer(ed25519_key):
 
 
 def invoke_command(
-    cmd, inputs, args, std_err_empty=True, test_context=None
+    cmd: Command,
+    inputs: List[str],
+    args: List[str],
+    std_err_empty: bool = True,
+    test_context: Optional[Context] = None,
 ) -> Result:
     client = _create_client()
     out_file_name = "out_file_.json"
