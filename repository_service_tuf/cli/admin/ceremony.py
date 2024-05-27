@@ -2,8 +2,8 @@
 #
 # SPDX-License-Identifier: MIT
 
-import json
 from dataclasses import asdict
+from typing import Any, Optional
 
 import click
 from rich.markdown import Markdown
@@ -31,28 +31,43 @@ from repository_service_tuf.cli.admin.helpers import (
     _online_settings_prompt,
     _print_root,
     _root_threshold_prompt,
-    _warn_no_save,
 )
+from repository_service_tuf.helpers.api_client import (
+    URL,
+    bootstrap_status,
+    send_payload,
+    task_status,
+)
+from repository_service_tuf.helpers.tuf import save_payload
+
+DEFAULT_PATH = "ceremony-payload.json"
 
 
 @admin.command()  # type: ignore
-@click.option(
-    "--save",
-    "-s",
-    is_flag=False,
-    flag_value="ceremony-payload.json",
-    help="Write json result to FILENAME (default: 'ceremony-payload.json')",
+@click.argument(
+    "output",
+    required=False,
     type=click.File("w"),
 )
-def ceremony(save) -> None:
+@click.pass_context
+def ceremony(context: Any, output: Optional[click.File]) -> None:
     """Bootstrap Ceremony to create initial root metadata and RSTUF config."""
     console.print("\n", Markdown("# Metadata Bootstrap Tool"))
+    settings = context.obj["settings"]
+    # Running online ceremony requires connection to the server and
+    # confirmation that the server is indeed ready for bootstap.
+    if not settings.get("SERVER") and not output:
+        raise click.ClickException(
+            "Either '--api-sever'/'SERVER' in RSTUF config or 'OUTPUT' needed"
+        )
 
-    if not save:  # pragma: no cover
-        _warn_no_save()
+    if settings.get("SERVER"):
+        bs_status = bootstrap_status(settings)
+        if bs_status.get("data", {}).get("bootstrap") is True:
+            raise click.ClickException(f"{bs_status.get('message')}")
 
+    # Performs ceremony steps.
     root = Root()
-
     ###########################################################################
     # Configure online role settings
     console.print(Markdown("##  Online role settings"))
@@ -95,11 +110,22 @@ def ceremony(save) -> None:
     _add_root_signatures_prompt(root_md, None)
 
     ###########################################################################
-    # Dump payload
-    # TODO: post to API
-    if save:
-        metadatas = Metadatas(root_md.to_dict())
-        settings = Settings(roles)
-        payload = CeremonyPayload(settings, metadatas)
-        json.dump(asdict(payload), save, indent=2)
-        console.print(f"Saved result to '{save.name}'")
+    metadatas = Metadatas(root_md.to_dict())
+    roles_settings = Settings(roles)
+    bootstrap_payload = CeremonyPayload(roles_settings, metadatas)
+    # Dump payload when the user explicitly wants or doesn't send it to the API
+    if output:
+        path = output.name if output is not None else DEFAULT_PATH
+        save_payload(path, asdict(bootstrap_payload))
+        console.print(f"Saved result to '{path}'")
+
+    if settings.get("SERVER"):
+        task_id = send_payload(
+            settings=settings,
+            url=URL.BOOTSTRAP.value,
+            payload=asdict(bootstrap_payload),
+            expected_msg="Bootstrap accepted.",
+            command_name="Bootstrap",
+        )
+        task_status(task_id, settings, "Bootstrap status: ")
+        console.print("\nCeremony done. 🔐 🎉. Bootstrap completed.")
