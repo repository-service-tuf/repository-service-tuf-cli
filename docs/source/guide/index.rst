@@ -125,16 +125,22 @@ You can do the Ceremony offline. This means on a disconnected computer
 
     ❯ rstuf admin ceremony -h
 
-    Usage: rstuf admin ceremony [OPTIONS]
+    Usage: rstuf admin ceremony [OPTIONS] [OUTPUT]
 
     Bootstrap Ceremony to create initial root metadata and RSTUF config.
+    There are two ways to use this command:
+    1) online mode: running the ceremony and then bootstrapping an existing RSTUF deployment. This can be achieved by using the '--bootstrap' flag and the
+    '--api-server` option.
+    2) offline mode: running the ceremony and saving to a local file. This can be achieved by using the 'OUTPUT' argument.
+    Note: If '--bootstrap' option is not used and 'OUTPUT' argument is not provided, then the result of the ceremony will be saved at 'ceremony-payload.json`
+    and will overwrite a file if it exists.
 
-    ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ --save  -s  FILENAME  Write json result to FILENAME (default: 'ceremony-payload.json')                               │
-    │ --help  -h            Show this message and exit.                                                                    │
-    ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
-
-There are four steps in the ceremony.
+    ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────-╮
+    │ --bootstrap   -b           Bootstrap an existing Repository Service for TUF deployemnt. Requires '--api-server'.'  │
+    │ --api-server      TEXT     RSTUF API Server address.                                                               │
+    │ --timeout     -t  INTEGER  Timeout for RSTUF API calls.                                                            │
+    │ --help        -h           Show this message and exit.                                                             │
+    ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────-╯
 
 .. note::
 
