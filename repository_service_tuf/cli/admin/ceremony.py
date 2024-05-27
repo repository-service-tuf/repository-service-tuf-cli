@@ -59,6 +59,12 @@ DEFAULT_PATH = "ceremony-payload.json"
     help="RSTUF API Server address.",
     required=False,
 )
+@click.option(
+    "-t",
+    "--timeout",
+    help="Timeout for RSTUF API calls.",
+    default=300,
+)
 @click.argument(
     "output",
     required=False,
@@ -69,6 +75,7 @@ def ceremony(
     context: Any,
     bootstrap: Optional[bool],
     api_server: Optional[str],
+    timeout: int,
     output: Optional[click.File],
 ) -> None:
     """
@@ -156,7 +163,7 @@ def ceremony(
     ###########################################################################
     metadatas = Metadatas(root_md.to_dict())
     roles_settings = Settings(roles)
-    bootstrap_payload = CeremonyPayload(roles_settings, metadatas)
+    bootstrap_payload = CeremonyPayload(roles_settings, metadatas, timeout)
     # Dump payload when the user explicitly wants or doesn't send it to the API
     if output or not bootstrap:
         path = output.name if output is not None else DEFAULT_PATH
