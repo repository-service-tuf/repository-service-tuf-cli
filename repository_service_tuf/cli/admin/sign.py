@@ -166,8 +166,14 @@ def sign(
     signature = _add_signature_prompt(root_md, key)
 
     ###########################################################################
-    # Send payload to the API and save it locally
+    # Send payload to the API and/or save it locally
+
     payload = SignPayload(signature=signature.to_dict())
+    if save or not api_server:
+        path = save.name if save is not None else DEFAULT_PATH
+        save_payload(path, asdict(payload))
+        console.print(f"Saved result to '{path}'")
+
     if settings.get("SERVER"):
         console.print(f"\nSending signature to {settings.SERVER}")
         task_id = send_payload(
@@ -179,8 +185,3 @@ def sign(
         )
         task_status(task_id, settings, "Metadata sign status:")
         console.print("\nMetadata Signed and sent to the API! 🔑\n")
-
-    if save or not api_server:
-        path = save.name if save is not None else DEFAULT_PATH
-        save_payload(path, asdict(payload))
-        console.print(f"Saved result to '{path}'")
