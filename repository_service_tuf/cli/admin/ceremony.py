@@ -2,8 +2,8 @@
 #
 # SPDX-License-Identifier: MIT
 
-import json
 from dataclasses import asdict
+from typing import Any, Optional
 
 import click
 from rich.markdown import Markdown
@@ -31,28 +31,87 @@ from repository_service_tuf.cli.admin.helpers import (
     _online_settings_prompt,
     _print_root,
     _root_threshold_prompt,
-    _warn_no_save,
 )
+from repository_service_tuf.helpers.api_client import (
+    URL,
+    bootstrap_status,
+    send_payload,
+    task_status,
+)
+from repository_service_tuf.helpers.tuf import save_payload
+
+DEFAULT_PATH = "ceremony-payload.json"
 
 
 @admin.command()  # type: ignore
 @click.option(
-    "--save",
-    "-s",
-    is_flag=False,
-    flag_value="ceremony-payload.json",
-    help="Write json result to FILENAME (default: 'ceremony-payload.json')",
+    "-b",
+    "--bootstrap",
+    help=(
+        "Bootstrap an existing Repository Service for TUF deployemnt. Requires"
+        " '--api-server'.'"
+    ),
+    required=False,
+    is_flag=True,
+)
+@click.option(
+    "--api-server",
+    help="RSTUF API Server address.",
+    required=False,
+)
+@click.argument(
+    "output",
+    required=False,
     type=click.File("w"),
 )
-def ceremony(save) -> None:
-    """Bootstrap Ceremony to create initial root metadata and RSTUF config."""
+@click.pass_context
+def ceremony(
+    context: Any,
+    bootstrap: Optional[bool],
+    api_server: Optional[str],
+    output: Optional[click.File],
+) -> None:
+    """
+    Bootstrap Ceremony to create initial root metadata and RSTUF config.
+
+    There are two ways to use this command:
+
+    1) online mode: running the ceremony and then bootstrapping an existing
+    RSTUF deployment. This can be achieved by using the '--bootstrap' flag and
+    the '--api-server` option.
+
+    2) offline mode: running the ceremony and saving to a local file.
+    This can be achieved by using the 'OUTPUT' argument.
+
+    Note: If '--bootstrap' option is not used and 'OUTPUT' argument is not
+    provided, then the result of the ceremony will be saved at
+    'ceremony-payload.json` and will overwrite a file if it exists.
+    """
     console.print("\n", Markdown("# Metadata Bootstrap Tool"))
+    settings = context.obj["settings"]
+    if api_server and not bootstrap:
+        raise click.ClickException(
+            "Not allowed using '--api-server' without '--bootstrap'"
+        )
 
-    if not save:  # pragma: no cover
-        _warn_no_save()
+    # Options bootstrap require connection to the server and
+    # confirmation that the server is indeed ready for bootstap.
+    if bootstrap:
+        if api_server:
+            settings.SERVER = api_server
 
+        if settings.get("SERVER") is None:
+            raise click.ClickException(
+                "Requires '--api-server' "
+                "Example: --api-server https://api.rstuf.example.com"
+            )
+
+        bs_status = bootstrap_status(settings)
+        if bs_status.get("data", {}).get("bootstrap") is True:
+            raise click.ClickException(f"{bs_status.get('message')}")
+
+    # Performs ceremony steps.
     root = Root()
-
     ###########################################################################
     # Configure online role settings
     console.print(Markdown("##  Online role settings"))
@@ -95,11 +154,22 @@ def ceremony(save) -> None:
     _add_root_signatures_prompt(root_md, None)
 
     ###########################################################################
-    # Dump payload
-    # TODO: post to API
-    if save:
-        metadatas = Metadatas(root_md.to_dict())
-        settings = Settings(roles)
-        payload = CeremonyPayload(settings, metadatas)
-        json.dump(asdict(payload), save, indent=2)
-        console.print(f"Saved result to '{save.name}'")
+    metadatas = Metadatas(root_md.to_dict())
+    roles_settings = Settings(roles)
+    bootstrap_payload = CeremonyPayload(roles_settings, metadatas)
+    # Dump payload when the user explicitly wants or doesn't send it to the API
+    if output or not bootstrap:
+        path = output.name if output is not None else DEFAULT_PATH
+        save_payload(path, asdict(bootstrap_payload))
+        console.print(f"Saved result to '{path}'")
+
+    if bootstrap:
+        task_id = send_payload(
+            settings=settings,
+            url=URL.BOOTSTRAP.value,
+            payload=asdict(bootstrap_payload),
+            expected_msg="Bootstrap accepted.",
+            command_name="Bootstrap",
+        )
+        task_status(task_id, settings, "Bootstrap status: ")
+        console.print("\nCeremony done. 🔐 🎉. Bootstrap completed.")

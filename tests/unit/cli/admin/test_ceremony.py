@@ -1,5 +1,7 @@
 import json
 
+import pretend
+
 from repository_service_tuf.cli.admin import ceremony
 from tests.conftest import _PAYLOADS, _PEMS, invoke_command
 
@@ -21,6 +23,118 @@ class TestCeremony:
 
         assert [s["keyid"] for s in sigs_r] == [s["keyid"] for s in sigs_e]
         assert result.data == expected
+
+    def test_ceremony_api_server_no_bootstrap(self, ceremony_inputs):
+        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
+        args = ["--api-server", "http://localhost:80"]
+        result = invoke_command(
+            ceremony.ceremony,
+            input_step1 + input_step2 + input_step3 + input_step4,
+            args,
+            std_err_empty=False,
+        )
+
+        err = "Not allowed using '--api-server' without '--bootstrap'"
+        assert err in result.stderr
+
+    def test_ceremony_bootstrap_no_api_server_no_settings(
+        self, ceremony_inputs
+    ):
+        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
+        args = ["--bootstrap"]
+        result = invoke_command(
+            ceremony.ceremony,
+            input_step1 + input_step2 + input_step3 + input_step4,
+            args,
+            std_err_empty=False,
+        )
+
+        err = "Requires '--api-server'"
+        assert err in result.stderr
+
+    def test_ceremony_bootstrap_api_server_locked_for_bootstrap(
+        self, ceremony_inputs, monkeypatch
+    ):
+        status = {
+            "data": {"bootstrap": True},
+            "message": "Locked for bootstrap",
+        }
+        fake_bootstrap_status = pretend.call_recorder(lambda a: status)
+        monkeypatch.setattr(
+            ceremony, "bootstrap_status", fake_bootstrap_status
+        )
+        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
+        args = ["--bootstrap", "--api-server", "http://localhost"]
+
+        result = invoke_command(
+            ceremony.ceremony,
+            input_step1 + input_step2 + input_step3 + input_step4,
+            args,
+            std_err_empty=False,
+        )
+
+        assert status["message"] in result.stderr
+        assert fake_bootstrap_status.calls == [
+            pretend.call(result.context["settings"])
+        ]
+
+    def test_ceremony_bootstrap_bootstrap_no_api_server_with_settings_server(
+        self,
+        ceremony_inputs,
+        test_context,
+        monkeypatch,
+        patch_getpass,
+        patch_utcnow,
+    ):
+        server = "http://localhost:80"
+        test_context["settings"].SERVER = server
+        status = {"data": {"bootstrap": False}}
+        fake_bootstrap_status = pretend.call_recorder(lambda a: status)
+        monkeypatch.setattr(
+            ceremony, "bootstrap_status", fake_bootstrap_status
+        )
+        fake_task_id = "123ab"
+        fake_send_payload = pretend.call_recorder(lambda **kw: fake_task_id)
+        monkeypatch.setattr(ceremony, "send_payload", fake_send_payload)
+        fake_task_status = pretend.call_recorder(lambda *a: None)
+        monkeypatch.setattr(ceremony, "task_status", fake_task_status)
+        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
+        args = ["--bootstrap"]
+
+        invoke_command(
+            ceremony.ceremony,
+            input_step1 + input_step2 + input_step3 + input_step4,
+            args,
+            test_context=test_context,
+        )
+
+        with open(_PAYLOADS / "ceremony.json") as f:
+            expected = json.load(f)
+
+        assert fake_bootstrap_status.calls == [
+            pretend.call(test_context["settings"])
+        ]
+        call = fake_send_payload.calls[0]
+        # This particular key with id "50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3"  # noqa
+        # is ecdsa type meaning it's not deterministic. It's expected to be
+        # different than expected that's why just equalize them.
+        expected["metadata"]["root"]["signatures"][1]["sig"] = call.kwargs[
+            "payload"
+        ]["metadata"]["root"]["signatures"][1]["sig"]
+        assert fake_send_payload.calls == [
+            pretend.call(
+                settings=test_context["settings"],
+                url=ceremony.URL.BOOTSTRAP.value,
+                payload=expected,
+                expected_msg="Bootstrap accepted.",
+                command_name="Bootstrap",
+            )
+        ]
+        assert fake_task_status.calls == [
+            pretend.call(
+                fake_task_id, test_context["settings"], "Bootstrap status: "
+            )
+        ]
 
     def test_ceremony_online_key_one_of_root_keys(
         self, ceremony_inputs, patch_getpass, patch_utcnow

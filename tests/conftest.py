@@ -21,6 +21,7 @@ from dynaconf import Dynaconf
 from securesystemslib.signer import CryptoSigner, SSlibKey
 from tuf.api.metadata import Metadata, Root
 
+from repository_service_tuf.cli.admin.ceremony import ceremony
 from repository_service_tuf.helpers.tuf import (
     BootstrapSetup,
     MetadataInfo,
@@ -301,22 +302,28 @@ def invoke_command(
     test_context: Optional[Context] = None,
 ) -> Result:
     client = _create_client()
-    out_file_name = "out_file_.json"
+    out_file_name = "out_file.json"
+
+    if cmd.name == ceremony.name:
+        # For ceremony out file name is an argument.
+        out_args = [out_file_name]
+    else:
+        out_args = ["-s", out_file_name]
+
     context = _create_test_context() if test_context is None else test_context
     with client.isolated_filesystem():
         result_obj = client.invoke(
             cmd,
-            args=args + ["-s", out_file_name],
+            args=args + out_args,
             input="\n".join(inputs),
             obj=context,
             catch_exceptions=False,
         )
 
+        result_obj.context = context
         if std_err_empty:
             assert result_obj.stderr == ""
             with open(out_file_name) as f:
                 result_obj.data = json.load(f)
-
-            result_obj.context = context
 
     return result_obj
