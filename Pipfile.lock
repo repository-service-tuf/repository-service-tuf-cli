@@ -417,6 +417,9 @@
             "version": "==0.2.8"
         },
         "securesystemslib": {
+            "extras": [
+                "crypto"
+            ],
             "hashes": [
                 "sha256:549d70f7be6460252d016f03edc5ec0128fee56af55d2b863a5db14541ddbf18",
                 "sha256:c1594afbcd5db198ec90c487e1720154afb71743d9f4bccf3dfda84de650c478"
