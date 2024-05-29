@@ -281,8 +281,7 @@ class TestSign:
     def test_sign_no_api_server_and_no_file_input(self):
         result = invoke_command(sign.sign, [], [], std_err_empty=False)
 
-        err = "Either '--api-sever' or 'SIGNING_JSON_INPUT_FILE' must be set"
-        assert err in result.stderr
+        assert "Either '--api-sever'/'SERVER'" in result.stderr
 
 
 class TestSignError:

@@ -116,8 +116,10 @@ def sign(
     if api_server:
         settings.SERVER = api_server
     if settings.get("SERVER") is None and signing_json_input_file is None:
-        error = "Either '--api-sever' or 'SIGNING_JSON_INPUT_FILE' must be set"
-        raise click.ClickException(error)
+        raise click.ClickException(
+            "Either '--api-sever'/'SERVER' in RSTUF config or "
+            "'SIGNING_JSON_INPUT_FILE' must be set"
+        )
     ###########################################################################
     # Load roots
     pending_roles: Dict[str, Dict[str, Any]]
@@ -169,7 +171,7 @@ def sign(
     # Send payload to the API and/or save it locally
 
     payload = SignPayload(signature=signature.to_dict())
-    if save or not api_server:
+    if save or not settings.get("SERVER"):
         path = save.name if save is not None else DEFAULT_PATH
         save_payload(path, asdict(payload))
         console.print(f"Saved result to '{path}'")
