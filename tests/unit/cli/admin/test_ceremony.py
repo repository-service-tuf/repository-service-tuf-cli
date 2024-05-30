@@ -24,60 +24,6 @@ class TestCeremony:
         assert [s["keyid"] for s in sigs_r] == [s["keyid"] for s in sigs_e]
         assert result.data == expected
 
-    def test_ceremony_api_server_no_bootstrap(self, ceremony_inputs):
-        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
-        args = ["--api-server", "http://localhost:80"]
-        result = invoke_command(
-            ceremony.ceremony,
-            input_step1 + input_step2 + input_step3 + input_step4,
-            args,
-            std_err_empty=False,
-        )
-
-        err = "Not allowed using '--api-server' without '--bootstrap'"
-        assert err in result.stderr
-
-    def test_ceremony_bootstrap_no_api_server_no_settings(
-        self, ceremony_inputs
-    ):
-        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
-        args = ["--bootstrap"]
-        result = invoke_command(
-            ceremony.ceremony,
-            input_step1 + input_step2 + input_step3 + input_step4,
-            args,
-            std_err_empty=False,
-        )
-
-        err = "Requires '--api-server'"
-        assert err in result.stderr
-
-    def test_ceremony_bootstrap_api_server_locked_for_bootstrap(
-        self, ceremony_inputs, monkeypatch
-    ):
-        status = {
-            "data": {"bootstrap": True},
-            "message": "Locked for bootstrap",
-        }
-        fake_bootstrap_status = pretend.call_recorder(lambda a: status)
-        monkeypatch.setattr(
-            ceremony, "bootstrap_status", fake_bootstrap_status
-        )
-        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
-        args = ["--bootstrap", "--api-server", "http://localhost"]
-
-        result = invoke_command(
-            ceremony.ceremony,
-            input_step1 + input_step2 + input_step3 + input_step4,
-            args,
-            std_err_empty=False,
-        )
-
-        assert status["message"] in result.stderr
-        assert fake_bootstrap_status.calls == [
-            pretend.call(result.context["settings"])
-        ]
-
     def test_ceremony_threshold_less_than_2(
         self, ceremony_inputs, patch_getpass, patch_utcnow
     ):
@@ -325,3 +271,59 @@ class TestCeremony:
         # Asser that at least root_threshold number of public keys are added.
         root_role = result.data["metadata"]["root"]["signed"]["roles"]["root"]
         assert len(root_role["keyids"]) <= root_role["threshold"]
+
+
+class TestCeremonyError:
+    def test_ceremony_api_server_no_bootstrap(self, ceremony_inputs):
+        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
+        args = ["--api-server", "http://localhost:80"]
+        result = invoke_command(
+            ceremony.ceremony,
+            input_step1 + input_step2 + input_step3 + input_step4,
+            args,
+            std_err_empty=False,
+        )
+
+        err = "Not allowed using '--api-server' without '--bootstrap'"
+        assert err in result.stderr
+
+    def test_ceremony_bootstrap_no_api_server_no_settings(
+        self, ceremony_inputs
+    ):
+        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
+        args = ["--bootstrap"]
+        result = invoke_command(
+            ceremony.ceremony,
+            input_step1 + input_step2 + input_step3 + input_step4,
+            args,
+            std_err_empty=False,
+        )
+
+        err = "Requires '--api-server'"
+        assert err in result.stderr
+
+    def test_ceremony_bootstrap_api_server_locked_for_bootstrap(
+        self, ceremony_inputs, monkeypatch
+    ):
+        status = {
+            "data": {"bootstrap": True},
+            "message": "Locked for bootstrap",
+        }
+        fake_bootstrap_status = pretend.call_recorder(lambda a: status)
+        monkeypatch.setattr(
+            ceremony, "bootstrap_status", fake_bootstrap_status
+        )
+        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
+        args = ["--bootstrap", "--api-server", "http://localhost"]
+
+        result = invoke_command(
+            ceremony.ceremony,
+            input_step1 + input_step2 + input_step3 + input_step4,
+            args,
+            std_err_empty=False,
+        )
+
+        assert status["message"] in result.stderr
+        assert fake_bootstrap_status.calls == [
+            pretend.call(result.context["settings"])
+        ]
