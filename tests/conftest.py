@@ -49,10 +49,13 @@ def test_context() -> Dict[str, Any]:
     return _create_test_context()
 
 
+def _create_client() -> CliRunner:
+    return CliRunner(mix_stderr=False)
+
+
 @pytest.fixture
 def client() -> CliRunner:
-    runner = CliRunner(mix_stderr=False)
-    return runner
+    return _create_client()
 
 
 @pytest.fixture
@@ -253,8 +256,9 @@ def ed25519_signer(ed25519_key):
 
 
 def invoke_command(
-    client, cmd, inputs, args, test_context=None, std_err_empty=True
+    cmd, inputs, args, std_err_empty=True, test_context=None
 ) -> Result:
+    client = _create_client()
     out_file_name = "out_file_.json"
     context = _create_test_context() if test_context is None else test_context
     with client.isolated_filesystem():
@@ -270,5 +274,7 @@ def invoke_command(
             assert result_obj.stderr == ""
             with open(out_file_name) as f:
                 result_obj.data = json.load(f)
+
+            result_obj.context = context
 
     return result_obj

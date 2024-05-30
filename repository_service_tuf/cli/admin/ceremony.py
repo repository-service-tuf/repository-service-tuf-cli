@@ -48,7 +48,7 @@ def ceremony(save) -> None:
     """Bootstrap Ceremony to create initial root metadata and RSTUF config."""
     console.print("\n", Markdown("# Metadata Bootstrap Tool"))
 
-    if not save:
+    if not save:  # pragma: no cover
         _warn_no_save()
 
     root = Root()

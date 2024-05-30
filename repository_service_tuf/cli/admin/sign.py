@@ -8,7 +8,6 @@ from typing import Any, Dict, Optional
 
 import click
 from rich.markdown import Markdown
-from rich.prompt import Prompt
 from tuf.api.metadata import Metadata, Root
 
 # TODO: Should we use the global rstuf console exclusively? We do use it for
@@ -34,42 +33,36 @@ from repository_service_tuf.helpers.api_client import (
     send_payload,
     task_status,
 )
+from repository_service_tuf.helpers.tuf import save_payload
 
 
-def _get_pending_roles(
-    settings: Any,
-    api_server: Optional[str] = None,
-    signing_input: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Dict[str, Any]]:
-    """Get dictionary of pending roles for signing."""
-    data: Dict[str, Any]
-    if signing_input:
-        data = signing_input
-    else:
-        if api_server:
-            settings.SERVER = api_server
-
-        if settings.get("SERVER") is None:
-            api_server = Prompt.ask("\n[cyan]API[/] URL address")
-            settings.SERVER = api_server
-
-        response = request_server(
-            settings.SERVER, URL.METADATA_SIGN.value, Methods.GET
-        )
-        if response.status_code != 200:
-            raise click.ClickException(
-                f"Failed to fetch metadata for signing. Error: {response.text}"
-            )
-
-        data = response.json().get("data")
-        if data is None:
-            raise click.ClickException(response.text)
+def _parse_pending_data(pending_roles_resp: Dict[str, Any]) -> Dict[str, Any]:
+    data = pending_roles_resp.get("data")
+    if data is None:
+        error = "'data' field missing from api server response/file input"
+        raise click.ClickException(error)
 
     pending_roles: Dict[str, Dict[str, Any]] = data.get("metadata", {})
     if len(pending_roles) == 0:
         raise click.ClickException("No metadata available for signing")
 
     return pending_roles
+
+
+def _get_pending_roles(settings: Any) -> Dict[str, Dict[str, Any]]:
+    """Get dictionary of pending roles for signing."""
+    response = request_server(
+        settings.SERVER, URL.METADATA_SIGN.value, Methods.GET
+    )
+    if response.status_code != 200:
+        raise click.ClickException(
+            f"Failed to fetch metadata for signing. Error: {response.text}"
+        )
+
+    return _parse_pending_data(response.json())
+
+
+DEFAULT_PATH = "sign-payload.json"
 
 
 @metadata.command()  # type: ignore
@@ -82,8 +75,8 @@ def _get_pending_roles(
     "--save",
     "-s",
     is_flag=False,
-    flag_value="sign-payload.json",
-    help="Write json result to FILENAME (default: 'sign-payload.json')",
+    flag_value=DEFAULT_PATH,
+    help=f"Write json result to FILENAME (default: '{DEFAULT_PATH}')",
     type=click.File("w"),
 )
 @click.argument(
@@ -105,27 +98,35 @@ def sign(
 
     1) utilizing access to the RSTUF API and signing pending metadata roles
 
-    2) provide a local file using the SIGNING_JSON_INPUT_FILE argument
+    2) provide a local file using the 'SIGNING_JSON_INPUT_FILE' argument
+
+    The result of this command will be saved locally in a 'sign-payload.json'
+    file if '--api-server' is not provided or at custom path if '--save' is
+    used.
 
     When using method 2:
 
     - 'SIGNING_JSON_INPUT_FILE' must be a file containing the JSON response
     from the 'GET /api/v1/metadata/sign' API endpoint.
 
-    - '--api_server' will be ignored.
-
-    - the result of the command will be saved into the 'sign-payload.json' file
-    unless a different name is provided with '--save'.
+    - '--api-server' will be ignored.
     """
     console.print("\n", Markdown("# Metadata Signing Tool"))
+    settings = context.obj["settings"]
+    if api_server:
+        settings.SERVER = api_server
+    if settings.get("SERVER") is None and signing_json_input_file is None:
+        raise click.ClickException(
+            "Either '--api-sever'/'SERVER' in RSTUF config or "
+            "'SIGNING_JSON_INPUT_FILE' must be set"
+        )
     ###########################################################################
     # Load roots
-    settings = context.obj["settings"]
-    signing_input: Optional[Dict[str, Any]] = None
+    pending_roles: Dict[str, Dict[str, Any]]
     if signing_json_input_file:
-        signing_input = json.load(signing_json_input_file)  # type: ignore
-
-    pending_roles = _get_pending_roles(settings, api_server, signing_input)
+        pending_roles = _parse_pending_data(json.load(signing_json_input_file))  # type: ignore  # noqa
+    else:
+        pending_roles = _get_pending_roles(settings)
 
     root_md = Metadata[Root].from_dict(pending_roles[Root.type])
 
@@ -167,19 +168,16 @@ def sign(
     signature = _add_signature_prompt(root_md, key)
 
     ###########################################################################
-    # Send payload to the API and save it locally
+    # Send payload to the API and/or save it locally
+
     payload = SignPayload(signature=signature.to_dict())
-    if save:
-        json.dump(asdict(payload), save, indent=2)  # type: ignore
-        console.print(f"Saved result to '{save.name}'")
-    elif signing_json_input_file:
-        with open("sign-payload.json", "w") as out_file:
-            json.dump(asdict(payload), out_file, indent=2)
+    if save or not settings.get("SERVER"):
+        path = save.name if save is not None else DEFAULT_PATH
+        save_payload(path, asdict(payload))
+        console.print(f"Saved result to '{path}'")
 
-        console.print("Saved result to 'sign-payload.json'")
-
-    if not signing_json_input_file:
-        console.print("\nSending signature")
+    if settings.get("SERVER"):
+        console.print(f"\nSending signature to {settings.SERVER}")
         task_id = send_payload(
             settings,
             URL.METADATA_SIGN.value,

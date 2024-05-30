@@ -30,7 +30,7 @@ class TestMetadataUpdate:
         ]
         args = [f"{_ROOTS / 'v1.json'}"]
 
-        result = invoke_command(client, update.update, inputs, args)
+        result = invoke_command(update.update, inputs, args)
         with open(_PAYLOADS / "update.json") as f:
             expected = json.load(f)
 

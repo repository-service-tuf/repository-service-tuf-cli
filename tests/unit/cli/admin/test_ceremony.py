@@ -5,7 +5,7 @@ from tests.conftest import _PAYLOADS, _PEMS, invoke_command
 
 
 class TestCeremony:
-    def test_ceremony(self, client, patch_getpass, patch_utcnow):
+    def test_ceremony(self, patch_getpass, patch_utcnow):
         inputs = [
             "",  # Please enter days until expiry for timestamp role (1)
             "",  # Please enter days until expiry for snapshot role (1)
@@ -32,7 +32,7 @@ class TestCeremony:
             f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
         ]
 
-        result = invoke_command(client, ceremony.ceremony, inputs, [])
+        result = invoke_command(ceremony.ceremony, inputs, [])
 
         with open(_PAYLOADS / "ceremony.json") as f:
             expected = json.load(f)

@@ -5,7 +5,7 @@
 from repository_service_tuf.cli import click, rstuf
 
 
-@rstuf.group()  # type: ignore
+@rstuf.group()  # pragma: no cover  # type: ignore
 def key():
     """Cryptographic Key Commands"""
 
