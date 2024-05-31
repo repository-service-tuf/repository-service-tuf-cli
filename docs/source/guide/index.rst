@@ -91,19 +91,19 @@ It executes administrative commands to the Repository Service for TUF.
 
 .. code:: shell
 
-    ❯ rstuf admin
-
     Usage: rstuf admin [OPTIONS] COMMAND [ARGS]...
 
     Administrative Commands
 
-    ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ --help  -h    Show this message and exit.                                                                             │
-    ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+    ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --api-server      TEXT  URL to an RSTUF API.                                                                                                 │
+    │ --offline               Run command offline not communicating with RSTUF API. RSTUF SERVER configuration and '--api-server' will be ignored. │
+    │ --help        -h        Show this message and exit.                                                                                          │
+    ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
     ╭─ Commands ────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ ceremony                 Bootstrap Ceremony to create initial root metadata and RSTUF config.                         │
-    │ import-artifacts         Import artifacts to RSTUF from exported CSV file.                                            │
-    │ metadata                 Metadata management.                                                                         │
+    │ ceremony                     Bootstrap Ceremony to create initial root metadata and RSTUF config.                     │
+    │ import-artifacts             Import artifacts information from exported CSV file and send it to RSTUF API deployment. │
+    │ metadata                     Metadata management.                                                                     │
     ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 
@@ -128,19 +128,25 @@ You can do the Ceremony offline. This means on a disconnected computer
     Usage: rstuf admin ceremony [OPTIONS] [OUTPUT]
 
     Bootstrap Ceremony to create initial root metadata and RSTUF config.
-    There are two ways to use this command:
-    1) online mode: running the ceremony and then bootstrapping an existing RSTUF deployment. This can be achieved by using the '--bootstrap' flag and the
-    '--api-server` option.
-    2) offline mode: running the ceremony and saving to a local file. This can be achieved by using the 'OUTPUT' argument.
-    Note: If '--bootstrap' option is not used and 'OUTPUT' argument is not provided, then the result of the ceremony will be saved at 'ceremony-payload.json`
-    and will overwrite a file if it exists.
+    There are three ways to use this command:
 
-    ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────-╮
-    │ --bootstrap   -b           Bootstrap an existing Repository Service for TUF deployemnt. Requires '--api-server'.'  │
-    │ --api-server      TEXT     RSTUF API Server address.                                                               │
-    │ --timeout     -t  INTEGER  Timeout for RSTUF API calls.                                                            │
-    │ --help        -h           Show this message and exit.                                                             │
-    ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────-╯
+    1) online mode: running the ceremony and then bootstrapping an existing
+    RSTUF API deployment.
+    For this you need to use the '--api-server` admin option.
+
+    2) offline mode: running the ceremony and saving to a local file.
+    This can be done with the 'OUTPUT' argument and '--offline' admin option.
+    If  'OUTPUT' argument is not provided, then the result of the ceremony
+    will be saved at 'ceremony-payload.json`.
+
+    3) online mode + local result: run ceremony, bootstrap and save in a file.
+    This can be achieved using the '--api-server' admin option and the 'OUTPUT'
+    argument.
+
+    ╭─ Options ───────────────────────────────────────────────╮
+    │ --timeout  -t  INTEGER  Timeout for RSTUF API calls.    │
+    │ --help     -h           Show this message and exit.     │
+    ╰─────────────────────────────────────────────────────────╯
 
 .. note::
 
@@ -185,19 +191,26 @@ sign (``sign``)
     Usage: rstuf admin metadata sign [OPTIONS] [SIGNING_JSON_INPUT_FILE]
 
     Add one signature to root metadata.
-    There are two ways to use this command:
-    1) utilizing access to the RSTUF API and signing pending metadata roles
-    2) provide a local file using the SIGNING_JSON_INPUT_FILE argument
-    When using method 2:
-     - 'SIGNING_JSON_INPUT_FILE' must be a file containing the JSON response from the 'GET /api/v1/metadata/sign' API endpoint.
-     - '--api-server' will be ignored.
-     - the result of the command will be saved into the 'sign-payload.json' file unless a different name is provided with '--save'.
+    There are three ways to use this command:
 
-╭─ Options ────────────────────────────────────────────────────────────────────────────────╮
-│ --api-server      TEXT      URL to an RSTUF API.                                         │
-│ --save        -s  FILENAME  Write json result to FILENAME (default: 'sign-payload.json') │
-│ --help        -h            Show this message and exit.                                  │
-╰──────────────────────────────────────────────────────────────────────────────────────────╯
+    1) fetching pending roles from RSTUF API and sending result to RSTUF API.
+    This can be done with '--api-server' admin option set.
+
+    2) using local file as input and sending result to RSTUF API.
+    To do that the '--api-server' admin option and 'SIGNING_JSON_INPUT_FILE'
+    must be set.
+
+    3) using local file as input and saving result locally as a file.
+    For this use '--offline' admin option and 'SIGNING_JSON_INPUT_FILE'.
+    If '--save' is not used, will store result into 'sign-payload.json' file.
+
+    Note: 'SIGNING_JSON_INPUT_FILE' must be a file containing the JSON response
+    from the 'GET /api/v1/metadata/sign' RSTUF API endpoint.
+
+    ╭─ Options ────────────────────────────────────────────────────────────────────────────╮
+    │ --save  -s  FILENAME  Write json result to FILENAME (default: 'sign-payload.json')   │
+    │ --help  -h            Show this message and exit.                                    │
+    ╰──────────────────────────────────────────────────────────────────────────────────────╯
 
 
 
@@ -249,17 +262,22 @@ See the below CSV file example:
 
     ❯ rstuf admin import-artifacts -h
 
-     Usage: rstuf admin import-artifacts [OPTIONS]
+    Usage: rstuf admin import-artifacts [OPTIONS]
 
-     Import artifacts to RSTUF from exported CSV file.
+    Import artifacts information from exported CSV file and send it to RSTUF API deployment.
+    Note: there are two additional requirements for this command:
 
-╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│    --api-server                  TEXT  RSTUF API URL i.e.: http://127.0.0.1 .                                                                       │
-│ *  --db-uri                      TEXT  RSTUF DB URI. i.e.: postgresql://postgres:secret@127.0.0.1:5433 [required]                                   │
-│ *  --csv                         TEXT  CSV file to import. Multiple --csv parameters are allowed. See rstuf CLI guide for more details. [required]  │
-│    --skip-publish-artifacts            Skip publishing artifacts in TUF Metadata.                                                                   │
-│    --help                    -h        Show this message and exit.                                                                                  │
-╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+    1) sqlalchemy needs to be installed in order to use this command:
+    pip install repository-service-tuf[sqlalchemy,psycopg2]
+
+    2) '--api-server' admin option set
+
+    ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ *  --db-uri                      TEXT  RSTUF DB URI. i.e.: postgresql://postgres:secret@127.0.0.1:5433 [required]                                                             │
+    │ *  --csv                         TEXT  CSV file to import. Multiple --csv parameters are allowed. See rstuf CLI guide for more details. [required]                            │
+    │    --skip-publish-artifacts            Skip publishing artifacts in TUF Metadata.                                                                                             │
+    │    --help                    -h        Show this message and exit.                                                                                                            │
+    ╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
     ❯ rstuf admin import-artifacts --db-uri postgresql://postgres:secret@127.0.0.1:5433 --csv artifacts-1of2.csv --csv artifacts-2of2.csv --api-server http://127.0.0.1:80/
     Import status: Loading data from ../repository-service-tuf/tests/data/artifacts-1of2.csv
