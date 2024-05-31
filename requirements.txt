@@ -14,7 +14,7 @@ psycopg2==2.9.9; python_version >= '3.7'
 pycparser==2.22; python_version >= '3.8'
 pygments==2.18.0; python_version >= '3.8'
 pynacl==1.5.0; python_version >= '3.6'
-requests==2.32.2; python_version >= '3.8'
+requests==2.32.3; python_version >= '3.8'
 rich==13.7.1; python_full_version >= '3.7.0'
 rich-click==1.8.2; python_version >= '3.7'
 ruamel.yaml==0.18.6
