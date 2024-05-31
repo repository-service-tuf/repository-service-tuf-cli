@@ -21,7 +21,8 @@ from dynaconf import Dynaconf
 from securesystemslib.signer import CryptoSigner, SSlibKey
 from tuf.api.metadata import Metadata, Root
 
-from repository_service_tuf.cli.admin.ceremony import ceremony
+import repository_service_tuf.cli.admin.ceremony as ceremony
+from repository_service_tuf.cli.admin.import_artifacts import import_artifacts
 from repository_service_tuf.helpers.tuf import (
     BootstrapSetup,
     MetadataInfo,
@@ -40,15 +41,21 @@ _HELPERS = "repository_service_tuf.cli.admin.helpers"
 _PROMPT = "rich.console.Console.input"
 
 
-def _create_test_context() -> Dict[str, Any]:
+def _create_test_context(
+    api_url: Optional[str], offline: bool = False
+) -> Dict[str, Any]:
     setting_file = os.path.join(TemporaryDirectory().name, "test_settings.yml")
     test_settings = Dynaconf(settings_files=[setting_file])
+    test_settings.OFFLINE = offline
+    if api_url:
+        test_settings.SERVER = api_url
+
     return {"settings": test_settings, "config": setting_file}
 
 
 @pytest.fixture
 def test_context() -> Dict[str, Any]:
-    return _create_test_context()
+    return _create_test_context(None, False)
 
 
 def _create_client() -> CliRunner:
@@ -304,13 +311,30 @@ def invoke_command(
     client = _create_client()
     out_file_name = "out_file.json"
 
-    if cmd.name == ceremony.name:
+    if cmd.name == ceremony.ceremony.name:
+        out_file_name = ceremony.DEFAULT_PATH
         # For ceremony out file name is an argument.
         out_args = [out_file_name]
+    elif cmd.name == import_artifacts.name:
+        out_args = []
     else:
         out_args = ["-s", out_file_name]
 
-    context = _create_test_context() if test_context is None else test_context
+    api_url = None
+    if "--api-server" in args:
+        api_server_flag_index = args.index("--api-server")
+        api_url = args.pop(api_server_flag_index + 1)
+        args.remove("--api-server")
+
+    offline = False
+    if "--offline" in args:
+        args.remove("--offline")
+        offline = True
+
+    context = test_context
+    if test_context is None:
+        context = _create_test_context(api_url, offline)
+
     with client.isolated_filesystem():
         result_obj = client.invoke(
             cmd,
@@ -323,7 +347,10 @@ def invoke_command(
         result_obj.context = context
         if std_err_empty:
             assert result_obj.stderr == ""
-            with open(out_file_name) as f:
-                result_obj.data = json.load(f)
+            if len(out_args) > 0:
+                # There are commands that doesn't save a file like
+                # 'import_artifacts'. For them out_args is empty.
+                with open(out_file_name) as f:
+                    result_obj.data = json.load(f)
 
     return result_obj

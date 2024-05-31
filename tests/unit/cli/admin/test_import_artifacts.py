@@ -10,6 +10,7 @@ import pretend
 import pytest
 
 from repository_service_tuf.cli.admin import import_artifacts
+from tests.conftest import invoke_command
 
 
 class TestImportArtifactsFunctions:
@@ -256,11 +257,9 @@ class TestImportArtifactsFunctions:
 
 
 class TestImportArtifactsGroupCLI:
-    def test_import_artifacts(self, client, test_context):
+    def test_import_artifacts(self):
         # Required to properly mock functions imported inside import_artifacts
         import sqlalchemy
-
-        test_context["settings"].SERVER = "fake-server"
 
         import_artifacts.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": True}, "message": "some msg"}
@@ -293,7 +292,7 @@ class TestImportArtifactsGroupCLI:
             lambda *a: {"status": "SUCCESS"}
         )
 
-        options = [
+        args = [
             "--api-server",
             "http://127.0.0.1",
             "--db-uri",
@@ -303,13 +302,11 @@ class TestImportArtifactsGroupCLI:
             "--csv",
             "artifacts2of2.csv",
         ]
-        result = client.invoke(
-            import_artifacts.import_artifacts, options, obj=test_context
-        )
+        result = invoke_command(import_artifacts.import_artifacts, [], args)
         assert result.exit_code == 0, result.output
         assert "Finished." in result.output
         assert import_artifacts.bootstrap_status.calls == [
-            pretend.call(test_context["settings"])
+            pretend.call(result.context["settings"])
         ]
         assert import_artifacts._get_succinct_roles.calls == [
             pretend.call("http://127.0.0.1")
@@ -321,20 +318,18 @@ class TestImportArtifactsGroupCLI:
             pretend.call(csv_files=("artifacts1of2.csv", "artifacts2of2.csv"))
         ]
         assert import_artifacts.publish_artifacts.calls == [
-            pretend.call(test_context["settings"])
+            pretend.call(result.context["settings"])
         ]
         assert import_artifacts.task_status.calls == [
             pretend.call(
                 "fake_task_id",
-                test_context["settings"],
+                result.context["settings"],
                 "Import status: task ",
             )
         ]
 
-    def test_import_artifacts_no_api_server_config_no_param(
-        self, client, test_context
-    ):
-        options = [
+    def test_import_artifacts_no_api_server_config_no_param(self):
+        args = [
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
             "--csv",
@@ -342,19 +337,33 @@ class TestImportArtifactsGroupCLI:
             "--csv",
             "artifacts2of2.csv",
         ]
-        result = client.invoke(
-            import_artifacts.import_artifacts, options, obj=test_context
+        result = invoke_command(
+            import_artifacts.import_artifacts, [], args, std_err_empty=False
         )
         assert result.exit_code == 1, result.stderr
         assert "Requires '--api-server' " in result.stderr
 
-    def test_import_artifacts_skip_publish_artifacts(
-        self, client, test_context
-    ):
+    def test_import_artifacts_offline_mode_not_allowed(self):
+        args = [
+            "--offline",
+            "--db-uri",
+            "postgresql://postgres:secret@127.0.0.1:5433",
+            "--csv",
+            "artifacts1of2.csv",
+            "--csv",
+            "artifacts2of2.csv",
+        ]
+        result = invoke_command(
+            import_artifacts.import_artifacts, [], args, std_err_empty=False
+        )
+        assert result.exit_code == 1, result.stderr
+        err_msg = "Option '--offline' is not allowed for this command"
+        assert err_msg in result.stderr
+        assert result.context["settings"].OFFLINE is True
+
+    def test_import_artifacts_skip_publish_artifacts(self):
         # Required to properly mock functions imported inside import_artifacts
         import sqlalchemy
-
-        test_context["settings"].SERVER = "fake-server"
 
         import_artifacts.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": True}, "message": "some msg"}
@@ -387,7 +396,7 @@ class TestImportArtifactsGroupCLI:
             lambda *a: {"status": "SUCCESS"}
         )
 
-        options = [
+        args = [
             "--api-server",
             "http://127.0.0.1",
             "--db-uri",
@@ -398,14 +407,12 @@ class TestImportArtifactsGroupCLI:
             "artifacts2of2.csv",
             "--skip-publish-artifacts",
         ]
-        result = client.invoke(
-            import_artifacts.import_artifacts, options, obj=test_context
-        )
+        result = invoke_command(import_artifacts.import_artifacts, [], args)
         assert result.exit_code == 0, result.output
         assert "Finished." in result.output
         assert "No artifacts published" in result.output
         assert import_artifacts.bootstrap_status.calls == [
-            pretend.call(test_context["settings"])
+            pretend.call(result.context["settings"])
         ]
         assert import_artifacts._get_succinct_roles.calls == [
             pretend.call("http://127.0.0.1")
@@ -419,9 +426,7 @@ class TestImportArtifactsGroupCLI:
         assert import_artifacts.publish_artifacts.calls == []
         assert import_artifacts.task_status.calls == []
 
-    def test_import_artifacts_sqlalchemy_import_fails(
-        self, client, test_context
-    ):
+    def test_import_artifacts_sqlalchemy_import_fails(self):
         import builtins
 
         real_import = builtins.__import__
@@ -436,30 +441,26 @@ class TestImportArtifactsGroupCLI:
 
         builtins.__import__ = fake_import
 
-        test_context["settings"].SERVER = "fake-server"
-        options = ["--api-server", "", "--db-uri", "", "--csv", ""]
-        result = client.invoke(
-            import_artifacts.import_artifacts, options, obj=test_context
-        )
+        args = ["--api-server", "", "--db-uri", "", "--csv", ""]
+        with pytest.raises(ModuleNotFoundError) as exc:
+            invoke_command(
+                import_artifacts.import_artifacts,
+                [],
+                args,
+                std_err_empty=False,
+            )
 
         # Return the original import to not cause other exceptions.
         builtins.__import__ = real_import
+        assert "pip install repository-service-tuf[sqlalchemy" in str(exc)
 
-        assert result.exit_code == 1
-        assert isinstance(result.exception, ModuleNotFoundError)
-        exc_msg = result.exception.msg
-        assert "pip install repository-service-tuf[sqlalchemy" in exc_msg
-
-    def test_import_artifacts_bootstrap_check_failed(
-        self, client, test_context
-    ):
-        test_context["settings"].SERVER = "fake-server"
+    def test_import_artifacts_bootstrap_check_failed(self):
 
         import_artifacts.bootstrap_status = pretend.raiser(
             import_artifacts.click.ClickException("Server ERROR")
         )
 
-        options = [
+        args = [
             "--api-server",
             "http://127.0.0.1",
             "--db-uri",
@@ -470,20 +471,19 @@ class TestImportArtifactsGroupCLI:
             "artifacts2of2.csv",
         ]
 
-        result = client.invoke(
-            import_artifacts.import_artifacts, options, obj=test_context
+        result = invoke_command(
+            import_artifacts.import_artifacts, [], args, std_err_empty=False
         )
         assert result.exit_code == 1
         assert "Server ERROR" in result.stderr, result.stderr
 
-    def test_import_artifacts_without_bootstrap(self, client, test_context):
-        test_context["settings"].SERVER = "fake-server"
+    def test_import_artifacts_without_bootstrap(self):
 
         import_artifacts.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": False}, "message": "some msg"}
         )
 
-        options = [
+        args = [
             "--api-server",
             "http://127.0.0.1",
             "--db-uri",
@@ -493,8 +493,8 @@ class TestImportArtifactsGroupCLI:
             "--csv",
             "artifacts2of2.csv",
         ]
-        result = client.invoke(
-            import_artifacts.import_artifacts, options, obj=test_context
+        result = invoke_command(
+            import_artifacts.import_artifacts, [], args, std_err_empty=False
         )
         assert result.exit_code == 1, result.stderr
         assert (
@@ -502,5 +502,5 @@ class TestImportArtifactsGroupCLI:
             in result.stderr
         )
         assert import_artifacts.bootstrap_status.calls == [
-            pretend.call(test_context["settings"])
+            pretend.call(result.context["settings"])
         ]

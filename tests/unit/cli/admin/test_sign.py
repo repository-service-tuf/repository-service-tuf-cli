@@ -15,6 +15,7 @@ from tests.conftest import _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 class TestSign:
     def test_sign_with_previous_root(self, patch_getpass):
+        """Testing case 1 '--api-server' set."""
         inputs = [
             "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
@@ -42,7 +43,7 @@ class TestSign:
         assert (
             result.data["signature"]["keyid"] == expected["signature"]["keyid"]
         )
-        assert "Metadata Signed and sent to the API! 🔑" in result.output
+        assert "Metadata Signed and sent to the API! 🔑" in result.stdout
         assert sign.request_server.calls == [
             pretend.call(
                 "http://127.0.0.1",
@@ -74,6 +75,7 @@ class TestSign:
         ]
 
     def test_sign_bootstap_root(self, patch_getpass):
+        """Testing case 1 '--api-server' set."""
         inputs = [
             "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
@@ -105,7 +107,7 @@ class TestSign:
 
         assert result.data["role"] == "root"
         assert result.data["signature"]["keyid"] == expected["keyid"]
-        assert "Metadata Signed and sent to the API! 🔑" in result.output
+        assert "Metadata Signed and sent to the API! 🔑" in result.stdout
         assert sign.request_server.calls == [
             pretend.call(
                 "http://127.0.0.1",
@@ -165,11 +167,12 @@ class TestSign:
         assert result.data["role"] == "root"
         assert result.data["signature"]["keyid"] == expected["keyid"]
         assert result.data["signature"]["sig"] == expected["sig"]
-        assert f"Saved result to '{custom_path}'" in result.output
+        assert f"Saved result to '{custom_path}'" in result.stdout
 
-    def test_sign_local_file_no_save_option_given(
+    def test_sign_local_file_no_save_option_given_but_offline_mode(
         self, client, test_context, patch_getpass
     ):
+        """Testing case 3 '--offline' and 'SIGNING_JSON_INPUT_FILE' set"""
         inputs = [
             "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
@@ -177,6 +180,7 @@ class TestSign:
 
         args = [f"{_PAYLOADS / 'sign_pending_roles.json'}"]
         default_path = "sign-payload.json"
+        test_context["settings"].OFFLINE = True
         with client.isolated_filesystem():
             result = client.invoke(
                 sign.sign,
@@ -197,11 +201,10 @@ class TestSign:
         assert result.data["role"] == "root"
         assert result.data["signature"]["keyid"] == expected["keyid"]
         assert result.data["signature"]["sig"] == expected["sig"]
-        assert f"Saved result to '{default_path}'" in result.output
+        assert f"Saved result to '{default_path}'" in result.stdout
 
-    def test_sign_bootstap_root_with_file_input_with_api_server(
-        self, patch_getpass
-    ):
+    def test_sign_with_file_input_and_api_server_set(self, patch_getpass):
+        """Testing case 2 '--api-server' and 'SIGNING_JSON_INPUT_FILE' set."""
         inputs = [
             "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
@@ -220,7 +223,7 @@ class TestSign:
 
         assert result.data["role"] == "root"
         assert result.data["signature"]["keyid"] == expected["keyid"]
-        assert "Metadata Signed and sent to the API! 🔑" in result.output
+        assert "Metadata Signed and sent to the API! 🔑" in result.stdout
         assert sign.send_payload.calls == [
             pretend.call(
                 result.context["settings"],
@@ -243,40 +246,6 @@ class TestSign:
                 "Metadata sign status:",
             )
         ]
-
-    def test_sign_bootstap_root_with_file_input_no_api_server_no_save(
-        self, client, patch_getpass, test_context
-    ):
-        inputs = [
-            "1",  # Please enter signing key index
-            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-        ]
-
-        sign_input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
-        args = [sign_input_path]
-
-        with client.isolated_filesystem():
-            result = client.invoke(
-                sign.sign,
-                args=args,
-                input="\n".join(inputs),
-                obj=test_context,
-                catch_exceptions=False,
-            )
-
-            assert result.stderr == ""
-            with open(sign.DEFAULT_PATH) as f:
-                result.data = json.load(f)
-
-        expected = {
-            "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # noqa
-            "sig": "828a659bc34972504b9dab16bc44818b8a7d49ffee2a9021df6a6be4dd3b7a026d1f890b952303d1cf32dda90fbdf60e9fcfeb5f0af6498f0f55cad31c750a02",  # noqa
-        }
-
-        assert result.data["role"] == "root"
-        assert result.data["signature"]["keyid"] == expected["keyid"]
-        assert "Metadata Signed and sent to the API! 🔑" not in result.output
-        assert f"Saved result to {sign.DEFAULT_PATH}"
 
     def test_sign_no_api_server_and_no_file_input(self):
         result = invoke_command(sign.sign, [], [], std_err_empty=False)
@@ -312,7 +281,7 @@ class TestSignError:
             sign.sign, inputs, args, std_err_empty=False
         )
 
-        assert test_result.exit_code == 1, test_result.output
+        assert test_result.exit_code == 1, test_result.stdout
         assert "Previous root v1 needed to sign root v2" in test_result.stderr
         assert sign.request_server.calls == [
             pretend.call(
@@ -349,7 +318,7 @@ class TestSignError:
             sign.sign, inputs, args, std_err_empty=False
         )
 
-        assert test_result.exit_code == 1, test_result.output
+        assert test_result.exit_code == 1, test_result.stdout
         assert "Metadata already fully signed." in test_result.stderr
         assert sign.request_server.calls == [
             pretend.call(

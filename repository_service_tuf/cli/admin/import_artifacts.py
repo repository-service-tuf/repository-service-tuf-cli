@@ -124,11 +124,6 @@ def _get_succinct_roles(api_server: str) -> SuccinctRoles:
 
 @admin.command()  # type: ignore
 @click.option(
-    "--api-server",
-    required=False,
-    help="RSTUF API URL i.e.: http://127.0.0.1 .",
-)
-@click.option(
     "--db-uri",
     required=True,
     help="RSTUF DB URI. i.e.: postgresql://postgres:secret@127.0.0.1:5433",
@@ -150,15 +145,22 @@ def _get_succinct_roles(api_server: str) -> SuccinctRoles:
 @click.pass_context
 def import_artifacts(
     context: Any,
-    api_server: str,
     db_uri: str,
     csv: List[str],
     skip_publish_artifacts: bool,
 ):
     """
-    Import artifacts to RSTUF from exported CSV file.\n
-    Note: sqlalchemy needs to be installed in order to use this command.\n
+    Import artifacts information from exported CSV file and send it to RSTUF
+    API deployment.
+
+    \b
+    Note: there are two additional requirements for this command:
+    \b
+    1) sqlalchemy needs to be installed in order to use this command:
     pip install repository-service-tuf[sqlalchemy,psycopg2]
+
+    \b
+    2) '--api-server' admin option set
     """
 
     # SQLAlchemy is an optional dependency and is required only for users who
@@ -171,8 +173,10 @@ def import_artifacts(
             "pip install repository-service-tuf[sqlalchemy,psycopg2]"
         )
     settings = context.obj["settings"]
-    if api_server:
-        settings.SERVER = api_server
+    if settings.OFFLINE:
+        raise click.ClickException(
+            "Option '--offline' is not allowed for this command"
+        )
 
     if settings.get("SERVER") is None:
         raise click.ClickException(
@@ -188,7 +192,7 @@ def import_artifacts(
         )
 
     # load all required infrastructure
-    succinct_roles = _get_succinct_roles(api_server)
+    succinct_roles = _get_succinct_roles(settings.SERVER)
     engine = create_engine(f"{db_uri}")
     db_metadata = MetaData()
     db_client: Connection = engine.connect()

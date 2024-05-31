@@ -45,21 +45,6 @@ DEFAULT_PATH = "ceremony-payload.json"
 
 @admin.command()  # type: ignore
 @click.option(
-    "-b",
-    "--bootstrap",
-    help=(
-        "Bootstrap an existing Repository Service for TUF deployemnt. Requires"
-        " '--api-server'.'"
-    ),
-    required=False,
-    is_flag=True,
-)
-@click.option(
-    "--api-server",
-    help="RSTUF API Server address.",
-    required=False,
-)
-@click.option(
     "-t",
     "--timeout",
     help="Timeout for RSTUF API calls.",
@@ -71,48 +56,33 @@ DEFAULT_PATH = "ceremony-payload.json"
     type=click.File("w"),
 )
 @click.pass_context
-def ceremony(
-    context: Any,
-    bootstrap: Optional[bool],
-    api_server: Optional[str],
-    timeout: int,
-    output: Optional[click.File],
-) -> None:
-    """
-    Bootstrap Ceremony to create initial root metadata and RSTUF config.
+def ceremony(context: Any, timeout: int, output: Optional[click.File]) -> None:
+    """Bootstrap Ceremony to create initial root metadata and RSTUF config.
 
-    There are two ways to use this command:
+    \b
+    There are three ways to use this command:
 
+    \b
     1) online mode: running the ceremony and then bootstrapping an existing
-    RSTUF deployment. This can be achieved by using the '--bootstrap' flag and
-    the '--api-server` option.
+    RSTUF API deployment.
+    For this you need to use the '--api-server` admin option.
 
+    \b
     2) offline mode: running the ceremony and saving to a local file.
-    This can be achieved by using the 'OUTPUT' argument.
+    This can be done with the 'OUTPUT' argument and '--offline' admin option.
+    If  'OUTPUT' argument is not provided, then the result of the ceremony
+    will be saved at 'ceremony-payload.json`.
 
-    Note: If '--bootstrap' option is not used and 'OUTPUT' argument is not
-    provided, then the result of the ceremony will be saved at
-    'ceremony-payload.json` and will overwrite a file if it exists.
+    \b
+    3) online mode + local result: run ceremony, bootstrap and save in a file.
+    This can be achieved using the '--api-server' admin option and the 'OUTPUT'
+    argument.
     """
     console.print("\n", Markdown("# Metadata Bootstrap Tool"))
     settings = context.obj["settings"]
-    if api_server and not bootstrap:
-        raise click.ClickException(
-            "Not allowed using '--api-server' without '--bootstrap'"
-        )
-
-    # Options bootstrap require connection to the server and
+    # Running online ceremony requires connection to the server and
     # confirmation that the server is indeed ready for bootstap.
-    if bootstrap:
-        if api_server:
-            settings.SERVER = api_server
-
-        if settings.get("SERVER") is None:
-            raise click.ClickException(
-                "Requires '--api-server' "
-                "Example: --api-server https://api.rstuf.example.com"
-            )
-
+    if settings.get("SERVER") and not settings.OFFLINE:
         bs_status = bootstrap_status(settings)
         if bs_status.get("data", {}).get("bootstrap") is True:
             raise click.ClickException(f"{bs_status.get('message')}")
@@ -165,12 +135,12 @@ def ceremony(
     roles_settings = Settings(roles)
     bootstrap_payload = CeremonyPayload(roles_settings, metadatas, timeout)
     # Dump payload when the user explicitly wants or doesn't send it to the API
-    if output or not bootstrap:
+    if output or settings.OFFLINE:
         path = output.name if output is not None else DEFAULT_PATH
         save_payload(path, asdict(bootstrap_payload))
         console.print(f"Saved result to '{path}'")
 
-    if bootstrap:
+    if settings.get("SERVER") and not settings.OFFLINE:
         task_id = send_payload(
             settings=settings,
             url=URL.BOOTSTRAP.value,
