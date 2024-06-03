@@ -1,6 +1,6 @@
 -i https://pypi.org/simple
 auto-click-auto==0.1.4; python_version >= '3.7' and python_version < '4.0'
-certifi==2024.2.2; python_version >= '3.6'
+certifi==2024.6.2; python_version >= '3.6'
 cffi==1.16.0; python_version >= '3.8'
 charset-normalizer==3.3.2; python_full_version >= '3.7.0'
 click==8.1.7; python_version >= '3.7'
@@ -22,5 +22,5 @@ ruamel.yaml.clib==0.2.8; python_version < '3.13' and platform_python_implementat
 securesystemslib[crypto]==0.31.0; python_version ~= '3.8'
 sqlalchemy==2.0.30; python_version >= '3.7'
 tuf==4.0.0; python_version >= '3.8'
-typing-extensions==4.12.0; python_version >= '3.8'
+typing-extensions==4.12.1; python_version >= '3.8'
 urllib3==2.2.1; python_version >= '3.8'
