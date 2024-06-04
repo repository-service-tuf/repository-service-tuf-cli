@@ -16,7 +16,13 @@ from cryptography.hazmat.primitives.serialization import (
 )
 from rich.prompt import Confirm, IntPrompt, InvalidResponse, Prompt
 from rich.table import Table
-from securesystemslib.signer import CryptoSigner, Key, Signature, SSlibKey
+from securesystemslib.signer import (
+    CryptoSigner,
+    Key,
+    Signature,
+    SSlibKey,
+    VaultSigner,
+)
 from tuf.api.metadata import (
     Metadata,
     Root,
@@ -148,6 +154,15 @@ def _load_key_from_file_prompt() -> Tuple[str, SSlibKey]:
     key = SSlibKey.from_crypto(crypto)
     uri = f"fn:{key.keyid}"
 
+    return uri, key
+
+
+def _load_key_from_hv_prompt() -> Tuple[str, SSlibKey]:
+    """Prompt for HashiCorp Vault key name, return signer uri and Key."""
+    # TODO: Inform user that they need to configure VAULT_ADDR and VAULT_TOKEN
+    hv_key_name = Prompt.ask("Please enter HashiCorp Vault key name")
+
+    uri, key = VaultSigner.import_(hv_key_name)
     return uri, key
 
 
