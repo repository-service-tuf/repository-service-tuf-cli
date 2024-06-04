@@ -166,7 +166,7 @@ def _load_key_from_hv_prompt() -> Tuple[str, SSlibKey]:
     return uri, key
 
 
-def _load_key_prompt(root: Root) -> Optional[Key]:
+def _load_offline_key_prompt(root: Root) -> Optional[Key]:
     """Prompt and return Key, or None on error or if key is already loaded."""
     try:
         _, key = _load_key_from_file_prompt()
@@ -179,6 +179,42 @@ def _load_key_prompt(root: Root) -> Optional[Key]:
     if key.keyid in root.keys:
         console.print("Key already in use.")
         return None
+
+    return key
+
+
+def _load_online_key_prompt(root: Root) -> Optional[Key]:
+    """Prompt and return Key, or None on error or if key is already loaded."""
+
+    console.print(" 1. File")
+    console.print(" 2. HashiCorp Vault")
+    choice = IntPrompt.ask(
+        "Please select online key type",
+        choices=["1", "2"],
+        default=...,  # no default
+        show_choices=False,
+        show_default=False,
+    )
+    try:
+        if choice == 1:
+            uri, key = _load_key_from_file_prompt()
+
+        elif choice == 2:
+            uri, key = _load_key_from_hv_prompt()
+
+        else:
+            raise ValueError("invalid choice")  # unreachable
+
+    except Exception as e:
+        console.print(f"Cannot load key: {e}")
+        return None
+
+    # Disallow re-adding a key even if it is for a different role.
+    if key.keyid in root.keys:
+        console.print("Key already in use.")
+        return None
+
+    key.unrecognized_fields[KEY_URI_FIELD] = uri
 
     return key
 
@@ -306,7 +342,7 @@ def _configure_root_keys_prompt(root: Root) -> None:
             break
 
         elif choice == 0:  # add
-            new_key = _load_key_prompt(root)
+            new_key = _load_offline_key_prompt(root)
             if not new_key:
                 continue
 
@@ -337,14 +373,11 @@ def _configure_online_key_prompt(root: Root) -> None:
             return
 
     while True:
-        if new_key := _load_key_prompt(root):
+        if new_key := _load_online_key_prompt(root):
             break
 
     name = _key_name_prompt(root)
     new_key.unrecognized_fields[KEY_NAME_FIELD] = name
-
-    uri = f"fn:{new_key.keyid}"
-    new_key.unrecognized_fields[KEY_URI_FIELD] = uri
 
     for role_name in ONLINE_ROLE_NAMES:
         if current_key:
