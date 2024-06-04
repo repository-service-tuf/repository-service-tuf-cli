@@ -137,8 +137,8 @@ def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
     return CryptoSigner(private_key, public_key)
 
 
-def _load_key_from_file_prompt() -> SSlibKey:
-    """Prompt for path to public key, return Key."""
+def _load_key_from_file_prompt() -> Tuple[str, SSlibKey]:
+    """Prompt for path to public key, return signer uri and Key."""
     path = Prompt.ask("Please enter path to public key")
     with open(path, "rb") as f:
         public_pem = f.read()
@@ -146,14 +146,15 @@ def _load_key_from_file_prompt() -> SSlibKey:
     crypto = load_pem_public_key(public_pem)
 
     key = SSlibKey.from_crypto(crypto)
+    uri = f"fn:{key.keyid}"
 
-    return key
+    return uri, key
 
 
 def _load_key_prompt(root: Root) -> Optional[Key]:
     """Prompt and return Key, or None on error or if key is already loaded."""
     try:
-        key = _load_key_from_file_prompt()
+        _, key = _load_key_from_file_prompt()
 
     except (OSError, ValueError) as e:
         console.print(f"Cannot load key: {e}")
