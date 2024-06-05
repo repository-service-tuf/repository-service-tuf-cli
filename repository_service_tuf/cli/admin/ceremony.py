@@ -44,21 +44,23 @@ DEFAULT_PATH = "ceremony-payload.json"
 
 
 @admin.command()  # type: ignore
-@click.argument(
-    "output",
-    required=False,
+@click.option(
+    "--out",
+    is_flag=False,
+    flag_value=DEFAULT_PATH,
+    help=f"Write output json result to FILENAME (default: '{DEFAULT_PATH}')",
     type=click.File("w"),
 )
 @click.pass_context
-def ceremony(context: Any, output: Optional[click.File]) -> None:
+def ceremony(context: Any, out: Optional[click.File]) -> None:
     """Bootstrap Ceremony to create initial root metadata and RSTUF config."""
     console.print("\n", Markdown("# Metadata Bootstrap Tool"))
     settings = context.obj["settings"]
     # Running online ceremony requires connection to the server and
     # confirmation that the server is indeed ready for bootstap.
-    if not settings.get("SERVER") and not output:
+    if not settings.get("SERVER") and not out:
         raise click.ClickException(
-            "Either '--api-sever'/'SERVER' in RSTUF config or 'OUTPUT' needed"
+            "Either '--api-sever'/'SERVER' in RSTUF config or '--out' needed"
         )
 
     if settings.get("SERVER"):
@@ -114,10 +116,9 @@ def ceremony(context: Any, output: Optional[click.File]) -> None:
     roles_settings = Settings(roles)
     bootstrap_payload = CeremonyPayload(roles_settings, metadatas)
     # Dump payload when the user explicitly wants or doesn't send it to the API
-    if output:
-        path = output.name if output is not None else DEFAULT_PATH
-        save_payload(path, asdict(bootstrap_payload))
-        console.print(f"Saved result to '{path}'")
+    if out:
+        save_payload(out.name, asdict(bootstrap_payload))
+        console.print(f"Saved result to '{out.name}'")
 
     if settings.get("SERVER"):
         task_id = send_payload(

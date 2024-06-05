@@ -67,11 +67,10 @@ DEFAULT_PATH = "sign-payload.json"
 
 @metadata.command()  # type: ignore
 @click.option(
-    "--save",
-    "-s",
+    "--out",
     is_flag=False,
     flag_value=DEFAULT_PATH,
-    help=f"Write json result to FILENAME (default: '{DEFAULT_PATH}')",
+    help=f"Write output json result to FILENAME (default: '{DEFAULT_PATH}')",
     type=click.File("w"),
 )
 @click.argument(
@@ -82,7 +81,7 @@ DEFAULT_PATH = "sign-payload.json"
 @click.pass_context
 def sign(
     context: click.Context,
-    save: Optional[click.File],
+    out: Optional[click.File],
     signing_json_input_file: Optional[click.File],
 ) -> None:
     """Add one signature to root metadata."""
@@ -144,10 +143,9 @@ def sign(
     # Send payload to the API and/or save it locally
 
     payload = SignPayload(signature=signature.to_dict())
-    if save:
-        path = save.name if save is not None else DEFAULT_PATH
-        save_payload(path, asdict(payload))
-        console.print(f"Saved result to '{path}'")
+    if out:
+        save_payload(out.name, asdict(payload))
+        console.print(f"Saved result to '{out.name}'")
 
     if settings.get("SERVER"):
         console.print(f"\nSending signature to {settings.SERVER}")

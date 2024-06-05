@@ -136,7 +136,7 @@ class TestSign:
             )
         ]
 
-    def test_sign_local_file_input_and_custom_save(
+    def test_sign_local_file_input_and_custom_out(
         self, client, test_context, patch_getpass
     ):
         inputs = [
@@ -149,7 +149,7 @@ class TestSign:
         with client.isolated_filesystem():
             result = client.invoke(
                 sign.sign,
-                args=args + ["-s", custom_path],
+                args=args + ["--out", custom_path],
                 input="\n".join(inputs),
                 obj=test_context,
                 catch_exceptions=False,

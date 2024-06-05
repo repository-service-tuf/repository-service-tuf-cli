@@ -7,7 +7,7 @@ from tests.conftest import _PAYLOADS, _PEMS, invoke_command
 
 
 class TestCeremony:
-    def test_ceremony_with_custom_output(
+    def test_ceremony_with_custom_out(
         self,
         ceremony_inputs,
         client,
@@ -20,7 +20,7 @@ class TestCeremony:
         with client.isolated_filesystem():
             result = client.invoke(
                 ceremony.ceremony,
-                args=[custom_path],
+                args=["--out", custom_path],
                 input="\n".join(
                     input_step1 + input_step2 + input_step3 + input_step4
                 ),
@@ -38,7 +38,6 @@ class TestCeremony:
 
         assert [s["keyid"] for s in sigs_r] == [s["keyid"] for s in sigs_e]
         assert result.data == expected
-        assert f"Saved result to '{custom_path}'" in result.stdout
 
     def test_ceremony_threshold_less_than_2(
         self, ceremony_inputs, patch_getpass, patch_utcnow
@@ -163,7 +162,7 @@ class TestCeremony:
         ]
         assert "Ceremony done. 🔐 🎉. Bootstrap completed." in result.stdout
 
-    def test_ceremony_api_server_with_output_argument(
+    def test_ceremony_api_server_with_out_option(
         self,
         ceremony_inputs,
         monkeypatch,
@@ -189,7 +188,7 @@ class TestCeremony:
         with client.isolated_filesystem():
             result = client.invoke(
                 ceremony.ceremony,
-                args=[custom_path],
+                args=["--out", custom_path],
                 input="\n".join(
                     input_step1 + input_step2 + input_step3 + input_step4
                 ),
@@ -298,6 +297,22 @@ class TestCeremony:
 
 
 class TestCeremonyError:
+    def test_ceremony_no_api_server_and_no_output_option(
+        self, client, test_context, ceremony_inputs
+    ):
+        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
+        result = client.invoke(
+            ceremony.ceremony,
+            args=[],
+            input="\n".join(
+                input_step1 + input_step2 + input_step3 + input_step4
+            ),
+            obj=test_context,
+            catch_exceptions=False,
+        )
+
+        assert "Either '--api-sever'/'SERVER'" in result.stderr
+
     def test_ceremony_bootstrap_api_server_locked_for_bootstrap(
         self, ceremony_inputs, monkeypatch
     ):

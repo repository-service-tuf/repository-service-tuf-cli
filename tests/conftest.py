@@ -21,8 +21,8 @@ from dynaconf import Dynaconf
 from securesystemslib.signer import CryptoSigner, SSlibKey
 from tuf.api.metadata import Metadata, Root
 
-import repository_service_tuf.cli.admin.ceremony as ceremony
 from repository_service_tuf.cli.admin.import_artifacts import import_artifacts
+from repository_service_tuf.cli.admin.update import update
 from repository_service_tuf.helpers.tuf import (
     BootstrapSetup,
     MetadataInfo,
@@ -308,14 +308,12 @@ def invoke_command(
     client = _create_client()
     out_file_name = "out_file.json"
 
-    if cmd.name == ceremony.ceremony.name:
-        out_file_name = ceremony.DEFAULT_PATH
-        # For ceremony out file name is an argument.
-        out_args = [out_file_name]
-    elif cmd.name == import_artifacts.name:
+    if cmd.name == import_artifacts.name:
         out_args = []
-    else:
+    elif cmd.name == update.name:
         out_args = ["-s", out_file_name]
+    else:
+        out_args = ["--out", out_file_name]
 
     api_url = None
     if "--api-server" in args:
