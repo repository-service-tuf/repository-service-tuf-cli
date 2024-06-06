@@ -136,7 +136,7 @@ class TestSign:
             )
         ]
 
-    def test_sign_local_file_input_and_custom_out(
+    def test_sign_input_option_and_custom_out(
         self, client, test_context, patch_getpass
     ):
         inputs = [
@@ -144,7 +144,7 @@ class TestSign:
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
 
-        args = [f"{_PAYLOADS / 'sign_pending_roles.json'}"]
+        args = ["--in", f"{_PAYLOADS / 'sign_pending_roles.json'}"]
         custom_path = "custom_sign_path.json"
         with client.isolated_filesystem():
             result = client.invoke(
@@ -167,7 +167,7 @@ class TestSign:
         assert result.data["signature"]["sig"] == expected["sig"]
         assert f"Saved result to '{custom_path}'" in result.stdout
 
-    def test_sign_with_file_input_and_api_server_set(self, patch_getpass):
+    def test_sign_with_input_option_and_api_server_set(self, patch_getpass):
         inputs = [
             "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
@@ -176,7 +176,7 @@ class TestSign:
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
         sign_input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
         api_server = "http://localhost:80"
-        args = ["--api-server", api_server, sign_input_path]
+        args = ["--api-server", api_server, "--in", sign_input_path]
         result = invoke_command(sign.sign, inputs, args)
 
         expected = {
@@ -210,7 +210,7 @@ class TestSign:
             )
         ]
 
-    def test_sign_no_api_server_and_no_file_input(self):
+    def test_sign_no_api_server_and_no_input_option(self):
         result = invoke_command(sign.sign, [], [], std_err_empty=False)
 
         assert "Either '--api-sever'/'SERVER'" in result.stderr

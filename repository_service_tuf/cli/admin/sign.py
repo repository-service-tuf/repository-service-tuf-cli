@@ -67,36 +67,41 @@ DEFAULT_PATH = "sign-payload.json"
 
 @metadata.command()  # type: ignore
 @click.option(
+    "--in",
+    "input",
+    help=(
+        "Input ile containing the JSON response from the "
+        "'GET /api/v1/metadata/sign' RSTUF API endpoint."
+    ),
+    type=click.File("r"),
+    required=False,
+)
+@click.option(
     "--out",
     is_flag=False,
     flag_value=DEFAULT_PATH,
     help=f"Write output json result to FILENAME (default: '{DEFAULT_PATH}')",
     type=click.File("w"),
-)
-@click.argument(
-    "signing_json_input_file",
     required=False,
-    type=click.File("rb"),
 )
 @click.pass_context
 def sign(
     context: click.Context,
+    input: Optional[click.File],
     out: Optional[click.File],
-    signing_json_input_file: Optional[click.File],
 ) -> None:
     """Add one signature to root metadata."""
     console.print("\n", Markdown("# Metadata Signing Tool"))
     settings = context.obj["settings"]
-    if settings.get("SERVER") is None and signing_json_input_file is None:
+    if settings.get("SERVER") is None and input is None:
         raise click.ClickException(
-            "Either '--api-sever'/'SERVER' in RSTUF config or "
-            "'SIGNING_JSON_INPUT_FILE' must be set"
+            "Either '--api-sever'/'SERVER' in RSTUF config or '--in' needed"
         )
     ###########################################################################
     # Load roots
     pending_roles: Dict[str, Dict[str, Any]]
-    if signing_json_input_file:
-        pending_roles = _parse_pending_data(json.load(signing_json_input_file))  # type: ignore  # noqa
+    if input:
+        pending_roles = _parse_pending_data(json.load(input))  # type: ignore
     else:
         pending_roles = _get_pending_roles(settings)
 
