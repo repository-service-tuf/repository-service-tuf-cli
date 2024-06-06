@@ -126,9 +126,7 @@ class _PositiveIntPrompt(IntPrompt):
 
 
 class _MoreThan1Prompt(IntPrompt):
-    validate_error_message = (
-        "[prompt.invalid]Please enter a positive number above 1"
-    )
+    validate_error_message = "[prompt.invalid]Please enter threshold above 1"
 
     def process_response(self, value: str) -> int:
         return_value: int = super().process_response(value)

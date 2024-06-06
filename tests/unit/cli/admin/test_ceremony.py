@@ -56,7 +56,7 @@ class TestCeremony:
 
         assert [s["keyid"] for s in sigs_r] == [s["keyid"] for s in sigs_e]
         assert result.data == expected
-        assert "Please enter a positive number above 1" in result.stdout
+        assert "Please enter threshold above 1" in result.stdout
 
     def test_ceremony_non_positive_expiration(
         self, ceremony_inputs, patch_getpass, patch_utcnow
