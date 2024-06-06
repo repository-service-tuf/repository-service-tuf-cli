@@ -70,7 +70,7 @@ DEFAULT_PATH = "sign-payload.json"
     "--in",
     "input",
     help=(
-        "Input ile containing the JSON response from the "
+        "Input file containing the JSON response from the "
         "'GET /api/v1/metadata/sign' RSTUF API endpoint."
     ),
     type=click.File("r"),
@@ -80,7 +80,7 @@ DEFAULT_PATH = "sign-payload.json"
     "--out",
     is_flag=False,
     flag_value=DEFAULT_PATH,
-    help=f"Write output json result to FILENAME (default: '{DEFAULT_PATH}')",
+    help=f"Write output JSON result to FILENAME (default: '{DEFAULT_PATH}')",
     type=click.File("w"),
     required=False,
 )
