@@ -119,9 +119,10 @@ class TestCeremony:
         self, ceremony_inputs, patch_getpass, patch_utcnow
     ):
         input_step1, _, input_step3, input_step4 = ceremony_inputs
+        # After setting one key we are trying to continue with pressing "enter"
+        # This wouldn't work as threshold is 2 and its required to set 2 keys.
         input_step2 = [  # Configure Root Keys
             "2",  # Please enter root threshold
-            "0",  # Please press 0 to add key, or remove key by entering its index  # noqa
             f"{_PEMS / 'JH.pub'}",  # Please enter path to public key
             "JimiHendrix's Key",  # Please enter key name
             # Try continuing even though threshold is not reached.
@@ -147,4 +148,4 @@ class TestCeremony:
         assert result.data == expected
         # Asser that at least root_threshold number of public keys are added.
         root_role = result.data["metadata"]["root"]["signed"]["roles"]["root"]
-        assert len(root_role["keyids"]) <= root_role["threshold"]
+        assert len(root_role["keyids"]) == root_role["threshold"]
