@@ -125,6 +125,16 @@ class _PositiveIntPrompt(IntPrompt):
         return return_value
 
 
+class _MoreThan1Prompt(IntPrompt):
+    validate_error_message = "[prompt.invalid]Please enter threshold above 1"
+
+    def process_response(self, value: str) -> int:
+        return_value: int = super().process_response(value)
+        if return_value < 2:
+            raise InvalidResponse(self.validate_error_message)
+        return return_value
+
+
 def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
     """Prompt for path to private key and password, return Signer."""
     path = Prompt.ask("Please enter path to encrypted private key")
@@ -227,8 +237,7 @@ def _online_settings_prompt() -> _OnlineSettings:
 
 
 def _root_threshold_prompt() -> int:
-    # TODO: validate default threshold policy?
-    return _PositiveIntPrompt.ask("Please enter root threshold")
+    return _MoreThan1Prompt.ask("Please enter root threshold")
 
 
 def _choose_add_remove_skip_key_prompt(

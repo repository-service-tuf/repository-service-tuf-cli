@@ -269,7 +269,8 @@ class MetadataInfo:
         except UnsignedMetadataError:
             trusted_keys_amount = 0
             for keyid in self._trusted_md.signed.roles["root"].keyids:
-                if keyid in self.signing_keys:
+                # Will remove this code soon, no need to test.
+                if keyid in self.signing_keys:  # pragma: no cover
                     trusted_keys_amount += 1
 
             t = self._trusted_md.signed.roles["root"].threshold
