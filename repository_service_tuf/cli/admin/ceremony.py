@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
+import json
 from dataclasses import asdict
 from typing import Any, Optional
 
@@ -38,7 +39,6 @@ from repository_service_tuf.helpers.api_client import (
     send_payload,
     task_status,
 )
-from repository_service_tuf.helpers.tuf import save_payload
 
 DEFAULT_PATH = "ceremony-payload.json"
 
@@ -117,7 +117,7 @@ def ceremony(context: Any, out: Optional[click.File]) -> None:
     bootstrap_payload = CeremonyPayload(roles_settings, metadatas)
     # Dump payload when the user explicitly wants or doesn't send it to the API
     if out:
-        save_payload(out.name, asdict(bootstrap_payload))
+        json.dump(asdict(bootstrap_payload), out, indent=2)  # type: ignore
         console.print(f"Saved result to '{out.name}'")
 
     if settings.get("SERVER"):

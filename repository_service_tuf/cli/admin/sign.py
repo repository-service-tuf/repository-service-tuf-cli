@@ -33,7 +33,6 @@ from repository_service_tuf.helpers.api_client import (
     send_payload,
     task_status,
 )
-from repository_service_tuf.helpers.tuf import save_payload
 
 
 def _parse_pending_data(pending_roles_resp: Dict[str, Any]) -> Dict[str, Any]:
@@ -149,7 +148,7 @@ def sign(
 
     payload = SignPayload(signature=signature.to_dict())
     if out:
-        save_payload(out.name, asdict(payload))
+        json.dump(asdict(payload), out, indent=2)  # type: ignore
         console.print(f"Saved result to '{out.name}'")
 
     if settings.get("SERVER"):
