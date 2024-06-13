@@ -22,6 +22,11 @@ from securesystemslib.signer import CryptoSigner, SSlibKey
 from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.cli.admin.import_artifacts import import_artifacts
+from repository_service_tuf.cli.admin.send.bootstrap import (
+    bootstrap as send_bootstrap,
+)
+from repository_service_tuf.cli.admin.send.sign import sign as send_sign
+from repository_service_tuf.cli.admin.send.update import update as send_update
 from repository_service_tuf.cli.admin.update import update
 from repository_service_tuf.helpers.tuf import (
     BootstrapSetup,
@@ -308,9 +313,15 @@ def invoke_command(
         out_index = args.index("--out")
         out_file_name = args[out_index + 1]
 
-    if cmd.name == import_artifacts.name:
+    commands_no_out_args = [
+        import_artifacts,
+        send_bootstrap,
+        send_sign,
+        send_update,
+    ]
+    if cmd in commands_no_out_args:
         out_args = []
-    elif cmd.name == update.name:
+    elif cmd == update:
         out_args = ["-s", out_file_name]
     else:
         out_args = ["--out", out_file_name]
