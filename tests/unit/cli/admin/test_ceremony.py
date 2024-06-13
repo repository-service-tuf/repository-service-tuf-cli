@@ -113,11 +113,6 @@ class TestCeremony:
         patch_getpass,
         patch_utcnow,
     ):
-        status = {"data": {"bootstrap": False}}
-        fake_bootstrap_status = pretend.call_recorder(lambda a: status)
-        monkeypatch.setattr(
-            ceremony, "bootstrap_status", fake_bootstrap_status
-        )
         fake_task_id = "123ab"
         fake_send_payload = pretend.call_recorder(lambda **kw: fake_task_id)
         monkeypatch.setattr(ceremony, "send_payload", fake_send_payload)
@@ -141,9 +136,6 @@ class TestCeremony:
         assert [s["keyid"] for s in sigs_r] == [s["keyid"] for s in sigs_e]
         assert result.data == expected
 
-        assert fake_bootstrap_status.calls == [
-            pretend.call(result.context["settings"])
-        ]
         # One of the used key with id "50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3"  # noqa
         # is an ecdsa type meaning it's not deterministic and have different
         # signature each run. That's why we do more granular check to work
@@ -171,12 +163,6 @@ class TestCeremony:
         patch_getpass,
         patch_utcnow,
     ):
-        """Test case 3 using custom OUTPUT argument."""
-        status = {"data": {"bootstrap": False}}
-        fake_bootstrap_status = pretend.call_recorder(lambda a: status)
-        monkeypatch.setattr(
-            ceremony, "bootstrap_status", fake_bootstrap_status
-        )
         fake_task_id = "123ab"
         fake_send_payload = pretend.call_recorder(lambda **kw: fake_task_id)
         monkeypatch.setattr(ceremony, "send_payload", fake_send_payload)
@@ -211,9 +197,6 @@ class TestCeremony:
         assert [s["keyid"] for s in sigs_r] == [s["keyid"] for s in sigs_e]
         assert result.data == expected
 
-        assert fake_bootstrap_status.calls == [
-            pretend.call(test_context["settings"])
-        ]
         # One of the used key with id "50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3"  # noqa
         # is an ecdsa type meaning it's not deterministic and have different
         # signature each run. That's why we do more granular check to work
@@ -312,29 +295,3 @@ class TestCeremonyError:
         )
 
         assert "Either '--api-sever'/'SERVER'" in result.stderr
-
-    def test_ceremony_bootstrap_api_server_locked_for_bootstrap(
-        self, ceremony_inputs, monkeypatch
-    ):
-        status = {
-            "data": {"bootstrap": True},
-            "message": "Locked for bootstrap",
-        }
-        fake_bootstrap_status = pretend.call_recorder(lambda a: status)
-        monkeypatch.setattr(
-            ceremony, "bootstrap_status", fake_bootstrap_status
-        )
-        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
-        args = ["--api-server", "http://localhost"]
-
-        result = invoke_command(
-            ceremony.ceremony,
-            input_step1 + input_step2 + input_step3 + input_step4,
-            args,
-            std_err_empty=False,
-        )
-
-        assert status["message"] in result.stderr
-        assert fake_bootstrap_status.calls == [
-            pretend.call(result.context["settings"])
-        ]

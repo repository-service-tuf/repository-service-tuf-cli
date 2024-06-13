@@ -35,7 +35,6 @@ from repository_service_tuf.cli.admin.helpers import (
 )
 from repository_service_tuf.helpers.api_client import (
     URL,
-    bootstrap_status,
     send_payload,
     task_status,
 )
@@ -62,11 +61,6 @@ def ceremony(context: Any, out: Optional[click.File]) -> None:
         raise click.ClickException(
             "Either '--api-sever'/'SERVER' in RSTUF config or '--out' needed"
         )
-
-    if settings.get("SERVER"):
-        bs_status = bootstrap_status(settings)
-        if bs_status.get("data", {}).get("bootstrap") is True:
-            raise click.ClickException(f"{bs_status.get('message')}")
 
     # Performs ceremony steps.
     root = Root()
