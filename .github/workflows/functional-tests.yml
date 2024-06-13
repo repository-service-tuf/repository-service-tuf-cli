@@ -57,10 +57,10 @@ jobs:
 
     steps:
       - name: Checkout RSTUF CLI source code
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
 
       - name: Checkout RSTUF Umbrella (FT)
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
             repository: repository-service-tuf/repository-service-tuf
             path: rstuf-umbrella
@@ -84,10 +84,10 @@ jobs:
 
     steps:
       - name: Checkout RSTUF CLI source code
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
 
       - name: Checkout RSTUF Umbrella (FT)
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
             repository: repository-service-tuf/repository-service-tuf
             path: rstuf-umbrella
@@ -114,10 +114,10 @@ jobs:
 
     steps:
       - name: Checkout RSTUF CLI source code
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
 
       - name: Checkout RSTUF Umbrella (FT)
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           repository: repository-service-tuf/repository-service-tuf
           path: rstuf-umbrella
@@ -141,10 +141,10 @@ jobs:
 
     steps:
       - name: Checkout RSTUF CLI source code
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
 
       - name: Checkout RSTUF Umbrella (FT)
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
         with:
           repository: repository-service-tuf/repository-service-tuf
           path: rstuf-umbrella
