@@ -17,4 +17,4 @@ def _validate_settings(context: click.Context):
 @click.pass_context
 def send(context: click.Context):
     """Send a payload to an existing RSTUF API deployment"""
-    _validate_settings(context)
+    _validate_settings(context)  # pragma: no cover
