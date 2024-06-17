@@ -17,18 +17,11 @@ class TestCeremony:
     ):
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
         custom_path = "file.json"
-        with client.isolated_filesystem():
-            result = client.invoke(
-                ceremony.ceremony,
-                args=["--out", custom_path],
-                input="\n".join(
-                    input_step1 + input_step2 + input_step3 + input_step4
-                ),
-                obj=test_context,
-                catch_exceptions=False,
-            )
-            with open(custom_path) as f:
-                result.data = json.load(f)
+        result = invoke_command(
+            ceremony.ceremony,
+            "\n".join(input_step1 + input_step2 + input_step3 + input_step4),
+            args=["--out", custom_path],
+        )
 
         with open(_PAYLOADS / "ceremony.json") as f:
             expected = json.load(f)
@@ -173,22 +166,14 @@ class TestCeremony:
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
         test_context["settings"].SERVER = "http://localhost:80"
         custom_path = "file.json"
-        with client.isolated_filesystem():
-            result = client.invoke(
-                ceremony.ceremony,
-                args=["--out", custom_path],
-                input="\n".join(
-                    input_step1 + input_step2 + input_step3 + input_step4
-                ),
-                obj=test_context,
-                catch_exceptions=False,
-            )
-            assert result.stderr == ""
-            with open(custom_path) as f:
-                result.data = json.load(f)
-
-        with open(_PAYLOADS / "ceremony.json") as f:
-            expected = json.load(f)
+        result = invoke_command(
+            ceremony.ceremony,
+            input="\n".join(
+                input_step1 + input_step2 + input_step3 + input_step4
+            ),
+            args=["--out", custom_path],
+            test_context=test_context,
+        )
 
         with open(_PAYLOADS / "ceremony.json") as f:
             expected = json.load(f)

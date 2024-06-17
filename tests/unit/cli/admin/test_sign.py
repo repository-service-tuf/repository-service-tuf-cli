@@ -137,19 +137,16 @@ class TestSign:
             "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
+        input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
+        custom_out_path = "custom_sign_path.json"
+        args = ["--in", input_path, "--out", custom_out_path]
 
-        args = ["--in", f"{_PAYLOADS / 'sign_pending_roles.json'}"]
-        custom_path = "custom_sign_path.json"
-        with client.isolated_filesystem():
-            result = client.invoke(
-                sign.sign,
-                args=args + ["--out", custom_path],
-                input="\n".join(inputs),
-                obj=test_context,
-                catch_exceptions=False,
-            )
-            with open(custom_path) as f:
-                result.data = json.load(f)
+        result = invoke_command(
+            sign.sign,
+            input="\n".join(inputs),
+            args=args,
+            test_context=test_context,
+        )
 
         expected = {
             "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # noqa
@@ -159,7 +156,7 @@ class TestSign:
         assert result.data["role"] == "root"
         assert result.data["signature"]["keyid"] == expected["keyid"]
         assert result.data["signature"]["sig"] == expected["sig"]
-        assert f"Saved result to '{custom_path}'" in result.stdout
+        assert f"Saved result to '{custom_out_path}'" in result.stdout
 
     def test_sign_with_input_option_and_api_server_set(
         self, test_context, patch_getpass

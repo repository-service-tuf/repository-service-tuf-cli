@@ -304,6 +304,9 @@ def invoke_command(
 ) -> Result:
     client = _create_client()
     out_file_name = "out_file.json"
+    if "--out" in args:
+        out_index = args.index("--out")
+        out_file_name = args[out_index + 1]
 
     if cmd.name == import_artifacts.name:
         out_args = []
@@ -315,18 +318,16 @@ def invoke_command(
     if not test_context:
         test_context = _create_test_context()
 
-    context = test_context
-
     with client.isolated_filesystem():
         result_obj = client.invoke(
             cmd,
             args=args + out_args,
             input="\n".join(inputs),
-            obj=context,
+            obj=test_context,
             catch_exceptions=False,
         )
 
-        result_obj.context = context
+        result_obj.context = test_context
         if std_err_empty:
             assert result_obj.stderr == ""
             if len(out_args) > 0:
