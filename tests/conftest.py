@@ -41,18 +41,15 @@ _HELPERS = "repository_service_tuf.cli.admin.helpers"
 _PROMPT = "rich.console.Console.input"
 
 
-def _create_test_context(api_url: Optional[str]) -> Dict[str, Any]:
+def _create_test_context() -> Dict[str, Any]:
     setting_file = os.path.join(TemporaryDirectory().name, "test_settings.yml")
     test_settings = Dynaconf(settings_files=[setting_file])
-    if api_url:
-        test_settings.SERVER = api_url
-
     return {"settings": test_settings, "config": setting_file}
 
 
 @pytest.fixture
 def test_context() -> Dict[str, Any]:
-    return _create_test_context(None)
+    return _create_test_context()
 
 
 def _create_client() -> CliRunner:
@@ -302,8 +299,8 @@ def invoke_command(
     cmd: Command,
     inputs: List[str],
     args: List[str],
-    std_err_empty: bool = True,
     test_context: Optional[Context] = None,
+    std_err_empty: bool = True,
 ) -> Result:
     client = _create_client()
     out_file_name = "out_file.json"
@@ -315,15 +312,10 @@ def invoke_command(
     else:
         out_args = ["--out", out_file_name]
 
-    api_url = None
-    if "--api-server" in args:
-        api_server_flag_index = args.index("--api-server")
-        api_url = args.pop(api_server_flag_index + 1)
-        args.remove("--api-server")
+    if not test_context:
+        test_context = _create_test_context()
 
     context = test_context
-    if test_context is None:
-        context = _create_test_context(api_url)
 
     with client.isolated_filesystem():
         result_obj = client.invoke(

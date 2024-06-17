@@ -257,7 +257,7 @@ class TestImportArtifactsFunctions:
 
 
 class TestImportArtifactsGroupCLI:
-    def test_import_artifacts(self):
+    def test_import_artifacts(self, test_context):
         # Required to properly mock functions imported inside import_artifacts
         import sqlalchemy
 
@@ -293,8 +293,6 @@ class TestImportArtifactsGroupCLI:
         )
 
         args = [
-            "--api-server",
-            "http://127.0.0.1",
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
             "--csv",
@@ -302,7 +300,11 @@ class TestImportArtifactsGroupCLI:
             "--csv",
             "artifacts2of2.csv",
         ]
-        result = invoke_command(import_artifacts.import_artifacts, [], args)
+        test_context["settings"].SERVER = "http://127.0.0.1"
+
+        result = invoke_command(
+            import_artifacts.import_artifacts, [], args, test_context
+        )
         assert result.exit_code == 0, result.output
         assert "Finished." in result.output
         assert import_artifacts.bootstrap_status.calls == [
@@ -343,7 +345,7 @@ class TestImportArtifactsGroupCLI:
         assert result.exit_code == 1, result.stderr
         assert "Requires '--api-server' " in result.stderr
 
-    def test_import_artifacts_skip_publish_artifacts(self):
+    def test_import_artifacts_skip_publish_artifacts(self, test_context):
         # Required to properly mock functions imported inside import_artifacts
         import sqlalchemy
 
@@ -379,8 +381,6 @@ class TestImportArtifactsGroupCLI:
         )
 
         args = [
-            "--api-server",
-            "http://127.0.0.1",
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
             "--csv",
@@ -389,7 +389,11 @@ class TestImportArtifactsGroupCLI:
             "artifacts2of2.csv",
             "--skip-publish-artifacts",
         ]
-        result = invoke_command(import_artifacts.import_artifacts, [], args)
+        test_context["settings"].SERVER = "http://127.0.0.1"
+
+        result = invoke_command(
+            import_artifacts.import_artifacts, [], args, test_context
+        )
         assert result.exit_code == 0, result.output
         assert "Finished." in result.output
         assert "No artifacts published" in result.output
@@ -408,7 +412,7 @@ class TestImportArtifactsGroupCLI:
         assert import_artifacts.publish_artifacts.calls == []
         assert import_artifacts.task_status.calls == []
 
-    def test_import_artifacts_sqlalchemy_import_fails(self):
+    def test_import_artifacts_sqlalchemy_import_fails(self, test_context):
         import builtins
 
         real_import = builtins.__import__
@@ -423,12 +427,14 @@ class TestImportArtifactsGroupCLI:
 
         builtins.__import__ = fake_import
 
-        args = ["--api-server", "", "--db-uri", "", "--csv", ""]
+        args = ["--db-uri", "", "--csv", ""]
+        test_context["settings"].SERVER = ""
         with pytest.raises(ModuleNotFoundError) as exc:
             invoke_command(
                 import_artifacts.import_artifacts,
                 [],
                 args,
+                test_context,
                 std_err_empty=False,
             )
 
@@ -436,15 +442,13 @@ class TestImportArtifactsGroupCLI:
         builtins.__import__ = real_import
         assert "pip install repository-service-tuf[sqlalchemy" in str(exc)
 
-    def test_import_artifacts_bootstrap_check_failed(self):
+    def test_import_artifacts_bootstrap_check_failed(self, test_context):
 
         import_artifacts.bootstrap_status = pretend.raiser(
             import_artifacts.click.ClickException("Server ERROR")
         )
 
         args = [
-            "--api-server",
-            "http://127.0.0.1",
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
             "--csv",
@@ -452,22 +456,25 @@ class TestImportArtifactsGroupCLI:
             "--csv",
             "artifacts2of2.csv",
         ]
+        test_context["settings"].SERVER = "http://127.0.0.1"
 
         result = invoke_command(
-            import_artifacts.import_artifacts, [], args, std_err_empty=False
+            import_artifacts.import_artifacts,
+            [],
+            args,
+            test_context,
+            std_err_empty=False,
         )
         assert result.exit_code == 1
         assert "Server ERROR" in result.stderr, result.stderr
 
-    def test_import_artifacts_without_bootstrap(self):
+    def test_import_artifacts_without_bootstrap(self, test_context):
 
         import_artifacts.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": False}, "message": "some msg"}
         )
 
         args = [
-            "--api-server",
-            "http://127.0.0.1",
             "--db-uri",
             "postgresql://postgres:secret@127.0.0.1:5433",
             "--csv",
@@ -475,8 +482,14 @@ class TestImportArtifactsGroupCLI:
             "--csv",
             "artifacts2of2.csv",
         ]
+        test_context["settings"].SERVER = "http://127.0.0.1"
+
         result = invoke_command(
-            import_artifacts.import_artifacts, [], args, std_err_empty=False
+            import_artifacts.import_artifacts,
+            [],
+            args,
+            test_context,
+            std_err_empty=False,
         )
         assert result.exit_code == 1, result.stderr
         assert (

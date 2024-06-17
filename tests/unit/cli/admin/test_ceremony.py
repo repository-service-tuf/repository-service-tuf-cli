@@ -112,6 +112,7 @@ class TestCeremony:
         monkeypatch,
         patch_getpass,
         patch_utcnow,
+        test_context,
     ):
         fake_task_id = "123ab"
         fake_send_payload = pretend.call_recorder(lambda **kw: fake_task_id)
@@ -119,12 +120,13 @@ class TestCeremony:
         fake_task_status = pretend.call_recorder(lambda *a: None)
         monkeypatch.setattr(ceremony, "task_status", fake_task_status)
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
-        args = ["--api-server", "http://localhost:80"]
+        test_context["settings"].SERVER = "http://localhost:80"
 
         result = invoke_command(
             ceremony.ceremony,
             input_step1 + input_step2 + input_step3 + input_step4,
-            args,
+            [],
+            test_context,
         )
 
         with open(_PAYLOADS / "ceremony.json") as f:
