@@ -19,7 +19,7 @@ class TestCeremony:
         custom_path = "file.json"
         result = invoke_command(
             ceremony.ceremony,
-            "\n".join(input_step1 + input_step2 + input_step3 + input_step4),
+            input_step1 + input_step2 + input_step3 + input_step4,
             args=["--out", custom_path],
         )
 
@@ -168,9 +168,7 @@ class TestCeremony:
         custom_path = "file.json"
         result = invoke_command(
             ceremony.ceremony,
-            input="\n".join(
-                input_step1 + input_step2 + input_step3 + input_step4
-            ),
+            inputs=input_step1 + input_step2 + input_step3 + input_step4,
             args=["--out", custom_path],
             test_context=test_context,
         )

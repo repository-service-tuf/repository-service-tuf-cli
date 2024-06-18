@@ -131,7 +131,7 @@ class TestSign:
         ]
 
     def test_sign_input_option_and_custom_out(
-        self, client, test_context, patch_getpass
+        self, test_context, patch_getpass
     ):
         inputs = [
             "1",  # Please enter signing key index
@@ -142,10 +142,7 @@ class TestSign:
         args = ["--in", input_path, "--out", custom_out_path]
 
         result = invoke_command(
-            sign.sign,
-            input="\n".join(inputs),
-            args=args,
-            test_context=test_context,
+            sign.sign, inputs=inputs, args=args, test_context=test_context
         )
 
         expected = {
