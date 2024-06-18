@@ -21,6 +21,13 @@ from dynaconf import Dynaconf
 from securesystemslib.signer import CryptoSigner, SSlibKey
 from tuf.api.metadata import Metadata, Root
 
+from repository_service_tuf.cli.admin.import_artifacts import import_artifacts
+from repository_service_tuf.cli.admin.send.bootstrap import (
+    bootstrap as send_bootstrap,
+)
+from repository_service_tuf.cli.admin.send.sign import sign as send_sign
+from repository_service_tuf.cli.admin.send.update import update as send_update
+from repository_service_tuf.cli.admin.update import update
 from repository_service_tuf.helpers.tuf import (
     BootstrapSetup,
     MetadataInfo,
@@ -297,26 +304,47 @@ def invoke_command(
     cmd: Command,
     inputs: List[str],
     args: List[str],
-    std_err_empty: bool = True,
     test_context: Optional[Context] = None,
+    std_err_empty: bool = True,
 ) -> Result:
     client = _create_client()
-    out_file_name = "out_file_.json"
-    context = _create_test_context() if test_context is None else test_context
+    out_file_name = "out_file.json"
+    if "--out" in args:
+        out_index = args.index("--out")
+        out_file_name = args[out_index + 1]
+
+    commands_no_out_args = [
+        import_artifacts,
+        send_bootstrap,
+        send_sign,
+        send_update,
+    ]
+    if cmd in commands_no_out_args:
+        out_args = []
+    elif cmd == update:
+        out_args = ["-s", out_file_name]
+    else:
+        out_args = ["--out", out_file_name]
+
+    if not test_context:
+        test_context = _create_test_context()
+
     with client.isolated_filesystem():
         result_obj = client.invoke(
             cmd,
-            args=args + ["-s", out_file_name],
+            args=args + out_args,
             input="\n".join(inputs),
-            obj=context,
+            obj=test_context,
             catch_exceptions=False,
         )
 
+        result_obj.context = test_context
         if std_err_empty:
             assert result_obj.stderr == ""
-            with open(out_file_name) as f:
-                result_obj.data = json.load(f)
-
-            result_obj.context = context
+            if len(out_args) > 0:
+                # There are commands that doesn't save a file like
+                # 'import_artifacts'. For them out_args is empty.
+                with open(out_file_name) as f:
+                    result_obj.data = json.load(f)
 
     return result_obj

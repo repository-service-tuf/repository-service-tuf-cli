@@ -33,7 +33,6 @@ from repository_service_tuf.helpers.api_client import (
     send_payload,
     task_status,
 )
-from repository_service_tuf.helpers.tuf import save_payload
 
 
 def _parse_pending_data(pending_roles_resp: Dict[str, Any]) -> Dict[str, Any]:
@@ -67,64 +66,41 @@ DEFAULT_PATH = "sign-payload.json"
 
 @metadata.command()  # type: ignore
 @click.option(
-    "--api-server",
-    help="URL to an RSTUF API.",
+    "--in",
+    "input",
+    help=(
+        "Input file containing the JSON response from the "
+        "'GET /api/v1/metadata/sign' RSTUF API endpoint."
+    ),
+    type=click.File("r"),
     required=False,
 )
 @click.option(
-    "--save",
-    "-s",
+    "--out",
     is_flag=False,
     flag_value=DEFAULT_PATH,
-    help=f"Write json result to FILENAME (default: '{DEFAULT_PATH}')",
+    help=f"Write output JSON result to FILENAME (default: '{DEFAULT_PATH}')",
     type=click.File("w"),
-)
-@click.argument(
-    "signing_json_input_file",
     required=False,
-    type=click.File("rb"),
 )
 @click.pass_context
 def sign(
     context: click.Context,
-    api_server: Optional[str],
-    save: Optional[click.File],
-    signing_json_input_file: Optional[click.File],
+    input: Optional[click.File],
+    out: Optional[click.File],
 ) -> None:
-    """
-    Add one signature to root metadata.
-
-    There are two ways to use this command:
-
-    1) utilizing access to the RSTUF API and signing pending metadata roles
-
-    2) provide a local file using the 'SIGNING_JSON_INPUT_FILE' argument
-
-    The result of this command will be saved locally in a 'sign-payload.json'
-    file if '--api-server' is not provided or at custom path if '--save' is
-    used.
-
-    When using method 2:
-
-    - 'SIGNING_JSON_INPUT_FILE' must be a file containing the JSON response
-    from the 'GET /api/v1/metadata/sign' API endpoint.
-
-    - '--api-server' will be ignored.
-    """
+    """Add one signature to root metadata."""
     console.print("\n", Markdown("# Metadata Signing Tool"))
     settings = context.obj["settings"]
-    if api_server:
-        settings.SERVER = api_server
-    if settings.get("SERVER") is None and signing_json_input_file is None:
+    if settings.get("SERVER") is None and input is None:
         raise click.ClickException(
-            "Either '--api-sever'/'SERVER' in RSTUF config or "
-            "'SIGNING_JSON_INPUT_FILE' must be set"
+            "Either '--api-sever'/'SERVER' in RSTUF config or '--in' needed"
         )
     ###########################################################################
     # Load roots
     pending_roles: Dict[str, Dict[str, Any]]
-    if signing_json_input_file:
-        pending_roles = _parse_pending_data(json.load(signing_json_input_file))  # type: ignore  # noqa
+    if input:
+        pending_roles = _parse_pending_data(json.load(input))  # type: ignore
     else:
         pending_roles = _get_pending_roles(settings)
 
@@ -171,10 +147,9 @@ def sign(
     # Send payload to the API and/or save it locally
 
     payload = SignPayload(signature=signature.to_dict())
-    if save or not settings.get("SERVER"):
-        path = save.name if save is not None else DEFAULT_PATH
-        save_payload(path, asdict(payload))
-        console.print(f"Saved result to '{path}'")
+    if out:
+        json.dump(asdict(payload), out, indent=2)  # type: ignore
+        console.print(f"Saved result to '{out.name}'")
 
     if settings.get("SERVER"):
         console.print(f"\nSending signature to {settings.SERVER}")

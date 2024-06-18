@@ -14,7 +14,7 @@ from tests.conftest import _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 
 class TestSign:
-    def test_sign_with_previous_root(self, patch_getpass):
+    def test_sign_with_previous_root(self, test_context, patch_getpass):
         inputs = [
             "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
@@ -31,9 +31,10 @@ class TestSign:
         )
         sign.send_payload = pretend.call_recorder(lambda *a: "fake-taskid")
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
-        args = ["--api-server", "http://127.0.0.1"]
+        api_server = "http://127.0.0.1"
+        test_context["settings"].SERVER = api_server
 
-        result = invoke_command(sign.sign, inputs, args)
+        result = invoke_command(sign.sign, inputs, [], test_context)
 
         with open(_PAYLOADS / "sign.json") as f:
             expected = json.load(f)
@@ -42,13 +43,9 @@ class TestSign:
         assert (
             result.data["signature"]["keyid"] == expected["signature"]["keyid"]
         )
-        assert "Metadata Signed and sent to the API! 🔑" in result.output
+        assert "Metadata Signed and sent to the API! 🔑" in result.stdout
         assert sign.request_server.calls == [
-            pretend.call(
-                "http://127.0.0.1",
-                "api/v1/metadata/sign/",
-                Methods.GET,
-            )
+            pretend.call(api_server, "api/v1/metadata/sign/", Methods.GET)
         ]
         assert sign.send_payload.calls == [
             pretend.call(
@@ -73,7 +70,7 @@ class TestSign:
             )
         ]
 
-    def test_sign_bootstap_root(self, patch_getpass):
+    def test_sign_bootstap_root(self, test_context, patch_getpass):
         inputs = [
             "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
@@ -94,9 +91,10 @@ class TestSign:
         )
         sign.send_payload = pretend.call_recorder(lambda *a: "fake-taskid")
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
-        args = ["--api-server", "http://127.0.0.1"]
+        api_server = "http://127.0.0.1"
+        test_context["settings"].SERVER = api_server
 
-        result = invoke_command(sign.sign, inputs, args)
+        result = invoke_command(sign.sign, inputs, [], test_context)
 
         expected = {
             "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # noqa
@@ -105,13 +103,9 @@ class TestSign:
 
         assert result.data["role"] == "root"
         assert result.data["signature"]["keyid"] == expected["keyid"]
-        assert "Metadata Signed and sent to the API! 🔑" in result.output
+        assert "Metadata Signed and sent to the API! 🔑" in result.stdout
         assert sign.request_server.calls == [
-            pretend.call(
-                "http://127.0.0.1",
-                "api/v1/metadata/sign/",
-                Methods.GET,
-            )
+            pretend.call(api_server, "api/v1/metadata/sign/", Methods.GET)
         ]
         assert sign.send_payload.calls == [
             pretend.call(
@@ -136,26 +130,20 @@ class TestSign:
             )
         ]
 
-    def test_sign_local_file_input_and_custom_save(
-        self, client, test_context, patch_getpass
+    def test_sign_input_option_and_custom_out(
+        self, test_context, patch_getpass
     ):
         inputs = [
             "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
+        input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
+        custom_out_path = "custom_sign_path.json"
+        args = ["--in", input_path, "--out", custom_out_path]
 
-        args = [f"{_PAYLOADS / 'sign_pending_roles.json'}"]
-        custom_path = "custom_sign_path.json"
-        with client.isolated_filesystem():
-            result = client.invoke(
-                sign.sign,
-                args=args + ["-s", custom_path],
-                input="\n".join(inputs),
-                obj=test_context,
-                catch_exceptions=False,
-            )
-            with open(custom_path) as f:
-                result.data = json.load(f)
+        result = invoke_command(
+            sign.sign, inputs=inputs, args=args, test_context=test_context
+        )
 
         expected = {
             "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # noqa
@@ -165,42 +153,10 @@ class TestSign:
         assert result.data["role"] == "root"
         assert result.data["signature"]["keyid"] == expected["keyid"]
         assert result.data["signature"]["sig"] == expected["sig"]
-        assert f"Saved result to '{custom_path}'" in result.output
+        assert f"Saved result to '{custom_out_path}'" in result.stdout
 
-    def test_sign_local_file_no_save_option_given(
-        self, client, test_context, patch_getpass
-    ):
-        inputs = [
-            "1",  # Please enter signing key index
-            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-        ]
-
-        args = [f"{_PAYLOADS / 'sign_pending_roles.json'}"]
-        default_path = "sign-payload.json"
-        with client.isolated_filesystem():
-            result = client.invoke(
-                sign.sign,
-                args=args,
-                input="\n".join(inputs),
-                obj=test_context,
-                catch_exceptions=False,
-            )
-            assert result.stderr == ""
-            with open(default_path) as f:
-                result.data = json.load(f)
-
-        expected = {
-            "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # noqa
-            "sig": "917046f9076eae41876be7c031be149aa2a960fd21f0d52f72128f55d9c423e2ec1632f98c96693dd801bd064e37efd6e5a5d32712fd5701a42099ece6b88c05",  # noqa
-        }
-
-        assert result.data["role"] == "root"
-        assert result.data["signature"]["keyid"] == expected["keyid"]
-        assert result.data["signature"]["sig"] == expected["sig"]
-        assert f"Saved result to '{default_path}'" in result.output
-
-    def test_sign_bootstap_root_with_file_input_with_api_server(
-        self, patch_getpass
+    def test_sign_with_input_option_and_api_server_set(
+        self, test_context, patch_getpass
     ):
         inputs = [
             "1",  # Please enter signing key index
@@ -209,9 +165,10 @@ class TestSign:
         sign.send_payload = pretend.call_recorder(lambda *a: "fake-taskid")
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
         sign_input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
-        api_server = "http://localhost:80"
-        args = ["--api-server", api_server, sign_input_path]
-        result = invoke_command(sign.sign, inputs, args)
+        test_context["settings"].SERVER = "http://localhost:80"
+        args = ["--in", sign_input_path]
+
+        result = invoke_command(sign.sign, inputs, args, test_context)
 
         expected = {
             "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # noqa
@@ -220,7 +177,7 @@ class TestSign:
 
         assert result.data["role"] == "root"
         assert result.data["signature"]["keyid"] == expected["keyid"]
-        assert "Metadata Signed and sent to the API! 🔑" in result.output
+        assert "Metadata Signed and sent to the API! 🔑" in result.stdout
         assert sign.send_payload.calls == [
             pretend.call(
                 result.context["settings"],
@@ -244,48 +201,16 @@ class TestSign:
             )
         ]
 
-    def test_sign_bootstap_root_with_file_input_no_api_server_no_save(
-        self, client, patch_getpass, test_context
-    ):
-        inputs = [
-            "1",  # Please enter signing key index
-            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-        ]
-
-        sign_input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
-        args = [sign_input_path]
-
-        with client.isolated_filesystem():
-            result = client.invoke(
-                sign.sign,
-                args=args,
-                input="\n".join(inputs),
-                obj=test_context,
-                catch_exceptions=False,
-            )
-
-            assert result.stderr == ""
-            with open(sign.DEFAULT_PATH) as f:
-                result.data = json.load(f)
-
-        expected = {
-            "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # noqa
-            "sig": "828a659bc34972504b9dab16bc44818b8a7d49ffee2a9021df6a6be4dd3b7a026d1f890b952303d1cf32dda90fbdf60e9fcfeb5f0af6498f0f55cad31c750a02",  # noqa
-        }
-
-        assert result.data["role"] == "root"
-        assert result.data["signature"]["keyid"] == expected["keyid"]
-        assert "Metadata Signed and sent to the API! 🔑" not in result.output
-        assert f"Saved result to {sign.DEFAULT_PATH}"
-
-    def test_sign_no_api_server_and_no_file_input(self):
+    def test_sign_no_api_server_and_no_input_option(self):
         result = invoke_command(sign.sign, [], [], std_err_empty=False)
 
         assert "Either '--api-sever'/'SERVER'" in result.stderr
 
 
 class TestSignError:
-    def test_sign_with_previous_root_but_wrong_version(self, patch_getpass):
+    def test_sign_with_previous_root_but_wrong_version(
+        self, test_context, patch_getpass
+    ):
         inputs = [
             "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
@@ -307,22 +232,20 @@ class TestSignError:
         sign.request_server = pretend.call_recorder(
             lambda *a, **kw: fake_response
         )
-        args = ["--api-server", "http://127.0.0.1"]
+        api_server = "http://127.0.0.1"
+        test_context["settings"].SERVER = api_server
+
         test_result = invoke_command(
-            sign.sign, inputs, args, std_err_empty=False
+            sign.sign, inputs, [], test_context, std_err_empty=False
         )
 
-        assert test_result.exit_code == 1, test_result.output
+        assert test_result.exit_code == 1, test_result.stdout
         assert "Previous root v1 needed to sign root v2" in test_result.stderr
         assert sign.request_server.calls == [
-            pretend.call(
-                "http://127.0.0.1",
-                "api/v1/metadata/sign/",
-                Methods.GET,
-            )
+            pretend.call(api_server, "api/v1/metadata/sign/", Methods.GET)
         ]
 
-    def test_sign_fully_signed_metadata(self, patch_getpass):
+    def test_sign_fully_signed_metadata(self, test_context, patch_getpass):
         inputs = [
             "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
@@ -344,19 +267,17 @@ class TestSignError:
         sign.request_server = pretend.call_recorder(
             lambda *a, **kw: fake_response
         )
-        args = ["--api-server", "http://127.0.0.1"]
+        api_server = "http://127.0.0.1"
+        test_context["settings"].SERVER = api_server
+
         test_result = invoke_command(
-            sign.sign, inputs, args, std_err_empty=False
+            sign.sign, inputs, [], test_context, std_err_empty=False
         )
 
-        assert test_result.exit_code == 1, test_result.output
+        assert test_result.exit_code == 1, test_result.stdout
         assert "Metadata already fully signed." in test_result.stderr
         assert sign.request_server.calls == [
-            pretend.call(
-                "http://127.0.0.1",
-                "api/v1/metadata/sign/",
-                Methods.GET,
-            )
+            pretend.call(api_server, "api/v1/metadata/sign/", Methods.GET)
         ]
 
 
