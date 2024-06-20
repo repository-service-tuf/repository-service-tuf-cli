@@ -16,7 +16,7 @@ distlib==0.3.8
 docutils==0.20.1; python_version >= '3.7'
 editables==0.5; python_version >= '3.1'
 execnet==2.1.1; python_version >= '3.8'
-filelock==3.15.1; python_version >= '3.8'
+filelock==3.15.3; python_version >= '3.8'
 flake8==7.1.0; python_full_version >= '3.8.1'
 hatchling==0.22.0
 identify==2.5.36; python_version >= '3.8'
