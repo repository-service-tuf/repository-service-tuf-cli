@@ -143,9 +143,13 @@ class TestSign:
             )
         ]
 
-    def test_sign_input_option_and_custom_out(
+    def test_sign_dry_run_and_input_option_and_custom_out(
         self, monkeypatch, test_context, patch_getpass
     ):
+        """
+        Test that '--dry-run', '--in' and '--out' are compatible options
+        without connecting to the API.
+        """
         inputs = [
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
@@ -156,7 +160,7 @@ class TestSign:
         )
         input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
         custom_out_path = "custom_sign_path.json"
-        args = ["--in", input_path, "--out", custom_out_path]
+        args = ["--dry-run", "--in", input_path, "--out", custom_out_path]
 
         result = invoke_command(
             sign.sign, inputs=inputs, args=args, test_context=test_context
@@ -171,6 +175,7 @@ class TestSign:
         assert result.data["signature"]["keyid"] == expected["keyid"]
         assert result.data["signature"]["sig"] == expected["sig"]
         assert f"Saved result to '{custom_out_path}'" in result.stdout
+        assert "Metadata Signed and sent to the API" not in result.stdout
 
     def test_sign_with_input_option_and_api_server_set(
         self, monkeypatch, test_context, patch_getpass
@@ -222,13 +227,65 @@ class TestSign:
             )
         ]
 
-    def test_sign_no_api_server_and_no_input_option(self):
-        result = invoke_command(sign.sign, [], [], std_err_empty=False)
+    def test_sign_dry_run_with_server_config_set(
+        self,
+        monkeypatch,
+        ceremony_inputs,
+        client,
+        test_context,
+        patch_getpass,
+        patch_utcnow,
+    ):
+        """
+        Test that '--dry-run' is with higher priority than 'settings.SERVER'.
+        """
+        # selections interface
+        monkeypatch.setattr(
+            f"{_HELPERS}._select",
+            lambda *a: "JimiHendrix's Key",
+        )
+        sign_input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
+        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
+        # We want to test when only "--dry-run" is used we will not save a file
+        # locally and will not send payload to the API.
+        # Given that "invoke_command" always saves a file, so the result can be
+        # read we cannot use it.
+        with client.isolated_filesystem():
+            result = client.invoke(
+                sign.sign,
+                args=["--dry-run", "--in", sign_input_path],
+                input="\n".join(
+                    input_step1 + input_step2 + input_step3 + input_step4
+                ),
+                obj=test_context,
+                catch_exceptions=False,
+            )
 
-        assert "Either '--api-sever'/'SERVER'" in result.stderr
+        assert result.stderr == ""
+        assert "Saved result to " not in result.stdout
+        assert "Bootstrap completed." not in result.stdout
 
 
 class TestSignError:
+    def test_sign_no_api_server_and_no_input_option(self):
+        result = invoke_command(sign.sign, [], [], std_err_empty=False)
+
+        err_prefix = "Either '--api-sever' admin option/'SERVER'"
+        err_suffix = "in RSTUF config or '--in' needed"
+        assert err_prefix in result.stderr
+        assert err_suffix in result.stderr
+
+    def test_sign_no_api_server_and_no_dry_run_option(self):
+        sign_input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
+        args = ["--in", sign_input_path]
+
+        result = invoke_command(sign.sign, [], args, std_err_empty=False)
+
+        err_prefix = "Either '--api-sever' admin option/'SERVER'"
+        err_suffix = "in RSTUF config or '--dry-run'"
+        assert err_prefix in result.stderr
+        assert err_suffix in result.stderr
+
     def test_sign_with_previous_root_but_wrong_version(
         self, test_context, patch_getpass
     ):

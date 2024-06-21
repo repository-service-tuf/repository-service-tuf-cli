@@ -83,18 +83,30 @@ DEFAULT_PATH = "sign-payload.json"
     type=click.File("w"),
     required=False,
 )
+@click.option("--dry-run", is_flag=True, default=False, help="")
 @click.pass_context
 def sign(
     context: click.Context,
     input: Optional[click.File],
     out: Optional[click.File],
+    dry_run: bool,
 ) -> None:
     """Add one signature to root metadata."""
     console.print("\n", Markdown("# Metadata Signing Tool"))
     settings = context.obj["settings"]
+    # Make sure there is a way to get a DAS metadata for signing.
     if settings.get("SERVER") is None and input is None:
         raise click.ClickException(
-            "Either '--api-sever'/'SERVER' in RSTUF config or '--in' needed"
+            "Either '--api-sever' admin option/'SERVER' in RSTUF config or "
+            "'--in' needed"
+        )
+
+    # Make sure user understands that result will be send to the API and if the
+    # the user wants something else should use '--dry-run'.
+    if settings.get("SERVER") is None and not dry_run:
+        raise click.ClickException(
+            "Either '--api-sever' admin option/'SERVER' in RSTUF config or "
+            "'--dry-run' needed"
         )
     ###########################################################################
     # Load roots
@@ -150,7 +162,7 @@ def sign(
         json.dump(asdict(payload), out, indent=2)  # type: ignore
         console.print(f"Saved result to '{out.name}'")
 
-    if settings.get("SERVER"):
+    if settings.get("SERVER") and not dry_run:
         console.print(f"\nSending signature to {settings.SERVER}")
         task_id = send_payload(
             settings,

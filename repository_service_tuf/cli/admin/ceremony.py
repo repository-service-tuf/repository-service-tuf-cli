@@ -50,16 +50,18 @@ DEFAULT_PATH = "ceremony-payload.json"
     help=f"Write output json result to FILENAME (default: '{DEFAULT_PATH}')",
     type=click.File("w"),
 )
+@click.option("--dry-run", is_flag=True, default=False, help="")
 @click.pass_context
-def ceremony(context: Any, out: Optional[click.File]) -> None:
+def ceremony(context: Any, out: Optional[click.File], dry_run: bool) -> None:
     """Bootstrap Ceremony to create initial root metadata and RSTUF config."""
     console.print("\n", Markdown("# Metadata Bootstrap Tool"))
     settings = context.obj["settings"]
     # Running online ceremony requires connection to the server and
     # confirmation that the server is indeed ready for bootstap.
-    if not settings.get("SERVER") and not out:
+    if not settings.get("SERVER") and not dry_run:
         raise click.ClickException(
-            "Either '--api-sever'/'SERVER' in RSTUF config or '--out' needed"
+            "Either '--api-sever' admin option/'SERVER' in RSTUF config or "
+            "'--dry-run' needed"
         )
 
     # Performs ceremony steps.
@@ -114,7 +116,7 @@ def ceremony(context: Any, out: Optional[click.File]) -> None:
         json.dump(asdict(bootstrap_payload), out, indent=2)  # type: ignore
         console.print(f"Saved result to '{out.name}'")
 
-    if settings.get("SERVER"):
+    if settings.get("SERVER") and not dry_run:
         task_id = send_payload(
             settings=settings,
             url=URL.BOOTSTRAP.value,
