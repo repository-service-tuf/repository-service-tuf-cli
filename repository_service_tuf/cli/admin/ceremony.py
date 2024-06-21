@@ -50,10 +50,29 @@ DEFAULT_PATH = "ceremony-payload.json"
     help=f"Write output json result to FILENAME (default: '{DEFAULT_PATH}')",
     type=click.File("w"),
 )
-@click.option("--dry-run", is_flag=True, default=False, help="")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help=(
+        "Run ceremony in dry-run mode without sending result to API. "
+        "Ignores options and configurations related to API."
+    ),
+)
 @click.pass_context
 def ceremony(context: Any, out: Optional[click.File], dry_run: bool) -> None:
-    """Bootstrap Ceremony to create initial root metadata and RSTUF config."""
+    """
+    Perform ceremony and send result to API to trigger bootstrap.
+
+    \b
+    * If `--out [FILENAME]` is passed, result is written to local FILENAME
+    (in addition to being sent to API).
+
+    \b
+    * If `--dry-run` is passed, result is not sent to API.
+    You can still pass `--out [FILENAME]` to store the result locally.
+    The `--api-server` admin option and `SERVER` from config will be ignored.
+    """
     console.print("\n", Markdown("# Metadata Bootstrap Tool"))
     settings = context.obj["settings"]
     # Running online ceremony requires connection to the server and

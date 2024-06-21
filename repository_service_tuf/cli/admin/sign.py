@@ -83,7 +83,15 @@ DEFAULT_PATH = "sign-payload.json"
     type=click.File("w"),
     required=False,
 )
-@click.option("--dry-run", is_flag=True, default=False, help="")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help=(
+        "Run sign in dry-run mode without sending result to API. "
+        "Ignores options and configurations related to API."
+    ),
+)
 @click.pass_context
 def sign(
     context: click.Context,
@@ -91,7 +99,21 @@ def sign(
     out: Optional[click.File],
     dry_run: bool,
 ) -> None:
-    """Add one signature to root metadata."""
+    """
+    Perform sign for pending event and send result to API.
+
+    * If `--in FILENAME` is passed, input is not read from API but from local
+    FILENAME.
+
+    * If `--out [FILENAME]` is passed, result is written to local FILENAME
+    (in addition to being sent to API).
+
+    * If `--dry-run` is passed, result is not sent to API.
+    You can still pass `--out [FILENAME]` to store the result locally.
+
+    * If `--in` and `--dry-run` is passed, `--api-server` admin option and
+    `SERVER` from config will be ignored.
+    """
     console.print("\n", Markdown("# Metadata Signing Tool"))
     settings = context.obj["settings"]
     # Make sure there is a way to get a DAS metadata for signing.
