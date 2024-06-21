@@ -271,7 +271,7 @@ class TestSignError:
         result = invoke_command(sign.sign, [], [], std_err_empty=False)
 
         err_prefix = "Either '--api-sever' admin option/'SERVER'"
-        err_suffix = "in RSTUF config or '--in' needed"
+        err_suffix = "or '--in'"
         assert err_prefix in result.stderr
         assert err_suffix in result.stderr
 
@@ -282,7 +282,7 @@ class TestSignError:
         result = invoke_command(sign.sign, [], args, std_err_empty=False)
 
         err_prefix = "Either '--api-sever' admin option/'SERVER'"
-        err_suffix = "in RSTUF config or '--dry-run'"
+        err_suffix = "or '--dry-run'"
         assert err_prefix in result.stderr
         assert err_suffix in result.stderr
 

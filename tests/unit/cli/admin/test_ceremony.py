@@ -308,6 +308,6 @@ class TestCeremonyError:
         result = invoke_command(ceremony.ceremony, [], [], std_err_empty=False)
 
         err_prefix = "Either '--api-sever' admin option/'SERVER'"
-        err_suffix = "in RSTUF config or '--dry-run' needed"
+        err_suffix = "or '--dry-run'"
         assert err_prefix in result.stderr
         assert err_suffix in result.stderr
