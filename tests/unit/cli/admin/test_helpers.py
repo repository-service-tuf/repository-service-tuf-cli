@@ -52,34 +52,38 @@ class TestHelpers:
         # success
         inputs = [f"{_PEMS / 'JH.pub'}"]
         with patch(_PROMPT, side_effect=inputs):
-            key = helpers._load_key_from_file_prompt()
+            uri, key = helpers._load_key_from_file_prompt()
 
+        assert uri.startswith("fn:")
         assert isinstance(key, SSlibKey)
 
         # fail with wrong file
         inputs = [f"{_PEMS / 'JH.ed25519'}"]
         with patch(_PROMPT, side_effect=inputs):
             with pytest.raises(ValueError):
-                _ = helpers._load_key_from_file_prompt()
+                _, _ = helpers._load_key_from_file_prompt()
 
-    def test_load_key_prompt(self):
+    def test_load_offline_key_prompt(self):
+        fake_uri = "fake uri"
         fake_root = pretend.stub(keys={"123"})
 
         # return key
         fake_key = pretend.stub(keyid="abc")
         with patch(
-            f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
+            f"{_HELPERS}._load_key_from_file_prompt",
+            return_value=[fake_uri, fake_key],
         ):
-            key = helpers._load_key_prompt(fake_root)
+            key = helpers._load_offline_key_prompt(fake_root)
 
         assert key == fake_key
 
         # return None - key in use
         fake_key = pretend.stub(keyid="123")
         with patch(
-            f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
+            f"{_HELPERS}._load_key_from_file_prompt",
+            return_value=[fake_uri, fake_key],
         ):
-            key = helpers._load_key_prompt(fake_root)
+            key = helpers._load_offline_key_prompt(fake_root)
 
         assert key is None
 
@@ -88,7 +92,7 @@ class TestHelpers:
             with patch(
                 f"{_HELPERS}._load_key_from_file_prompt", side_effect=err()
             ):
-                key = helpers._load_key_prompt(fake_root)
+                key = helpers._load_offline_key_prompt(fake_root)
                 assert key is None
 
     def test_key_name_prompt(self):
@@ -178,7 +182,7 @@ class TestHelpers:
         root = Root()
         with (
             patch(
-                f"{_HELPERS}._load_key_prompt",
+                f"{_HELPERS}._load_offline_key_prompt",
                 side_effect=[ed25519_key, None, ed25519_key],
             ),
             patch(f"{_HELPERS}._key_name_prompt", return_value="foo"),
@@ -193,6 +197,10 @@ class TestHelpers:
         assert [ed25519_key.keyid] == root.roles["root"].keyids
 
     def test_configure_online_key_prompt(self, ed25519_key):
+        ed25519_key.unrecognized_fields[helpers.KEY_URI_FIELD] = (
+            f"fn:{ed25519_key.keyid}"
+        )
+
         # Create empty root
         root = Root()
 
@@ -214,7 +222,9 @@ class TestHelpers:
 
         # Add new key (no user choice)
         with (
-            patch(f"{_HELPERS}._load_key_prompt", return_value=ed25519_key),
+            patch(
+                f"{_HELPERS}._load_online_key_prompt", return_value=ed25519_key
+            ),
             patch(f"{_HELPERS}._key_name_prompt", return_value="foo"),
         ):
             helpers._configure_online_key_prompt(root)
@@ -226,11 +236,12 @@ class TestHelpers:
         # 2. succeed (load returns key2)
         key2 = copy.copy(ed25519_key)
         key2.keyid = "fake_keyid2"
+        key2.unrecognized_fields[helpers.KEY_URI_FIELD] = f"fn:{key2.keyid}"
 
         with (
             patch(_PROMPT, side_effect=[""]),  # default user choice: change
             patch(
-                f"{_HELPERS}._load_key_prompt",
+                f"{_HELPERS}._load_online_key_prompt",
                 side_effect=[None, key2],
             ),
             patch(f"{_HELPERS}._key_name_prompt", return_value="foo"),

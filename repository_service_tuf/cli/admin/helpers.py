@@ -16,7 +16,13 @@ from cryptography.hazmat.primitives.serialization import (
 )
 from rich.prompt import Confirm, IntPrompt, InvalidResponse, Prompt
 from rich.table import Table
-from securesystemslib.signer import CryptoSigner, Key, Signature, SSlibKey
+from securesystemslib.signer import (
+    CryptoSigner,
+    Key,
+    Signature,
+    SSlibKey,
+    VaultSigner,
+)
 from tuf.api.metadata import (
     Metadata,
     Root,
@@ -147,8 +153,8 @@ def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
     return CryptoSigner(private_key, public_key)
 
 
-def _load_key_from_file_prompt() -> SSlibKey:
-    """Prompt for path to public key, return Key."""
+def _load_key_from_file_prompt() -> Tuple[str, SSlibKey]:
+    """Prompt for path to public key, return signer uri and Key."""
     path = Prompt.ask("Please enter path to public key")
     with open(path, "rb") as f:
         public_pem = f.read()
@@ -156,14 +162,24 @@ def _load_key_from_file_prompt() -> SSlibKey:
     crypto = load_pem_public_key(public_pem)
 
     key = SSlibKey.from_crypto(crypto)
+    uri = f"fn:{key.keyid}"
 
-    return key
+    return uri, key
 
 
-def _load_key_prompt(root: Root) -> Optional[Key]:
+def _load_key_from_hv_prompt() -> Tuple[str, SSlibKey]:
+    """Prompt for HashiCorp Vault key name, return signer uri and Key."""
+    # TODO: Inform user that they need to configure VAULT_ADDR and VAULT_TOKEN
+    hv_key_name = Prompt.ask("Please enter HashiCorp Vault key name")
+
+    uri, key = VaultSigner.import_(hv_key_name)
+    return uri, key
+
+
+def _load_offline_key_prompt(root: Root) -> Optional[Key]:
     """Prompt and return Key, or None on error or if key is already loaded."""
     try:
-        key = _load_key_from_file_prompt()
+        _, key = _load_key_from_file_prompt()
 
     except (OSError, ValueError) as e:
         console.print(f"Cannot load key: {e}")
@@ -173,6 +189,42 @@ def _load_key_prompt(root: Root) -> Optional[Key]:
     if key.keyid in root.keys:
         console.print("Key already in use.")
         return None
+
+    return key
+
+
+def _load_online_key_prompt(root: Root) -> Optional[Key]:
+    """Prompt and return Key, or None on error or if key is already loaded."""
+
+    console.print(" 1. File")
+    console.print(" 2. HashiCorp Vault")
+    choice = IntPrompt.ask(
+        "Please select online key type",
+        choices=["1", "2"],
+        default=...,  # no default
+        show_choices=False,
+        show_default=False,
+    )
+    try:
+        if choice == 1:
+            uri, key = _load_key_from_file_prompt()
+
+        elif choice == 2:
+            uri, key = _load_key_from_hv_prompt()
+
+        else:
+            raise ValueError("invalid choice")  # unreachable
+
+    except Exception as e:
+        console.print(f"Cannot load key: {e}")
+        return None
+
+    # Disallow re-adding a key even if it is for a different role.
+    if key.keyid in root.keys:
+        console.print("Key already in use.")
+        return None
+
+    key.unrecognized_fields[KEY_URI_FIELD] = uri
 
     return key
 
@@ -299,7 +351,7 @@ def _configure_root_keys_prompt(root: Root) -> None:
             break
 
         elif choice == 0:  # add
-            new_key = _load_key_prompt(root)
+            new_key = _load_offline_key_prompt(root)
             if not new_key:
                 continue
 
@@ -330,14 +382,11 @@ def _configure_online_key_prompt(root: Root) -> None:
             return
 
     while True:
-        if new_key := _load_key_prompt(root):
+        if new_key := _load_online_key_prompt(root):
             break
 
     name = _key_name_prompt(root)
     new_key.unrecognized_fields[KEY_NAME_FIELD] = name
-
-    uri = f"fn:{new_key.keyid}"
-    new_key.unrecognized_fields[KEY_URI_FIELD] = uri
 
     for role_name in ONLINE_ROLE_NAMES:
         if current_key:
