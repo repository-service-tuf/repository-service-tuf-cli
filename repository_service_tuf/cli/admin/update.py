@@ -37,7 +37,13 @@ DEFAULT_PATH = "update-payload.json"
 
 
 @metadata.command()  # type: ignore
-@click.argument("root_in", type=click.File("rb"))
+@click.option(
+    "--in",
+    "input",
+    help="Input file containing current trusted root JSON.",
+    type=click.File("r"),
+    required=True,
+)
 @click.option(
     "--out",
     is_flag=False,
@@ -45,7 +51,7 @@ DEFAULT_PATH = "update-payload.json"
     help=f"Write json result to FILENAME (default: '{DEFAULT_PATH}')",
     type=click.File("w"),
 )
-def update(root_in, out: Optional[click.File]) -> None:
+def update(input: click.File, out: Optional[click.File]) -> None:
     """Update root metadata and bump version."""
     console.print("\n", Markdown("# Metadata Update Tool"))
 
@@ -55,7 +61,7 @@ def update(root_in, out: Optional[click.File]) -> None:
     ###########################################################################
     # Load root
     # TODO: load from API
-    prev_root_md = Metadata[Root].from_bytes(root_in.read())
+    prev_root_md = Metadata[Root].from_bytes(input.read())  # type: ignore
     root = deepcopy(prev_root_md.signed)
 
     ###########################################################################
