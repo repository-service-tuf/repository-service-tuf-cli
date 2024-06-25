@@ -189,8 +189,6 @@ def invoke_command(
     ]
     if cmd in commands_no_out_args:
         out_args = []
-    elif cmd == update:
-        out_args = ["-s", out_file_name]
     else:
         out_args = ["--out", out_file_name]
 

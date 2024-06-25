@@ -5,6 +5,7 @@
 import json
 from copy import deepcopy
 from dataclasses import asdict
+from typing import Optional
 
 import click
 from rich.markdown import Markdown
@@ -32,22 +33,23 @@ from repository_service_tuf.cli.admin.helpers import (
     _warn_no_save,
 )
 
+DEFAULT_PATH = "update-payload.json"
+
 
 @metadata.command()  # type: ignore
 @click.argument("root_in", type=click.File("rb"))
 @click.option(
-    "--save",
-    "-s",
+    "--out",
     is_flag=False,
-    flag_value="update-payload.json",
-    help="Write json result to FILENAME (default: 'update-payload.json')",
+    flag_value=DEFAULT_PATH,
+    help=f"Write json result to FILENAME (default: '{DEFAULT_PATH}')",
     type=click.File("w"),
 )
-def update(root_in, save) -> None:
+def update(root_in, out: Optional[click.File]) -> None:
     """Update root metadata and bump version."""
     console.print("\n", Markdown("# Metadata Update Tool"))
 
-    if not save:
+    if not out:
         _warn_no_save()
 
     ###########################################################################
@@ -110,6 +112,6 @@ def update(root_in, save) -> None:
     # Dump payload
     # TODO: post to API
     payload = UpdatePayload(Metadatas(root_md.to_dict()))
-    if save:
-        json.dump(asdict(payload), save, indent=2)
-        console.print(f"Saved result to '{save.name}'")
+    if out:
+        json.dump(asdict(payload), out, indent=2)  # type: ignore
+        console.print(f"Saved result to '{out.name}'")
