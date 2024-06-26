@@ -7,7 +7,7 @@ from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, invoke_command
 
 
 class TestCeremony:
-    def test_ceremony_with_custom_out(
+    def test_ceremony_with_dry_run_and_custom_out(
         self,
         monkeypatch,
         ceremony_inputs,
@@ -17,7 +17,10 @@ class TestCeremony:
         patch_getpass,
         patch_utcnow,
     ):
-
+        """
+        Test that '--dry-run' and '--out' are compatible without connecting to
+        the API.
+        """
         # public keys and signing keys selection options
         monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
 
@@ -26,7 +29,7 @@ class TestCeremony:
         result = invoke_command(
             ceremony.ceremony,
             input_step1 + input_step2 + input_step3 + input_step4,
-            args=["--out", custom_path],
+            args=["--dry-run", "--out", custom_path],
         )
 
         with open(_PAYLOADS / "ceremony.json") as f:
@@ -37,6 +40,8 @@ class TestCeremony:
 
         assert [s["keyid"] for s in sigs_r] == [s["keyid"] for s in sigs_e]
         assert result.data == expected
+        assert f"Saved result to '{custom_path}'" in result.stdout
+        assert "Bootstrap completed." not in result.stdout
 
     def test_ceremony_threshold_less_than_2(
         self,
@@ -65,7 +70,7 @@ class TestCeremony:
         result = invoke_command(
             ceremony.ceremony,
             input_step1 + input_step2 + input_step3 + input_step4,
-            [],
+            ["--dry-run"],
         )
 
         with open(_PAYLOADS / "ceremony.json") as f:
@@ -103,7 +108,7 @@ class TestCeremony:
         result = invoke_command(
             ceremony.ceremony,
             input_step1 + input_step2 + input_step3 + input_step4,
-            [],
+            ["--dry-run"],
         )
 
         with open(_PAYLOADS / "ceremony.json") as f:
@@ -132,6 +137,7 @@ class TestCeremony:
         monkeypatch.setattr(ceremony, "task_status", fake_task_status)
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
         test_context["settings"].SERVER = "http://localhost:80"
+        # public keys and signing keys selection options
         monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
 
         result = invoke_command(
@@ -186,6 +192,7 @@ class TestCeremony:
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
         test_context["settings"].SERVER = "http://localhost:80"
         custom_path = "file.json"
+        # public keys and signing keys selection options
         monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
 
         result = invoke_command(
@@ -246,7 +253,7 @@ class TestCeremony:
         result = invoke_command(
             ceremony.ceremony,
             input_step1 + input_step2 + input_step3 + input_step4,
-            [],
+            ["--dry-run"],
         )
 
         with open(_PAYLOADS / "ceremony.json") as f:
@@ -259,20 +266,48 @@ class TestCeremony:
         assert result.data == expected
         assert "Key already in use." in result.stdout
 
+    def test_ceremony_dry_run_with_server_config_set(
+        self,
+        monkeypatch,
+        ceremony_inputs,
+        key_selection,
+        client,
+        test_context,
+        patch_getpass,
+        patch_utcnow,
+    ):
+        """
+        Test that '--dry-run' is with higher priority than 'settings.SERVER'.
+        """
+        # public keys and signing keys selection options
+        monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
+        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
+        test_context["settings"].SERVER = "http://localhost:80"
+        # We want to test when only "--dry-run" is used we will not save a file
+        # locally and will not send payload to the API.
+        # Given that "invoke_command" always saves a file, so the result can be
+        # read we cannot use it.
+        with client.isolated_filesystem():
+            result = client.invoke(
+                ceremony.ceremony,
+                args=["--dry-run"],
+                input="\n".join(
+                    input_step1 + input_step2 + input_step3 + input_step4
+                ),
+                obj=test_context,
+                catch_exceptions=False,
+            )
+
+        assert result.stderr == ""
+        assert "Saved result to " not in result.stdout
+        assert "Bootstrap completed." not in result.stdout
+
 
 class TestCeremonyError:
-    def test_ceremony_no_api_server_and_no_output_option(
-        self, client, test_context, ceremony_inputs
-    ):
-        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
-        result = client.invoke(
-            ceremony.ceremony,
-            args=[],
-            input="\n".join(
-                input_step1 + input_step2 + input_step3 + input_step4
-            ),
-            obj=test_context,
-            catch_exceptions=False,
-        )
+    def test_ceremony_no_api_server_and_no_dry_run_option(self):
+        result = invoke_command(ceremony.ceremony, [], [], std_err_empty=False)
 
-        assert "Either '--api-sever'/'SERVER'" in result.stderr
+        err_prefix = "Either '--api-sever' admin option/'SERVER'"
+        err_suffix = "or '--dry-run'"
+        assert err_prefix in result.stderr
+        assert err_suffix in result.stderr

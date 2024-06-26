@@ -50,16 +50,37 @@ DEFAULT_PATH = "ceremony-payload.json"
     help=f"Write output json result to FILENAME (default: '{DEFAULT_PATH}')",
     type=click.File("w"),
 )
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help=(
+        "Run ceremony in dry-run mode without sending result to API. "
+        "Ignores options and configurations related to API."
+    ),
+)
 @click.pass_context
-def ceremony(context: Any, out: Optional[click.File]) -> None:
-    """Bootstrap Ceremony to create initial root metadata and RSTUF config."""
+def ceremony(context: Any, out: Optional[click.File], dry_run: bool) -> None:
+    """
+    Perform ceremony and send result to API to trigger bootstrap.
+
+    \b
+    * If `--out [FILENAME]` is passed, result is written to local FILENAME
+    (in addition to being sent to API).
+
+    \b
+    * If `--dry-run` is passed, result is not sent to API.
+    You can still pass `--out [FILENAME]` to store the result locally.
+    The `--api-server` admin option and `SERVER` from config will be ignored.
+    """
     console.print("\n", Markdown("# Metadata Bootstrap Tool"))
     settings = context.obj["settings"]
     # Running online ceremony requires connection to the server and
     # confirmation that the server is indeed ready for bootstap.
-    if not settings.get("SERVER") and not out:
+    if not settings.get("SERVER") and not dry_run:
         raise click.ClickException(
-            "Either '--api-sever'/'SERVER' in RSTUF config or '--out' needed"
+            "Either '--api-sever' admin option/'SERVER' in RSTUF config or "
+            "'--dry-run' needed"
         )
 
     # Performs ceremony steps.
@@ -114,7 +135,7 @@ def ceremony(context: Any, out: Optional[click.File]) -> None:
         json.dump(asdict(bootstrap_payload), out, indent=2)  # type: ignore
         console.print(f"Saved result to '{out.name}'")
 
-    if settings.get("SERVER"):
+    if settings.get("SERVER") and not dry_run:
         task_id = send_payload(
             settings=settings,
             url=URL.BOOTSTRAP.value,
