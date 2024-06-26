@@ -144,7 +144,10 @@ def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
     with open(path, "rb") as f:
         private_pem = f.read()
 
-    password = click.prompt("\nPlease enter password", hide_input=True)
+    password = click.prompt(
+        f"\nPlease enter password to encrypted private key '{name}'",
+        hide_input=True,
+    )
     private_key = load_pem_private_key(private_pem, password.encode())
     return CryptoSigner(private_key, public_key)
 
@@ -387,11 +390,10 @@ def _add_root_signatures_prompt(
             or_continue = " or continue:"
             sign_options.insert(0, "continue")
 
-        console.print(f"\nSelect one current key to sign{or_continue}")
+        console.print(f"\nSelect a key for signing{or_continue}")
         choice = _select(sign_options)
 
         if choice == "continue":
-            console.print("\nSelect one current key for sign")
             break
 
         _add_signature_prompt(root_md, key_choices[choice])
