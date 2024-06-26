@@ -163,7 +163,7 @@ class TestHelpers:
             patch(f"{_HELPERS}._key_name_prompt", return_value="foo"),
             patch(
                 f"{_HELPERS}._select",
-                side_effect=["fake_keyid", "continue"],
+                side_effect=["add", "add", "continue"],
             ),
         ):
             helpers._configure_root_keys_prompt(root)
