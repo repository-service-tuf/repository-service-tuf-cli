@@ -18,7 +18,7 @@ class TestCeremony:
         patch_utcnow,
     ):
 
-        # public key selection options
+        # public keys and signing keys selection options
         monkeypatch.setattr(
             "repository_service_tuf.cli.admin.helpers._select",
             ceremony_selection,
@@ -62,7 +62,7 @@ class TestCeremony:
             "JanisJoplin's Key",  # Please enter key name
         ]
 
-        # public key selection options
+        # public keys and signing keys selection options
         monkeypatch.setattr(
             "repository_service_tuf.cli.admin.helpers._select",
             ceremony_selection,
@@ -103,7 +103,7 @@ class TestCeremony:
             "4",  # Please enter number of delegated hash bins [2/4/8/16/32/64/128/256/512/1024/2048/4096/8192/16384] (256)  # noqa
             "",  # Please enter days until expiry for root role (365)
         ]
-
+        # public keys and signing keys selection options
         monkeypatch.setattr(
             "repository_service_tuf.cli.admin.helpers._select",
             ceremony_selection,
@@ -257,7 +257,7 @@ class TestCeremony:
             "Online Key",  # Please enter a key name
         ]
 
-        # public key selection options
+        # public keys and signing keys selection options
         monkeypatch.setattr(
             "repository_service_tuf.cli.admin.helpers._select",
             ceremony_selection,

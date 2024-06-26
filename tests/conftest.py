@@ -171,17 +171,17 @@ def ceremony_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
 
 
 @pytest.fixture
-def ceremony_selection(monkeypatch) -> lambda *a: str:
+def ceremony_selection() -> lambda *a: str:
     # public key selection options
     selection_options = iter(
         (
-            # adding/removing root public signing keys
+            # adding/removing root public signing keys (selections for input_step2)
             "add",  # add key
             "add",  # add key
             "remove",  # remove key
             "my rsa key",  # select key to remove
             "continue",  # continue
-            # signing with root keys
+            # signing with root keys (selections for input_step4)
             "JimiHendrix's Key",  # select key to sign
             "JanisJoplin's Key",  # select key to sign
             "continue",  # continue
