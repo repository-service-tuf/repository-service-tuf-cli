@@ -125,7 +125,7 @@ def sign(
 
     # Make sure user understands that result will be send to the API and if the
     # the user wants something else should use '--dry-run'.
-    if settings.get("SERVER") is None and not dry_run:
+    if not settings.get("SERVER") and not dry_run:
         raise click.ClickException(
             "Either '--api-sever' admin option/'SERVER' in RSTUF config or "
             "'--dry-run' needed"
@@ -187,11 +187,11 @@ def sign(
     if settings.get("SERVER") and not dry_run:
         console.print(f"\nSending signature to {settings.SERVER}")
         task_id = send_payload(
-            settings,
-            URL.METADATA_SIGN.value,
-            asdict(payload),
-            "Metadata sign accepted.",
-            "Metadata sign",
+            settings=settings,
+            url=URL.METADATA_SIGN.value,
+            payload=asdict(payload),
+            expected_msg="Metadata sign accepted.",
+            command_name="Metadata sign",
         )
         task_status(task_id, settings, "Metadata sign status:")
         console.print("\nMetadata Signed and sent to the API! 🔑\n")

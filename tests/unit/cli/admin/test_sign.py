@@ -36,7 +36,7 @@ class TestSign:
         sign.request_server = pretend.call_recorder(
             lambda *a, **kw: fake_response
         )
-        sign.send_payload = pretend.call_recorder(lambda *a: "fake-taskid")
+        sign.send_payload = pretend.call_recorder(lambda **kw: "fake-taskid")
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
         api_server = "http://127.0.0.1"
         test_context["settings"].SERVER = api_server
@@ -56,17 +56,17 @@ class TestSign:
         ]
         assert sign.send_payload.calls == [
             pretend.call(
-                result.context["settings"],
-                URL.METADATA_SIGN.value,
-                {
+                settings=result.context["settings"],
+                url=URL.METADATA_SIGN.value,
+                payload={
                     "role": "root",
                     "signature": {
                         "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # noqa
                         "sig": "917046f9076eae41876be7c031be149aa2a960fd21f0d52f72128f55d9c423e2ec1632f98c96693dd801bd064e37efd6e5a5d32712fd5701a42099ece6b88c05",  # noqa
                     },
                 },
-                "Metadata sign accepted.",
-                "Metadata sign",
+                expected_msg="Metadata sign accepted.",
+                command_name="Metadata sign",
             )
         ]
         assert sign.task_status.calls == [
@@ -102,7 +102,7 @@ class TestSign:
         sign.request_server = pretend.call_recorder(
             lambda *a, **kw: fake_response
         )
-        sign.send_payload = pretend.call_recorder(lambda *a: "fake-taskid")
+        sign.send_payload = pretend.call_recorder(lambda **kw: "fake-taskid")
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
         api_server = "http://127.0.0.1"
         test_context["settings"].SERVER = api_server
@@ -122,17 +122,17 @@ class TestSign:
         ]
         assert sign.send_payload.calls == [
             pretend.call(
-                result.context["settings"],
-                URL.METADATA_SIGN.value,
-                {
+                settings=result.context["settings"],
+                url=URL.METADATA_SIGN.value,
+                payload={
                     "role": "root",
                     "signature": {
                         "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # noqa
                         "sig": "828a659bc34972504b9dab16bc44818b8a7d49ffee2a9021df6a6be4dd3b7a026d1f890b952303d1cf32dda90fbdf60e9fcfeb5f0af6498f0f55cad31c750a02",  # noqa
                     },
                 },
-                "Metadata sign accepted.",
-                "Metadata sign",
+                expected_msg="Metadata sign accepted.",
+                command_name="Metadata sign",
             )
         ]
         assert sign.task_status.calls == [
@@ -188,7 +188,7 @@ class TestSign:
             f"{_HELPERS}._select",
             lambda *a: "JimiHendrix's Key",
         )
-        sign.send_payload = pretend.call_recorder(lambda *a: "fake-taskid")
+        sign.send_payload = pretend.call_recorder(lambda **kw: "fake-taskid")
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
         sign_input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
         test_context["settings"].SERVER = "http://localhost:80"
@@ -206,17 +206,17 @@ class TestSign:
         assert "Metadata Signed and sent to the API! 🔑" in result.stdout
         assert sign.send_payload.calls == [
             pretend.call(
-                result.context["settings"],
-                URL.METADATA_SIGN.value,
-                {
+                settings=result.context["settings"],
+                url=URL.METADATA_SIGN.value,
+                payload={
                     "role": "root",
                     "signature": {
                         "keyid": "c6d8bf2e4f48b41ac2ce8eca21415ca8ef68c133b47fc33df03d4070a7e1e9cc",  # noqa
                         "sig": "917046f9076eae41876be7c031be149aa2a960fd21f0d52f72128f55d9c423e2ec1632f98c96693dd801bd064e37efd6e5a5d32712fd5701a42099ece6b88c05",  # noqa
                     },
                 },
-                "Metadata sign accepted.",
-                "Metadata sign",
+                expected_msg="Metadata sign accepted.",
+                command_name="Metadata sign",
             )
         ]
         assert sign.task_status.calls == [
