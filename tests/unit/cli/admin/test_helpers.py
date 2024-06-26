@@ -152,29 +152,8 @@ class TestHelpers:
             result = helpers._root_threshold_prompt()
         assert result == 5
 
-    def test_choose_add_remove_skip_key_prompt(self):
-        # prompt for choice until in allowed range, default is disallowed
-        inputs = ["-1", "", "2", "1"]
-        with patch(_PROMPT, side_effect=inputs):
-            result = helpers._choose_add_remove_skip_key_prompt(1, False)
-        assert result == 1
-
-        # default allowed but cannot be entered explicitly
-        inputs = ["-1", ""]
-        with patch(_PROMPT, side_effect=inputs):
-            result = helpers._choose_add_remove_skip_key_prompt(1, True)
-        assert result == -1
-
     def test_configure_root_keys_prompt(self, ed25519_key):
         # Configure root keys in empty root
-        # NOTE: This is quite intricate but gives us full coverage
-        # The course of action is:
-        # 1. User is forced to add key to reach threshold (load: ed25519_key)
-        # 2. User chooses to re-add key (choice: 0) but fails (load: None)
-        # 3. User chooses to remove key (choice: 1)
-        # 4. User is forced to add key to reach threshold (load: ed25519_key)
-        # 5. User chooses to exit (choice: -1)
-
         root = Root()
         with (
             patch(
@@ -183,8 +162,8 @@ class TestHelpers:
             ),
             patch(f"{_HELPERS}._key_name_prompt", return_value="foo"),
             patch(
-                f"{_HELPERS}._choose_add_remove_skip_key_prompt",
-                side_effect=[0, 1, -1],
+                f"{_HELPERS}._select",
+                side_effect=["add", "add", "continue"],
             ),
         ):
             helpers._configure_root_keys_prompt(root)
@@ -245,19 +224,6 @@ class TestHelpers:
 
         _assert_online_key(key2)
 
-    def test_choose_signing_key_prompt(self):
-        # prompt for choice until in allowed range, default is disallowed
-        inputs = ["-1", "", "0", "2", "1"]
-        with patch(_PROMPT, side_effect=inputs):
-            result = helpers._choose_signing_key_prompt(1, False)
-        assert result == 1
-
-        # default allowed but cannot be entered explicitly
-        inputs = ["-1", ""]
-        with patch(_PROMPT, side_effect=inputs):
-            result = helpers._choose_signing_key_prompt(1, True)
-        assert result == -1
-
     def test_add_signature_prompt(self, ed25519_signer):
         metadata = Metadata(Root())
         # Sign until success (two attempts)
@@ -303,8 +269,7 @@ class TestHelpers:
                 return_value=keys,
             ),
             patch(
-                f"{_HELPERS}._choose_signing_key_prompt",
-                side_effect=[1, -1],
+                f"{_HELPERS}._select", side_effect=["fake_keyid", "continue"]
             ),
             patch(
                 f"{_HELPERS}._add_signature_prompt",
@@ -378,3 +343,16 @@ class TestHelpers:
         root.add_key(ed25519_key2, "root")
         keys = helpers._print_root_keys(root)
         assert keys == [ed25519_key, ed25519_key2]
+
+    def test__select(self, monkeypatch):
+        helpers.beaupy.select = pretend.call_recorder(
+            lambda *a, **kw: "option1"
+        )
+        result = helpers._select(["option1", "option2"])
+
+        assert result == "option1"
+        assert helpers.beaupy.select.calls == [
+            pretend.call(
+                options=["option1", "option2"], cursor=">", cursor_style="cyan"
+            )
+        ]

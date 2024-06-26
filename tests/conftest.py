@@ -141,6 +141,8 @@ def test_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
 
 @pytest.fixture
 def ceremony_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
+    # the selection add/remove signing keys is managed by fixture key_selection
+
     input_step1 = [  # Configure online role settings and root expiration
         "",  # Please enter days until expiry for timestamp role (1)
         "",  # Please enter days until expiry for snapshot role (1)
@@ -153,27 +155,43 @@ def ceremony_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
         "2",  # Please enter root threshold
         f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
         "my rsa key",  # Please enter key name
-        "0",  # Please press 0 to add key, or remove key by entering its index  # noqa
         f"{_PEMS / 'JH.pub'}",  # Please enter path to public key
         "JimiHendrix's Key",  # Please enter key name
-        "0",  # Please press 0 to add key, or remove key by entering its index.  # noqa
         f"{_PEMS / 'JJ.pub'}",  # Please enter path to public key
         "JanisJoplin's Key",  # Please enter key name
-        "1",  # Please press 0 to add key, or remove key by entering its index. Press enter to contiue  # noqa
-        "",  # Please press 0 to add key, or remove key by entering its index. Press enter to contiue  # noqa
     ]
     input_step3 = [  # Configure Online Key
         f"{_PEMS / '0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043.pub'}",  # Please enter path to public key  # noqa
         "Online Key",  # Please enter a key name
     ]
     input_step4 = [  # Sign Metadata
-        "1",  # Please enter signing key index
         f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-        "1",  # Please enter signing key index
         f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
     ]
 
     return input_step1, input_step2, input_step3, input_step4
+
+
+@pytest.fixture
+def key_selection() -> lambda *a: str:
+    # public key selection options
+    selection_options = iter(
+        (
+            # selections for input_step4
+            "add",  # add key
+            "add",  # add key
+            "remove",  # remove key
+            "my rsa key",  # select key to remove
+            "continue",  # continue
+            # selections for input_step4
+            "JimiHendrix's Key",  # select key to sign
+            "JanisJoplin's Key",  # select key to sign
+            "continue",  # continue
+        )
+    )
+    mocked_select = pretend.call_recorder(lambda *a: next(selection_options))
+
+    return mocked_select
 
 
 @pytest.fixture

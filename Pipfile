@@ -16,6 +16,7 @@ isort = "*"
 sqlalchemy = "*"
 psycopg2 = "*"
 tuf = "*"
+beaupy = "*"
 
 [dev-packages]
 black = "*"

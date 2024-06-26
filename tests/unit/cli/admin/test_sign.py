@@ -10,15 +10,22 @@ import pytest
 
 from repository_service_tuf.cli.admin import sign
 from repository_service_tuf.helpers.api_client import URL, Methods
-from tests.conftest import _PAYLOADS, _PEMS, _ROOTS, invoke_command
+from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 
 class TestSign:
-    def test_sign_with_previous_root(self, test_context, patch_getpass):
+    def test_sign_with_previous_root(
+        self, monkeypatch, test_context, patch_getpass
+    ):
         inputs = [
-            "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
+        # selections interface
+        monkeypatch.setattr(
+            f"{_HELPERS}._select",
+            lambda *a: "JimiHendrix's Key",
+        )
+
         with open(f"{_PAYLOADS / 'sign_pending_roles.json'}") as f:
             fake_response_data = json.load(f)
 
@@ -70,11 +77,17 @@ class TestSign:
             )
         ]
 
-    def test_sign_bootstap_root(self, test_context, patch_getpass):
+    def test_sign_bootstrap_root(
+        self, monkeypatch, test_context, patch_getpass
+    ):
         inputs = [
-            "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
+        # selections interface
+        monkeypatch.setattr(
+            f"{_HELPERS}._select",
+            lambda *a: "JimiHendrix's Key",
+        )
 
         with open(f"{_ROOTS / 'v1.json'}") as f:
             v1_das_root = f.read()
@@ -131,12 +144,16 @@ class TestSign:
         ]
 
     def test_sign_input_option_and_custom_out(
-        self, test_context, patch_getpass
+        self, monkeypatch, test_context, patch_getpass
     ):
         inputs = [
-            "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
+        # selections interface
+        monkeypatch.setattr(
+            f"{_HELPERS}._select",
+            lambda *a: "JimiHendrix's Key",
+        )
         input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
         custom_out_path = "custom_sign_path.json"
         args = ["--in", input_path, "--out", custom_out_path]
@@ -156,12 +173,16 @@ class TestSign:
         assert f"Saved result to '{custom_out_path}'" in result.stdout
 
     def test_sign_with_input_option_and_api_server_set(
-        self, test_context, patch_getpass
+        self, monkeypatch, test_context, patch_getpass
     ):
         inputs = [
-            "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
+        # selections interface
+        monkeypatch.setattr(
+            f"{_HELPERS}._select",
+            lambda *a: "JimiHendrix's Key",
+        )
         sign.send_payload = pretend.call_recorder(lambda *a: "fake-taskid")
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
         sign_input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
@@ -212,7 +233,6 @@ class TestSignError:
         self, test_context, patch_getpass
     ):
         inputs = [
-            "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
         with open(f"{_ROOTS / 'v2.json'}") as f:
@@ -247,7 +267,6 @@ class TestSignError:
 
     def test_sign_fully_signed_metadata(self, test_context, patch_getpass):
         inputs = [
-            "1",  # Please enter signing key index
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
         with open("tests/files/payload/ceremony.json", "r") as f:
