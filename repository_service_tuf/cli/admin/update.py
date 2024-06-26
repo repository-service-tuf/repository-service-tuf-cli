@@ -5,12 +5,16 @@
 import json
 from copy import deepcopy
 from dataclasses import asdict
+from tempfile import TemporaryDirectory
 from typing import Optional
 
 import click
+import requests
 from rich.markdown import Markdown
 from rich.prompt import Confirm
+from tuf.api.exceptions import DownloadError, RepositoryError
 from tuf.api.metadata import Metadata, Root
+from tuf.ngclient.updater import Updater
 
 # TODO: Should we use the global rstuf console exclusively? We do use it for
 # `console.print`, but not with `Confirm/Prompt.ask`. The latter uses a default
@@ -36,13 +40,42 @@ from repository_service_tuf.cli.admin.helpers import (
 DEFAULT_PATH = "update-payload.json"
 
 
+def get_latest_md(metadata_url: str, md_name: str) -> Metadata:
+    try:
+        temp_dir = TemporaryDirectory()
+        initial_root_url = f"{metadata_url}/1.root.json"
+        response = requests.get(initial_root_url, timeout=300)
+        if response.status_code != 200:
+            raise click.ClickException(
+                f"Cannot fetch initial root {initial_root_url}"
+            )
+
+        with open(f"{temp_dir.name}/root.json", "w") as f:
+            f.write(response.text)
+
+        updater = Updater(
+            metadata_dir=temp_dir.name, metadata_base_url=metadata_url
+        )
+        updater.refresh()
+        return Metadata.from_file(f"{temp_dir.name}/{md_name}.json")
+
+    except (OSError, RepositoryError, DownloadError):
+        raise click.ClickException(f"Problem fetching latest {md_name}")
+
+
 @metadata.command()  # type: ignore
 @click.option(
     "--in",
     "input",
     help="Input file containing current trusted root JSON.",
-    type=click.File("r"),
-    required=True,
+    type=click.File("rb"),
+    required=False,
+)
+@click.option(
+    "--metadata-url",
+    help="URL to the RSTUF API metadata storage.",
+    type=str,
+    required=False,
 )
 @click.option(
     "--out",
@@ -51,17 +84,30 @@ DEFAULT_PATH = "update-payload.json"
     help=f"Write json result to FILENAME (default: '{DEFAULT_PATH}')",
     type=click.File("w"),
 )
-def update(input: click.File, out: Optional[click.File]) -> None:
+def update(
+    input: Optional[click.File],
+    metadata_url: Optional[str],
+    out: Optional[click.File],
+) -> None:
     """Update root metadata and bump version."""
     console.print("\n", Markdown("# Metadata Update Tool"))
+    if not input and not metadata_url:
+        raise click.ClickException("Either '--in' or '--metadata-url' needed")
 
     if not out:
         _warn_no_save()
 
     ###########################################################################
     # Load root
-    # TODO: load from API
-    prev_root_md = Metadata[Root].from_bytes(input.read())  # type: ignore
+    prev_root_md: Metadata[Root]
+    if metadata_url:
+        prev_root_md = get_latest_md(metadata_url, Root.type)
+        console.print(
+            f"Latest root version found: {prev_root_md.signed.version}"
+        )
+    else:
+        prev_root_md = Metadata.from_bytes(input.read())  # type: ignore
+
     root = deepcopy(prev_root_md.signed)
 
     ###########################################################################
