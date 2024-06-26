@@ -7,7 +7,7 @@ import json
 import pretend
 
 from repository_service_tuf.cli.admin import update
-from tests.conftest import _PAYLOADS, _PEMS, _ROOTS, invoke_command
+from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 
 class TestMetadataUpdate:
@@ -29,12 +29,12 @@ class TestMetadataUpdate:
         # selections interface
         selection_options = iter(
             (
-                # adding/removing root public signing keys
+                # selection for inputs (update root keys)
                 "remove",  # add key
                 "JimiHendrix's Key",  # add key
                 "add",  # remove key
                 "continue",  # continue
-                # signing with root keys
+                # selection for inputs (signing root key)
                 "JimiHendrix's Key",  # select key to sign
                 "JanisJoplin's Key",  # select key to sign
                 "JoeCocker's Key",  # select key to sign
@@ -46,9 +46,7 @@ class TestMetadataUpdate:
         )
 
         # public key selection options
-        monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.helpers._select", mocked_select
-        )
+        monkeypatch.setattr(f"{_HELPERS}._select", mocked_select)
         result = invoke_command(update.update, inputs, args)
         with open(_PAYLOADS / "update.json") as f:
             expected = json.load(f)

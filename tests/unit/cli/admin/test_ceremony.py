@@ -3,7 +3,7 @@ import json
 import pretend
 
 from repository_service_tuf.cli.admin import ceremony
-from tests.conftest import _PAYLOADS, _PEMS, invoke_command
+from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, invoke_command
 
 
 class TestCeremony:
@@ -11,7 +11,7 @@ class TestCeremony:
         self,
         monkeypatch,
         ceremony_inputs,
-        ceremony_selection,
+        key_selection,
         client,
         test_context,
         patch_getpass,
@@ -19,10 +19,7 @@ class TestCeremony:
     ):
 
         # public keys and signing keys selection options
-        monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.helpers._select",
-            ceremony_selection,
-        )
+        monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
 
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
         custom_path = "file.json"
@@ -45,7 +42,7 @@ class TestCeremony:
         self,
         monkeypatch,
         ceremony_inputs,
-        ceremony_selection,
+        key_selection,
         patch_getpass,
         patch_utcnow,
     ):
@@ -63,10 +60,7 @@ class TestCeremony:
         ]
 
         # public keys and signing keys selection options
-        monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.helpers._select",
-            ceremony_selection,
-        )
+        monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
 
         result = invoke_command(
             ceremony.ceremony,
@@ -88,7 +82,7 @@ class TestCeremony:
         self,
         monkeypatch,
         ceremony_inputs,
-        ceremony_selection,
+        key_selection,
         patch_getpass,
         patch_utcnow,
     ):
@@ -104,10 +98,7 @@ class TestCeremony:
             "",  # Please enter days until expiry for root role (365)
         ]
         # public keys and signing keys selection options
-        monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.helpers._select",
-            ceremony_selection,
-        )
+        monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
 
         result = invoke_command(
             ceremony.ceremony,
@@ -128,7 +119,7 @@ class TestCeremony:
     def test_ceremony_api_server(
         self,
         ceremony_inputs,
-        ceremony_selection,
+        key_selection,
         monkeypatch,
         patch_getpass,
         patch_utcnow,
@@ -141,11 +132,7 @@ class TestCeremony:
         monkeypatch.setattr(ceremony, "task_status", fake_task_status)
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
         test_context["settings"].SERVER = "http://localhost:80"
-
-        monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.helpers._select",
-            ceremony_selection,
-        )
+        monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
 
         result = invoke_command(
             ceremony.ceremony,
@@ -184,7 +171,7 @@ class TestCeremony:
     def test_ceremony_api_server_with_out_option(
         self,
         ceremony_inputs,
-        ceremony_selection,
+        key_selection,
         monkeypatch,
         client,
         test_context,
@@ -199,11 +186,7 @@ class TestCeremony:
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
         test_context["settings"].SERVER = "http://localhost:80"
         custom_path = "file.json"
-
-        monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.helpers._select",
-            ceremony_selection,
-        )
+        monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
 
         result = invoke_command(
             ceremony.ceremony,
@@ -245,7 +228,7 @@ class TestCeremony:
         self,
         monkeypatch,
         ceremony_inputs,
-        ceremony_selection,
+        key_selection,
         patch_getpass,
         patch_utcnow,
     ):
@@ -258,10 +241,7 @@ class TestCeremony:
         ]
 
         # public keys and signing keys selection options
-        monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.helpers._select",
-            ceremony_selection,
-        )
+        monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
 
         result = invoke_command(
             ceremony.ceremony,

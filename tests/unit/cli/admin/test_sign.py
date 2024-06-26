@@ -10,7 +10,7 @@ import pytest
 
 from repository_service_tuf.cli.admin import sign
 from repository_service_tuf.helpers.api_client import URL, Methods
-from tests.conftest import _PAYLOADS, _PEMS, _ROOTS, invoke_command
+from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 
 class TestSign:
@@ -22,7 +22,7 @@ class TestSign:
         ]
         # selections interface
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.helpers._select",
+            f"{_HELPERS}._select",
             lambda *a: "JimiHendrix's Key",
         )
 
@@ -85,7 +85,7 @@ class TestSign:
         ]
         # selections interface
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.helpers._select",
+            f"{_HELPERS}._select",
             lambda *a: "JimiHendrix's Key",
         )
 
@@ -151,7 +151,7 @@ class TestSign:
         ]
         # selections interface
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.helpers._select",
+            f"{_HELPERS}._select",
             lambda *a: "JimiHendrix's Key",
         )
         input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
@@ -180,7 +180,7 @@ class TestSign:
         ]
         # selections interface
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.helpers._select",
+            f"{_HELPERS}._select",
             lambda *a: "JimiHendrix's Key",
         )
         sign.send_payload = pretend.call_recorder(lambda *a: "fake-taskid")

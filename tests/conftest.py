@@ -141,6 +141,8 @@ def test_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
 
 @pytest.fixture
 def ceremony_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
+    # the selection add/remove signing keys is managed by fixture key_selection
+
     input_step1 = [  # Configure online role settings and root expiration
         "",  # Please enter days until expiry for timestamp role (1)
         "",  # Please enter days until expiry for snapshot role (1)
@@ -171,17 +173,17 @@ def ceremony_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
 
 
 @pytest.fixture
-def ceremony_selection() -> lambda *a: str:
+def key_selection() -> lambda *a: str:
     # public key selection options
     selection_options = iter(
         (
-            # adding/removing root public signing keys (selections for input_step2)
+            # selections for input_step4
             "add",  # add key
             "add",  # add key
             "remove",  # remove key
             "my rsa key",  # select key to remove
             "continue",  # continue
-            # signing with root keys (selections for input_step4)
+            # selections for input_step4
             "JimiHendrix's Key",  # select key to sign
             "JanisJoplin's Key",  # select key to sign
             "continue",  # continue
