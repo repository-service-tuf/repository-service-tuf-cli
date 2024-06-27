@@ -87,10 +87,7 @@ DEFAULT_PATH = "sign-payload.json"
     "--dry-run",
     is_flag=True,
     default=False,
-    help=(
-        "Run sign in dry-run mode without sending result to API. "
-        "Ignores options and configurations related to API."
-    ),
+    help="Run sign in dry-run mode without sending result to API. ",
 )
 @click.pass_context
 def sign(

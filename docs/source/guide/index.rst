@@ -131,11 +131,11 @@ You can do the Ceremony offline. This means on a disconnected computer
     You can still pass `--out [FILENAME]` to store the result locally.
     The `--api-server` admin option and `SERVER` from config will be ignored.
 
-    ╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ --out          FILENAME  Write output json result to FILENAME (default: 'ceremony-payload.json')                                        │
-    │ --dry-run                Run ceremony in dry-run mode without sending result to API. Ignores options and configurations related to API. │
-    │ --help     -h            Show this message and exit.                                                                                    │
-    ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+    ╭─ Options ─────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --out          FILENAME  Write output json result to FILENAME (default: 'ceremony-payload.json')  │
+    │ --dry-run                Run ceremony in dry-run mode without sending result to API.              │
+    │ --help     -h            Show this message and exit.                                              │
+    ╰───────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 There are four steps in the ceremony.
 
@@ -187,12 +187,12 @@ sign (``sign``)
     * If `--dry-run` is passed, result is not sent to API. You can still pass `--out [FILENAME]` to store the result locally.
     * If `--in` and `--dry-run` is passed, `--api-server` admin option and `SERVER` from config will be ignored.
 
-    ╭─ Options ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-    │ --in           FILENAME  Input file containing the JSON response from the 'GET /api/v1/metadata/sign' RSTUF API endpoint.            │
-    │ --out          FILENAME  Write output JSON result to FILENAME (default: 'sign-payload.json')                                         │
-    │ --dry-run                Run sign in dry-run mode without sending result to API. Ignores options and configurations related to API.  │
-    │ --help     -h            Show this message and exit.                                                                                 │
-    ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+    ╭─ Options ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ --in           FILENAME  Input file containing the JSON response from the 'GET /api/v1/metadata/sign' RSTUF API endpoint.  │
+    │ --out          FILENAME  Write output JSON result to FILENAME (default: 'sign-payload.json')                               │
+    │ --dry-run                Run sign in dry-run mode without sending result to API.                                           │
+    │ --help     -h            Show this message and exit.                                                                       │
+    ╰────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
 .. rstuf-cli-admin-send
 

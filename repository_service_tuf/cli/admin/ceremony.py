@@ -54,10 +54,7 @@ DEFAULT_PATH = "ceremony-payload.json"
     "--dry-run",
     is_flag=True,
     default=False,
-    help=(
-        "Run ceremony in dry-run mode without sending result to API. "
-        "Ignores options and configurations related to API."
-    ),
+    help="Run ceremony in dry-run mode without sending result to API.",
 )
 @click.pass_context
 def ceremony(context: Any, out: Optional[click.File], dry_run: bool) -> None:
