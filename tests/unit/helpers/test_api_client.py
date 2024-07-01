@@ -6,7 +6,6 @@ from unittest.mock import Mock
 
 import pretend
 import pytest
-import rich_click as click
 
 from repository_service_tuf.helpers import api_client
 
