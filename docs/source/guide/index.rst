@@ -81,12 +81,6 @@ In this file, the following optional settings can be configured:
 Administration (``admin``)
 ==========================
 
-
-.. note::
-
-    Find the legacy administrative commands in the ``admin-legacy`` command.
-    The guide is available in :doc:`admin_legacy`.
-
 It executes administrative commands to the Repository Service for TUF.
 
 .. code:: shell

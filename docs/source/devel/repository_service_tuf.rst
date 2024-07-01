@@ -10,17 +10,6 @@ Subpackages
    repository_service_tuf.cli
    repository_service_tuf.helpers
 
-Submodules
-----------
-
-repository\_service\_tuf.constants module
------------------------------------------
-
-.. automodule:: repository_service_tuf.constants
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Module contents
 ---------------
 
