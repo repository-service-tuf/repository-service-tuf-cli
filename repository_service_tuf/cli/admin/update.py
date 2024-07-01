@@ -34,7 +34,11 @@ from repository_service_tuf.cli.admin.helpers import (
     _expiry_prompt,
     _print_root,
     _root_threshold_prompt,
-    _warn_no_save,
+)
+from repository_service_tuf.helpers.api_client import (
+    URL,
+    send_payload,
+    task_status,
 )
 
 DEFAULT_PATH = "update-payload.json"
@@ -84,18 +88,33 @@ def get_latest_md(metadata_url: str, md_name: str) -> Metadata:
     help=f"Write json result to FILENAME (default: '{DEFAULT_PATH}')",
     type=click.File("w"),
 )
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Run update in dry-run mode without sending result to API. ",
+)
+@click.pass_context
 def update(
+    context: click.Context,
     input: Optional[click.File],
     metadata_url: Optional[str],
     out: Optional[click.File],
+    dry_run: bool,
 ) -> None:
     """Update root metadata and bump version."""
     console.print("\n", Markdown("# Metadata Update Tool"))
     if not input and not metadata_url:
         raise click.ClickException("Either '--in' or '--metadata-url' needed")
 
-    if not out:
-        _warn_no_save()
+    settings = context.obj["settings"]
+    # Make sure user understands that result will be send to the API and if the
+    # the user wants something else should use '--dry-run'.
+    if not settings.get("SERVER") and not dry_run:
+        raise click.ClickException(
+            "Either '--api-sever' admin option/'SERVER' in RSTUF config or "
+            "'--dry-run' needed"
+        )
 
     ###########################################################################
     # Load root
@@ -161,9 +180,21 @@ def update(
     _add_root_signatures_prompt(root_md, prev_root_md.signed)
 
     ###########################################################################
-    # Dump payload
-    # TODO: post to API
+    # Send payload to the API and/or save it locally
+
     payload = UpdatePayload(Metadatas(root_md.to_dict()))
     if out:
         json.dump(asdict(payload), out, indent=2)  # type: ignore
         console.print(f"Saved result to '{out.name}'")
+
+    if settings.get("SERVER") and not dry_run:
+        task_id = send_payload(
+            settings=settings,
+            url=URL.METADATA.value,
+            payload=asdict(payload),
+            expected_msg="Metadata update accepted.",
+            command_name="Metadata Update",
+        )
+        task_status(task_id, settings, "Metadata Update status: ")
+
+        console.print("Ceremony done. 🔐 🎉. Root metadata update completed.")
