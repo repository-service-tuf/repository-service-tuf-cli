@@ -234,15 +234,3 @@ def send_payload(
         raise click.ClickException(
             f"Failed to get task response data {response.text}"
         )
-
-
-def get_md_file(file_uri: str) -> Metadata:
-    if file_uri.startswith("http"):
-        console.print(f"Fetching file {file_uri}")
-        response = requests.get(file_uri, timeout=300)
-        if response.status_code != 200:
-            raise click.ClickException(f"Cannot fetch {file_uri}")
-
-        return Metadata.from_bytes(response.content)
-    else:
-        return Metadata.from_file(file_uri)
