@@ -20,14 +20,6 @@ repository\_service\_tuf.helpers.cli module
    :undoc-members:
    :show-inheritance:
 
-repository\_service\_tuf.helpers.tuf module
--------------------------------------------
-
-.. automodule:: repository_service_tuf.helpers.tuf
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Module contents
 ---------------
 

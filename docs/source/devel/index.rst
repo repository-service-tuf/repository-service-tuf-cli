@@ -19,6 +19,5 @@ Component level
    repository_service_tuf.cli.admin
    repository_service_tuf.cli.admin.send
    repository_service_tuf.cli.artifact
-   repository_service_tuf.cli.key
    repository_service_tuf.helpers
    modules

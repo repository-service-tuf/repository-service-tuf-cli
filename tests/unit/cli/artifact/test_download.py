@@ -35,9 +35,7 @@ class TestDownloadArtifacInteractionWithoutConfig:
         self,
         client,
         test_context,
-        test_setup,
     ):
-        download.setup = test_setup
         test_result = client.invoke(
             download.download,
             ARTIFACT_NAME,
@@ -51,9 +49,7 @@ class TestDownloadArtifacInteractionWithoutConfig:
         self,
         client,
         test_context,
-        test_setup,
     ):
-        download.setup = test_setup
 
         test_result = client.invoke(
             download.download,
@@ -65,9 +61,8 @@ class TestDownloadArtifacInteractionWithoutConfig:
         assert test_result.exit_code == 1
 
     def test_download_command_using_tofu(
-        self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
+        self, client, test_context, monkeypatch, mocked_os_makedirs
     ):
-        download.setup = test_setup
         metadata_dir = "foo_dir"
         fake_build_metadata_dir = pretend.call_recorder(lambda a: metadata_dir)
         monkeypatch.setattr(
@@ -134,9 +129,8 @@ class TestDownloadArtifacInteractionWithoutConfig:
         assert test_result.exit_code == 0
 
     def test_download_command_with_trusted_root(
-        self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
+        self, client, test_context, monkeypatch, mocked_os_makedirs
     ):
-        download.setup = test_setup
 
         trusted_root_path = "tests/files"
         fake_build_metadata_dir = pretend.call_recorder(
@@ -188,9 +182,8 @@ class TestDownloadArtifacInteractionWithoutConfig:
         assert test_result.exit_code == 0
 
     def test_download_command_with_artifact_url(
-        self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
+        self, client, test_context, monkeypatch, mocked_os_makedirs
     ):
-        download.setup = test_setup
         fake_download_artifact = pretend.call_recorder(lambda *a: None)
         monkeypatch.setattr(
             f"{SRC_PATH}._download_artifact", fake_download_artifact
@@ -216,9 +209,8 @@ class TestDownloadArtifacInteractionWithoutConfig:
         ]
 
     def test_download_command_with_hash_prefix(
-        self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
+        self, client, test_context, monkeypatch, mocked_os_makedirs
     ):
-        download.setup = test_setup
         artifact_path = f"example_path/{ARTIFACT_NAME}"
         metadata_dir = "foo_dir"
 
@@ -280,9 +272,8 @@ class TestDownloadArtifacInteractionWithoutConfig:
         ]
 
     def test_download_command_with_directory_prefix(
-        self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
+        self, client, test_context, monkeypatch, mocked_os_makedirs
     ):
-        download.setup = test_setup
         artifact_path = f"example_path/{ARTIFACT_NAME}"
         directory_prefix = os.getcwd() + "/downloads"
 
@@ -318,9 +309,8 @@ class TestDownloadArtifacInteractionWithoutConfig:
         ]
 
     def test_download_command_failed_to_download_artifact(
-        self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
+        self, client, test_context, monkeypatch, mocked_os_makedirs
     ):
-        download.setup = test_setup
         ARTIFACT_NAME = "non-existing"
 
         metadata_dir = "foo_dir"
@@ -369,9 +359,8 @@ class TestDownloadArtifacInteractionWithoutConfig:
         assert test_result.exit_code == 1
 
     def test_download_command_with_failing_tofu(
-        self, client, test_context, test_setup, monkeypatch, mocked_os_makedirs
+        self, client, test_context, monkeypatch, mocked_os_makedirs
     ):
-        download.setup = test_setup
         fake_build_metadata_dir = pretend.call_recorder(lambda a: "foo_dir")
         monkeypatch.setattr(
             f"{SRC_PATH}._build_metadata_dir", fake_build_metadata_dir
@@ -410,9 +399,8 @@ class TestDownloadArtifacInteractionWithConfig:
     """
 
     def test_download_command_no_current_repo(
-        self, client, test_context, test_setup, monkeypatch
+        self, client, test_context, monkeypatch
     ):
-        download.setup = test_setup
         config = {
             "REPOSITORIES": {
                 "r1": {
@@ -437,9 +425,8 @@ class TestDownloadArtifacInteractionWithConfig:
         assert "Please specify current repository" in test_result.stderr
 
     def test_download_command_no_repos_listed(
-        self, client, test_context, test_setup, monkeypatch
+        self, client, test_context, monkeypatch
     ):
-        download.setup = test_setup
         config = {
             "CURRENT_REPOSITORY": "r1",
             "REPOSITORIES": {},
@@ -461,9 +448,8 @@ class TestDownloadArtifacInteractionWithConfig:
         )
 
     def test_download_command_and_no_root_param(
-        self, client, test_context, test_setup, monkeypatch
+        self, client, test_context, monkeypatch
     ):
-        download.setup = test_setup
         config = {
             "CURRENT_REPOSITORY": "r1",
             "REPOSITORIES": {
@@ -493,9 +479,8 @@ class TestDownloadArtifacInteractionWithConfig:
         assert "Decoded trusted root some_root" in test_result.output
 
     def test_download_command_repo_is_missing(
-        self, client, test_context, test_setup, monkeypatch
+        self, client, test_context, monkeypatch
     ):
-        download.setup = test_setup
         config = {
             "CURRENT_REPOSITORY": "r1_expected",
             "REPOSITORIES": {
@@ -523,9 +508,8 @@ class TestDownloadArtifacInteractionWithConfig:
         assert err_msg in test_result.stderr
 
     def test_download_command_no_trusted_root(
-        self, client, test_context, test_setup, monkeypatch
+        self, client, test_context, monkeypatch
     ):
-        download.setup = test_setup
         config = {
             "CURRENT_REPOSITORY": "r1",
             "REPOSITORIES": {

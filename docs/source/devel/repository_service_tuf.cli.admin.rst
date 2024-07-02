@@ -1,6 +1,14 @@
 repository\_service\_tuf.cli.admin package
 ==========================================
 
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   repository_service_tuf.cli.admin.send
+
 Submodules
 ----------
 
