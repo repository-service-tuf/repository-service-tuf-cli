@@ -13,9 +13,7 @@ WRITE_CONFIG_SRC_PATH = (
 class TestArtifactRepositoryInteraction:
     """Test the artifact repository command interaction"""
 
-    def test_repository_show_all(self, client, test_context, test_setup):
-        repository.setup = test_setup
-
+    def test_repository_show_all(self, client, test_context):
         config = {
             "CURRENT_REPOSITORY": "r1",
             "REPOSITORIES": {
@@ -39,12 +37,12 @@ class TestArtifactRepositoryInteraction:
             repository.show,
             obj=test_context,
         )
+
         assert "r1" in test_result.output
         assert "r2" in test_result.output
         assert test_result.exit_code == 0
 
-    def test_repository_show_one(self, client, test_context, test_setup):
-        repository.setup = test_setup
+    def test_repository_show_one(self, client, test_context):
 
         config = {
             "CURRENT_REPOSITORY": "r1",
@@ -82,8 +80,7 @@ class TestArtifactRepositoryInteraction:
         assert '"some_root"' in test_result.output
         assert test_result.exit_code == 0
 
-    def test_repository_show_current(self, client, test_context, test_setup):
-        repository.setup = test_setup
+    def test_repository_show_current(self, client, test_context):
 
         config = {
             "CURRENT_REPOSITORY": "r1",
@@ -115,9 +112,10 @@ class TestArtifactRepositoryInteraction:
         assert test_result.exit_code == 0
 
     def test_repository_show_wrong_data_type(
-        self, client, test_context, test_setup
+        self,
+        client,
+        test_context,
     ):
-        repository.setup = test_setup
 
         config = {
             "CURRENT_REPOSITORY": "wrong_root_type",
@@ -143,8 +141,11 @@ class TestArtifactRepositoryInteraction:
         )
         assert test_result.exit_code == 1
 
-    def test_repository_show_no_repos(self, client, test_context, test_setup):
-        repository.setup = test_setup
+    def test_repository_show_no_repos(
+        self,
+        client,
+        test_context,
+    ):
 
         test_result = client.invoke(
             repository.show,
@@ -164,10 +165,7 @@ class TestArtifactRepositoryInteraction:
         )
         assert test_result.exit_code == 1
 
-    def test_repository_set(
-        self, client, test_context, test_setup, monkeypatch
-    ):
-        repository.setup = test_setup
+    def test_repository_set(self, client, test_context, monkeypatch):
         config = {
             "CURRENT_REPOSITORY": "r1",
             "REPOSITORIES": {
@@ -209,9 +207,8 @@ class TestArtifactRepositoryInteraction:
         assert test_result.exit_code == 0
 
     def test_repository_add_one_param_only(
-        self, client, test_context, test_setup, monkeypatch
+        self, client, test_context, monkeypatch
     ):
-        repository.setup = test_setup
 
         config = {
             "CURRENT_REPOSITORY": "r1",
@@ -252,9 +249,8 @@ class TestArtifactRepositoryInteraction:
         assert "Missing option '-m' / '--metadata-url'." in test_result.stderr
 
     def test_repository_add_all_params(
-        self, client, test_context, test_setup, monkeypatch
+        self, client, test_context, monkeypatch
     ):
-        repository.setup = test_setup
 
         config = {
             "CURRENT_REPOSITORY": "r1",
@@ -318,9 +314,8 @@ class TestArtifactRepositoryInteraction:
         assert test_result.exit_code == 0
 
     def test_repository_add_with_hash_prefix(
-        self, client, test_context, test_setup, monkeypatch
+        self, client, test_context, monkeypatch
     ):
-        repository.setup = test_setup
 
         config = {
             "CURRENT_REPOSITORY": "r1",
@@ -375,9 +370,8 @@ class TestArtifactRepositoryInteraction:
         assert test_result.exit_code == 0
 
     def test_repository_add_with_no_repos(
-        self, client, test_context, test_setup, monkeypatch
+        self, client, test_context, monkeypatch
     ):
-        repository.setup = test_setup
 
         config = {
             "CURRENT_REPOSITORY": "r1",
@@ -430,9 +424,8 @@ class TestArtifactRepositoryInteraction:
         assert test_result.exit_code == 0
 
     def test_repository_add_already_configured(
-        self, client, test_context, test_setup, monkeypatch
+        self, client, test_context, monkeypatch
     ):
-        repository.setup = test_setup
 
         config = {
             "CURRENT_REPOSITORY": "r1",
@@ -483,9 +476,10 @@ class TestArtifactRepositoryInteraction:
         assert test_result.exit_code == 0
 
     def test_repository_update_no_repos(
-        self, client, test_context, test_setup
+        self,
+        client,
+        test_context,
     ):
-        repository.setup = test_setup
 
         config = {
             "CURRENT_REPOSITORY": "r1",
@@ -516,10 +510,7 @@ class TestArtifactRepositoryInteraction:
         )
         assert test_result.exit_code == 1
 
-    def test_repository_update(
-        self, client, test_context, test_setup, monkeypatch
-    ):
-        repository.setup = test_setup
+    def test_repository_update(self, client, test_context, monkeypatch):
 
         config = {
             "CURRENT_REPOSITORY": "r1",
@@ -565,9 +556,8 @@ class TestArtifactRepositoryInteraction:
         assert test_result.exit_code == 0
 
     def test_repository_update_with_root_param(
-        self, client, test_context, test_setup, monkeypatch
+        self, client, test_context, monkeypatch
     ):
-        repository.setup = test_setup
 
         config = {
             "CURRENT_REPOSITORY": "r1",
@@ -607,9 +597,8 @@ class TestArtifactRepositoryInteraction:
         assert test_result.exit_code == 0
 
     def test_repository_update_with_artifact_url(
-        self, client, test_context, test_setup, monkeypatch
+        self, client, test_context, monkeypatch
     ):
-        repository.setup = test_setup
 
         config = {
             "CURRENT_REPOSITORY": "r1",
@@ -649,9 +638,10 @@ class TestArtifactRepositoryInteraction:
         assert test_result.exit_code == 0
 
     def test_repository_update_non_existing(
-        self, client, test_context, test_setup
+        self,
+        client,
+        test_context,
     ):
-        repository.setup = test_setup
 
         config = {
             "CURRENT_REPOSITORY": "r1",
@@ -696,9 +686,10 @@ class TestArtifactRepositoryInteraction:
         assert test_result.exit_code == 1
 
     def test_repository_delete_no_repos(
-        self, client, test_context, test_setup
+        self,
+        client,
+        test_context,
     ):
-        repository.setup = test_setup
 
         config = {
             "CURRENT_REPOSITORY": "r1",
@@ -725,9 +716,10 @@ class TestArtifactRepositoryInteraction:
         assert test_result.exit_code == 1
 
     def test_repository_delete_non_existing(
-        self, client, test_context, test_setup
+        self,
+        client,
+        test_context,
     ):
-        repository.setup = test_setup
 
         config = {
             "CURRENT_REPOSITORY": "r1",
@@ -767,9 +759,8 @@ class TestArtifactRepositoryInteraction:
         assert test_result.exit_code == 1
 
     def test_repository_delete_existing(
-        self, client, test_context, test_setup, monkeypatch
+        self, client, test_context, monkeypatch
     ):
-        repository.setup = test_setup
 
         config = {
             "CURRENT_REPOSITORY": "r1",
