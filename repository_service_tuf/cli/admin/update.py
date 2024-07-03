@@ -102,7 +102,27 @@ def update(
     out: Optional[click.File],
     dry_run: bool,
 ) -> None:
-    """Update root metadata and bump version."""
+    """
+    Perform metadata update and send result to API.
+
+    * If `--metadata-url TEXT` is passed, the latest root will be fetched from
+    metadata storage.
+
+    * If `--in FILENAME` is passed, input is not read from API but from local
+    FILENAME.
+
+    * If both `--metadata-url TEXT` and `--in FILENAME` are passed, then
+    `--metadata-url TEXT` will have higher priority.
+
+    * If `--out [FILENAME]` is passed, result is written to local FILENAME
+    (in addition to being sent to API).
+
+    * If `--dry-run` is passed, result is not sent to API.
+    You can still pass `--out [FILENAME]` to store the result locally.
+
+    * If `--in` and `--dry-run` are passed, `--api-server` admin option and
+    `SERVER` from config will be ignored.
+    """
     console.print("\n", Markdown("# Metadata Update Tool"))
     if not input and not metadata_url:
         raise click.ClickException("Either '--in' or '--metadata-url' needed")

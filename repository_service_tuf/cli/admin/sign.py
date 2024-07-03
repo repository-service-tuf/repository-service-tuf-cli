@@ -108,7 +108,7 @@ def sign(
     * If `--dry-run` is passed, result is not sent to API.
     You can still pass `--out [FILENAME]` to store the result locally.
 
-    * If `--in` and `--dry-run` is passed, `--api-server` admin option and
+    * If `--in` and `--dry-run` are passed, `--api-server` admin option and
     `SERVER` from config will be ignored.
     """
     console.print("\n", Markdown("# Metadata Signing Tool"))
