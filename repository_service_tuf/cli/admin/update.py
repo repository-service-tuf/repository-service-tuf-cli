@@ -92,7 +92,7 @@ def get_latest_md(metadata_url: str, md_name: str) -> Metadata:
     "--dry-run",
     is_flag=True,
     default=False,
-    help="Run update in dry-run mode without sending result to API. ",
+    help="Run update in dry-run mode without sending result to API.",
 )
 @click.pass_context
 def update(

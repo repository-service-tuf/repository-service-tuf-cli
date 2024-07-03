@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import json
+from datetime import datetime, timedelta, timezone
 
 import click
 import pretend
@@ -10,7 +11,7 @@ import pytest
 from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.cli.admin import update
-from tests.conftest import _HELPERS, _PAYLOADS, _ROOTS, invoke_command
+from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 MOCK_PATH = "repository_service_tuf.cli.admin.update"
 
@@ -231,6 +232,65 @@ class TestMetadataUpdate:
         assert result.stderr == ""
         assert "Saved result to " not in result.stdout
         assert "Bootstrap completed." not in result.stdout
+
+    def test_update_change_expiration_and_threshold(
+        self, monkeypatch, patch_getpass
+    ):
+        future_date = datetime(2030, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+        fake_replace = pretend.stub(
+            replace=pretend.call_recorder(lambda **kw: future_date)
+        )
+        fake_datetime = pretend.stub(
+            now=pretend.call_recorder(lambda *a: fake_replace)
+        )
+        additional_days = 365
+
+        monkeypatch.setattr(f"{_HELPERS}.datetime", fake_datetime)
+
+        inputs = [
+            "y",  # Do you want to change the expiry date? [y/n] (y)
+            f"{additional_days}",  # Please enter days until expiry for root role  # noqa
+            "y",  # Do you want to change the threshold? [y/n] (n)
+            "3",  # "Please enter root threshold"
+            f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
+            "JoeCocker's Key",  # Please enter a key name
+            "y",  # Do you want to change the online key? [y/n] (y)
+            f"{_PEMS / 'cb20fa1061dde8e6267e0bef0981766aaadae168e917030f7f26edc7a0bab9c2.pub'}",  # Please enter path to public key  # noqa
+            "New Online Key",  # Please enter a key name
+            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
+            f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
+            f"{_PEMS / 'JC.rsa'}",  # Please enter path to encrypted private key  # noqa
+        ]
+        args = ["--in", f"{_ROOTS / 'v1.json'}", "--dry-run"]
+
+        # selections interface
+        selection_options = iter(
+            (
+                # selection for inputs (update root keys)
+                "add",  # remove key
+                "continue",  # continue
+                # selection for inputs (signing root key)
+                "JimiHendrix's Key",  # select key to sign
+                "JanisJoplin's Key",  # select key to sign
+                "JoeCocker's Key",  # select key to sign
+                "continue",  # continue
+            )
+        )
+        mocked_select = pretend.call_recorder(
+            lambda *a: next(selection_options)
+        )
+
+        # public key selection options
+        monkeypatch.setattr(f"{_HELPERS}._select", mocked_select)
+
+        result = invoke_command(update.update, inputs, args)
+
+        exp_date = future_date + timedelta(days=additional_days)
+        res_root = result.data["metadata"]["root"]["signed"]
+        # Make sure new expiration is the same as expected.
+        assert res_root["expires"] == exp_date.strftime("%Y-%m-%dT%H:%M:%SZ")
+        # Make sure new threshold is the same .
+        assert res_root["roles"]["root"]["threshold"] == 3
 
 
 class TestUpdateError:
