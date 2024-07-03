@@ -232,7 +232,7 @@ def invoke_command(
     if not test_context:
         test_context = _create_test_context()
 
-    with client.isolated_filesystem() as f:
+    with client.isolated_filesystem():
         result_obj = client.invoke(
             cmd,
             args=args + out_args,
