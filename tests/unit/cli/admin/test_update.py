@@ -10,51 +10,21 @@ import pytest
 from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.cli.admin import update
-from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
+from tests.conftest import _HELPERS, _PAYLOADS, _ROOTS, invoke_command
 
 MOCK_PATH = "repository_service_tuf.cli.admin.update"
 
 
 class TestMetadataUpdate:
     def test_update_input_dry_run(
-        self, monkeypatch, patch_getpass, patch_utcnow
+        self, monkeypatch, update_inputs, update_key_selection, patch_getpass
     ):
-        inputs = [
-            "n",  # Do you want to change the expiry date? [y/n] (y)
-            "n",  # Do you want to change the threshold? [y/n] (n)
-            f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
-            "JoeCocker's Key",  # Please enter a key name
-            "y",  # Do you want to change the online key? [y/n] (y)
-            f"{_PEMS / 'cb20fa1061dde8e6267e0bef0981766aaadae168e917030f7f26edc7a0bab9c2.pub'}",  # Please enter path to public key  # noqa
-            "New Online Key",  # Please enter a key name
-            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-            f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
-            f"{_PEMS / 'JC.rsa'}",  # Please enter path to encrypted private key  # noqa
-        ]
         args = ["--in", f"{_ROOTS / 'v1.json'}", "--dry-run"]
-
-        # selections interface
-        selection_options = iter(
-            (
-                # selection for inputs (update root keys)
-                "remove",  # add key
-                "JimiHendrix's Key",  # add key
-                "add",  # remove key
-                "continue",  # continue
-                # selection for inputs (signing root key)
-                "JimiHendrix's Key",  # select key to sign
-                "JanisJoplin's Key",  # select key to sign
-                "JoeCocker's Key",  # select key to sign
-                "continue",  # continue
-            )
-        )
-        mocked_select = pretend.call_recorder(
-            lambda *a: next(selection_options)
-        )
-
         # public key selection options
-        monkeypatch.setattr(f"{_HELPERS}._select", mocked_select)
-        result = invoke_command(update.update, inputs, args)
+        monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
+
+        result = invoke_command(update.update, update_inputs, args)
+
         with open(_PAYLOADS / "update.json") as f:
             expected = json.load(f)
 
@@ -65,20 +35,13 @@ class TestMetadataUpdate:
         assert result.data == expected
 
     def test_update_input_and_server(
-        self, monkeypatch, test_context, patch_getpass, patch_utcnow
+        self,
+        monkeypatch,
+        update_inputs,
+        update_key_selection,
+        test_context,
+        patch_getpass,
     ):
-        inputs = [
-            "n",  # Do you want to change the expiry date? [y/n] (y)
-            "n",  # Do you want to change the threshold? [y/n] (n)
-            f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
-            "JoeCocker's Key",  # Please enter a key name
-            "y",  # Do you want to change the online key? [y/n] (y)
-            f"{_PEMS / 'cb20fa1061dde8e6267e0bef0981766aaadae168e917030f7f26edc7a0bab9c2.pub'}",  # Please enter path to public key  # noqa
-            "New Online Key",  # Please enter a key name
-            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-            f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
-            f"{_PEMS / 'JC.rsa'}",  # Please enter path to encrypted private key  # noqa
-        ]
         fake_task_id = "123a"
         fake_send_payload = pretend.call_recorder(lambda **kw: fake_task_id)
         monkeypatch.setattr(f"{MOCK_PATH}.send_payload", fake_send_payload)
@@ -87,28 +50,13 @@ class TestMetadataUpdate:
         test_context["settings"].SERVER = "http://localhost:80"
         args = ["--in", f"{_ROOTS / 'v1.json'}"]
 
-        # selections interface
-        selection_options = iter(
-            (
-                # selection for inputs (update root keys)
-                "remove",  # add key
-                "JimiHendrix's Key",  # add key
-                "add",  # remove key
-                "continue",  # continue
-                # selection for inputs (signing root key)
-                "JimiHendrix's Key",  # select key to sign
-                "JanisJoplin's Key",  # select key to sign
-                "JoeCocker's Key",  # select key to sign
-                "continue",  # continue
-            )
-        )
-        mocked_select = pretend.call_recorder(
-            lambda *a: next(selection_options)
+        # public key selection options
+        monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
+
+        result = invoke_command(
+            update.update, update_inputs, args, test_context
         )
 
-        # public key selection options
-        monkeypatch.setattr(f"{_HELPERS}._select", mocked_select)
-        result = invoke_command(update.update, inputs, args, test_context)
         with open(_PAYLOADS / "update.json") as f:
             expected = json.load(f)
 
@@ -139,20 +87,13 @@ class TestMetadataUpdate:
         assert "Root metadata update completed." in result.stdout
 
     def test_update_metadata_url_and_server(
-        self, monkeypatch, test_context, patch_getpass, patch_utcnow
+        self,
+        monkeypatch,
+        update_inputs,
+        update_key_selection,
+        test_context,
+        patch_getpass,
     ):
-        inputs = [
-            "n",  # Do you want to change the expiry date? [y/n] (y)
-            "n",  # Do you want to change the threshold? [y/n] (n)
-            f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
-            "JoeCocker's Key",  # Please enter a key name
-            "y",  # Do you want to change the online key? [y/n] (y)
-            f"{_PEMS / 'cb20fa1061dde8e6267e0bef0981766aaadae168e917030f7f26edc7a0bab9c2.pub'}",  # Please enter path to public key  # noqa
-            "New Online Key",  # Please enter a key name
-            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-            f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
-            f"{_PEMS / 'JC.rsa'}",  # Please enter path to encrypted private key  # noqa
-        ]
         root_md = Metadata.from_file(f"{_ROOTS / 'v1.json'}")
         fake_get_latest_md = pretend.call_recorder(lambda *a: root_md)
         monkeypatch.setattr(f"{MOCK_PATH}.get_latest_md", fake_get_latest_md)
@@ -165,28 +106,13 @@ class TestMetadataUpdate:
         test_context["settings"].SERVER = "http://localhost:80"
         args = ["--metadata-url", fake_url]
 
-        # selections interface
-        selection_options = iter(
-            (
-                # selection for inputs (update root keys)
-                "remove",  # add key
-                "JimiHendrix's Key",  # add key
-                "add",  # remove key
-                "continue",  # continue
-                # selection for inputs (signing root key)
-                "JimiHendrix's Key",  # select key to sign
-                "JanisJoplin's Key",  # select key to sign
-                "JoeCocker's Key",  # select key to sign
-                "continue",  # continue
-            )
-        )
-        mocked_select = pretend.call_recorder(
-            lambda *a: next(selection_options)
+        # public key selection options
+        monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
+
+        result = invoke_command(
+            update.update, update_inputs, args, test_context
         )
 
-        # public key selection options
-        monkeypatch.setattr(f"{_HELPERS}._select", mocked_select)
-        result = invoke_command(update.update, inputs, args, test_context)
         with open(_PAYLOADS / "update.json") as f:
             expected = json.load(f)
 
@@ -218,48 +144,19 @@ class TestMetadataUpdate:
         assert "Root metadata update completed." in result.stdout
 
     def test_update_metadata_url_dry_run(
-        self, monkeypatch, patch_getpass, patch_utcnow
+        self, monkeypatch, update_inputs, update_key_selection, patch_getpass
     ):
-        inputs = [
-            "n",  # Do you want to change the expiry date? [y/n] (y)
-            "n",  # Do you want to change the threshold? [y/n] (n)
-            f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
-            "JoeCocker's Key",  # Please enter a key name
-            "y",  # Do you want to change the online key? [y/n] (y)
-            f"{_PEMS / 'cb20fa1061dde8e6267e0bef0981766aaadae168e917030f7f26edc7a0bab9c2.pub'}",  # Please enter path to public key  # noqa
-            "New Online Key",  # Please enter a key name
-            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-            f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
-            f"{_PEMS / 'JC.rsa'}",  # Please enter path to encrypted private key  # noqa
-        ]
         root_md = Metadata.from_file(f"{_ROOTS / 'v1.json'}")
         fake_get_latest_md = pretend.call_recorder(lambda *a: root_md)
         monkeypatch.setattr(f"{MOCK_PATH}.get_latest_md", fake_get_latest_md)
         fake_url = "http://fake-server/1.root.json"
         args = ["--metadata-url", fake_url, "--dry-run"]
 
-        # selections interface
-        selection_options = iter(
-            (
-                # selection for inputs (update root keys)
-                "remove",  # add key
-                "JimiHendrix's Key",  # add key
-                "add",  # remove key
-                "continue",  # continue
-                # selection for inputs (signing root key)
-                "JimiHendrix's Key",  # select key to sign
-                "JanisJoplin's Key",  # select key to sign
-                "JoeCocker's Key",  # select key to sign
-                "continue",  # continue
-            )
-        )
-        mocked_select = pretend.call_recorder(
-            lambda *a: next(selection_options)
-        )
-
         # public key selection options
-        monkeypatch.setattr(f"{_HELPERS}._select", mocked_select)
-        result = invoke_command(update.update, inputs, args)
+        monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
+
+        result = invoke_command(update.update, update_inputs, args)
+
         with open(_PAYLOADS / "update.json") as f:
             expected = json.load(f)
 
@@ -271,21 +168,9 @@ class TestMetadataUpdate:
         assert fake_get_latest_md.calls == [pretend.call(fake_url, Root.type)]
 
     def test_update_metadata_url_and_input_file(
-        self, monkeypatch, patch_getpass, patch_utcnow
+        self, monkeypatch, update_inputs, update_key_selection, patch_getpass
     ):
         """Test that '--metadata-url' is with higher priority than '--in'."""
-        inputs = [
-            "n",  # Do you want to change the expiry date? [y/n] (y)
-            "n",  # Do you want to change the threshold? [y/n] (n)
-            f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
-            "JoeCocker's Key",  # Please enter a key name
-            "y",  # Do you want to change the online key? [y/n] (y)
-            f"{_PEMS / 'cb20fa1061dde8e6267e0bef0981766aaadae168e917030f7f26edc7a0bab9c2.pub'}",  # Please enter path to public key  # noqa
-            "New Online Key",  # Please enter a key name
-            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-            f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
-            f"{_PEMS / 'JC.rsa'}",  # Please enter path to encrypted private key  # noqa
-        ]
         root_md = Metadata.from_file(f"{_ROOTS / 'v1.json'}")
         fake_get_latest_md = pretend.call_recorder(lambda *a: root_md)
         monkeypatch.setattr(f"{MOCK_PATH}.get_latest_md", fake_get_latest_md)
@@ -298,29 +183,10 @@ class TestMetadataUpdate:
             "--dry-run",
         ]
 
-        # selections interface
-        selection_options = iter(
-            (
-                # selection for inputs (update root keys)
-                "remove",  # add key
-                "JimiHendrix's Key",  # add key
-                "add",  # remove key
-                "continue",  # continue
-                # selection for inputs (signing root key)
-                "JimiHendrix's Key",  # select key to sign
-                "JanisJoplin's Key",  # select key to sign
-                "JoeCocker's Key",  # select key to sign
-                "continue",  # continue
-            )
-        )
-        mocked_select = pretend.call_recorder(
-            lambda *a: next(selection_options)
-        )
-
         # public key selection options
-        monkeypatch.setattr(f"{_HELPERS}._select", mocked_select)
+        monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
 
-        result = invoke_command(update.update, inputs, args)
+        result = invoke_command(update.update, update_inputs, args)
 
         with open(_PAYLOADS / "update.json") as f:
             expected = json.load(f)
@@ -336,48 +202,17 @@ class TestMetadataUpdate:
     def test_update_dry_run_with_server_config_set(
         self,
         monkeypatch,
-        client,
+        update_inputs,
+        update_key_selection,
         test_context,
+        client,
         patch_getpass,
-        patch_utcnow,
     ):
         """
         Test that '--dry-run' is with higher priority than 'settings.SERVER'.
         """
-        inputs = [
-            "n",  # Do you want to change the expiry date? [y/n] (y)
-            "n",  # Do you want to change the threshold? [y/n] (n)
-            f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
-            "JoeCocker's Key",  # Please enter a key name
-            "y",  # Do you want to change the online key? [y/n] (y)
-            f"{_PEMS / 'cb20fa1061dde8e6267e0bef0981766aaadae168e917030f7f26edc7a0bab9c2.pub'}",  # Please enter path to public key  # noqa
-            "New Online Key",  # Please enter a key name
-            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-            f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
-            f"{_PEMS / 'JC.rsa'}",  # Please enter path to encrypted private key  # noqa
-        ]
-
-        # selections interface
-        selection_options = iter(
-            (
-                # selection for inputs (update root keys)
-                "remove",  # add key
-                "JimiHendrix's Key",  # add key
-                "add",  # remove key
-                "continue",  # continue
-                # selection for inputs (signing root key)
-                "JimiHendrix's Key",  # select key to sign
-                "JanisJoplin's Key",  # select key to sign
-                "JoeCocker's Key",  # select key to sign
-                "continue",  # continue
-            )
-        )
-        mocked_select = pretend.call_recorder(
-            lambda *a: next(selection_options)
-        )
-
         # public key selection options
-        monkeypatch.setattr(f"{_HELPERS}._select", mocked_select)
+        monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
         args = ["--in", f"{_ROOTS / 'v1.json'}", "--dry-run"]
         test_context["settings"].SERVER = "http://localhost:80"
         # We want to test when only "--dry-run" is used we will not save a file
@@ -388,7 +223,7 @@ class TestMetadataUpdate:
             result = client.invoke(
                 update.update,
                 args=args,
-                input="\n".join(inputs),
+                input="\n".join(update_inputs),
                 obj=test_context,
                 catch_exceptions=False,
             )
