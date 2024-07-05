@@ -217,4 +217,4 @@ def update(
         )
         task_status(task_id, settings, "Metadata Update status: ")
 
-        console.print("Ceremony done. 🔐 🎉. Root metadata update completed.")
+        console.print("Root metadata update completed. 🔐 🎉")

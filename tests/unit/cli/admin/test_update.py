@@ -84,7 +84,6 @@ class TestMetadataUpdate:
                 "Metadata Update status: ",
             )
         ]
-        assert "Ceremony done. 🔐 🎉. " in result.stdout
         assert "Root metadata update completed." in result.stdout
 
     def test_update_metadata_url_and_server(
@@ -141,8 +140,7 @@ class TestMetadataUpdate:
                 "Metadata Update status: ",
             )
         ]
-        assert "Ceremony done. 🔐 🎉. " in result.stdout
-        assert "Root metadata update completed." in result.stdout
+        assert "Root metadata update completed. 🔐 🎉" in result.stdout
 
     def test_update_metadata_url_dry_run(
         self, monkeypatch, update_inputs, update_key_selection, patch_getpass
