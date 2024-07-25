@@ -116,7 +116,7 @@ def sign(
     # Make sure there is a way to get a DAS metadata for signing.
     if settings.get("SERVER") is None and input is None:
         raise click.ClickException(
-            "Either '--api-sever' admin option/'SERVER' in RSTUF config or "
+            "Either '--api-server' admin option/'SERVER' in RSTUF config or "
             "'--in' needed"
         )
 
@@ -124,7 +124,7 @@ def sign(
     # the user wants something else should use '--dry-run'.
     if not settings.get("SERVER") and not dry_run:
         raise click.ClickException(
-            "Either '--api-sever' admin option/'SERVER' in RSTUF config or "
+            "Either '--api-server' admin option/'SERVER' in RSTUF config or "
             "'--dry-run' needed"
         )
     ###########################################################################

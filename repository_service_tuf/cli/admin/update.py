@@ -132,7 +132,7 @@ def update(
     # the user wants something else should use '--dry-run'.
     if not settings.get("SERVER") and not dry_run:
         raise click.ClickException(
-            "Either '--api-sever' admin option/'SERVER' in RSTUF config or "
+            "Either '--api-server' admin option/'SERVER' in RSTUF config or "
             "'--dry-run' needed"
         )
 

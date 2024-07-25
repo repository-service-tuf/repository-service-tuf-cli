@@ -76,7 +76,7 @@ def ceremony(context: Any, out: Optional[click.File], dry_run: bool) -> None:
     # confirmation that the server is indeed ready for bootstap.
     if not settings.get("SERVER") and not dry_run:
         raise click.ClickException(
-            "Either '--api-sever' admin option/'SERVER' in RSTUF config or "
+            "Either '--api-server' admin option/'SERVER' in RSTUF config or "
             "'--dry-run' needed"
         )
 

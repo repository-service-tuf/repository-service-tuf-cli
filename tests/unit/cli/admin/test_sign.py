@@ -270,7 +270,7 @@ class TestSignError:
     def test_sign_no_api_server_and_no_input_option(self):
         result = invoke_command(sign.sign, [], [], std_err_empty=False)
 
-        err_prefix = "Either '--api-sever' admin option/'SERVER'"
+        err_prefix = "Either '--api-server' admin option/'SERVER'"
         err_suffix = "or '--in'"
         assert err_prefix in result.stderr
         assert err_suffix in result.stderr
@@ -281,7 +281,7 @@ class TestSignError:
 
         result = invoke_command(sign.sign, [], args, std_err_empty=False)
 
-        err_prefix = "Either '--api-sever' admin option/'SERVER'"
+        err_prefix = "Either '--api-server' admin option/'SERVER'"
         err_suffix = "or '--dry-run'"
         assert err_prefix in result.stderr
         assert err_suffix in result.stderr
