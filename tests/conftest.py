@@ -27,7 +27,6 @@ from repository_service_tuf.cli.admin.send.bootstrap import (
 )
 from repository_service_tuf.cli.admin.send.sign import sign as send_sign
 from repository_service_tuf.cli.admin.send.update import update as send_update
-from repository_service_tuf.cli.admin.update import update
 
 _FILES = Path(os.path.dirname(__file__)) / "files"
 _ROOTS = _FILES / "root"
@@ -115,6 +114,44 @@ def key_selection() -> lambda *a: str:
 
 
 @pytest.fixture
+def update_inputs():
+    return [
+        "n",  # Do you want to change the expiry date? [y/n] (y)
+        "n",  # Do you want to change the threshold? [y/n] (n)
+        f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
+        "JoeCocker's Key",  # Please enter a key name
+        "y",  # Do you want to change the online key? [y/n] (y)
+        f"{_PEMS / 'cb20fa1061dde8e6267e0bef0981766aaadae168e917030f7f26edc7a0bab9c2.pub'}",  # Please enter path to public key  # noqa
+        "New Online Key",  # Please enter a key name
+        f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
+        f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
+        f"{_PEMS / 'JC.rsa'}",  # Please enter path to encrypted private key  # noqa
+    ]
+
+
+@pytest.fixture
+def update_key_selection() -> lambda *a: str:
+    # selections interface
+    selection_options = iter(
+        (
+            # selection for inputs (update root keys)
+            "remove",  # remove key
+            "JimiHendrix's Key",  # select key to remove
+            "add",  # add key
+            "continue",  # continue
+            # selection for inputs (signing root key)
+            "JimiHendrix's Key",  # select key to sign
+            "JanisJoplin's Key",  # select key to sign
+            "JoeCocker's Key",  # select key to sign
+            "continue",  # continue
+        )
+    )
+    mocked_select = pretend.call_recorder(lambda *a: next(selection_options))
+
+    return mocked_select
+
+
+@pytest.fixture
 def root() -> Metadata[Root]:
     return Metadata(Root(expires=datetime.now(timezone.utc)))
 
@@ -189,8 +226,6 @@ def invoke_command(
     ]
     if cmd in commands_no_out_args:
         out_args = []
-    elif cmd == update:
-        out_args = ["-s", out_file_name]
     else:
         out_args = ["--out", out_file_name]
 
