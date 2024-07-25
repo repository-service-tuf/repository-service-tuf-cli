@@ -5,11 +5,16 @@
 import json
 from copy import deepcopy
 from dataclasses import asdict
+from tempfile import TemporaryDirectory
+from typing import Optional
 
 import click
+import requests
 from rich.markdown import Markdown
 from rich.prompt import Confirm
+from tuf.api.exceptions import DownloadError, RepositoryError
 from tuf.api.metadata import Metadata, Root
+from tuf.ngclient.updater import Updater
 
 # TODO: Should we use the global rstuf console exclusively? We do use it for
 # `console.print`, but not with `Confirm/Prompt.ask`. The latter uses a default
@@ -29,31 +34,119 @@ from repository_service_tuf.cli.admin.helpers import (
     _expiry_prompt,
     _print_root,
     _root_threshold_prompt,
-    _warn_no_save,
 )
+from repository_service_tuf.helpers.api_client import (
+    URL,
+    send_payload,
+    task_status,
+)
+
+DEFAULT_PATH = "update-payload.json"
+
+
+def get_latest_md(metadata_url: str, md_name: str) -> Metadata:
+    try:
+        temp_dir = TemporaryDirectory()
+        initial_root_url = f"{metadata_url}/1.root.json"
+        response = requests.get(initial_root_url, timeout=300)
+        if response.status_code != 200:
+            raise click.ClickException(
+                f"Cannot fetch initial root {initial_root_url}"
+            )
+
+        with open(f"{temp_dir.name}/root.json", "w") as f:
+            f.write(response.text)
+
+        updater = Updater(
+            metadata_dir=temp_dir.name, metadata_base_url=metadata_url
+        )
+        updater.refresh()
+        return Metadata.from_file(f"{temp_dir.name}/{md_name}.json")
+
+    except (OSError, RepositoryError, DownloadError):
+        raise click.ClickException(f"Problem fetching latest {md_name}")
 
 
 @metadata.command()  # type: ignore
-@click.argument("root_in", type=click.File("rb"))
 @click.option(
-    "--save",
-    "-s",
+    "--in",
+    "input",
+    help="Input file containing current trusted root JSON.",
+    type=click.File("rb"),
+    required=False,
+)
+@click.option(
+    "--metadata-url",
+    help="URL to the RSTUF API metadata storage.",
+    type=str,
+    required=False,
+)
+@click.option(
+    "--out",
     is_flag=False,
-    flag_value="update-payload.json",
-    help="Write json result to FILENAME (default: 'update-payload.json')",
+    flag_value=DEFAULT_PATH,
+    help=f"Write json result to FILENAME (default: '{DEFAULT_PATH}')",
     type=click.File("w"),
 )
-def update(root_in, save) -> None:
-    """Update root metadata and bump version."""
-    console.print("\n", Markdown("# Metadata Update Tool"))
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Run update in dry-run mode without sending result to API.",
+)
+@click.pass_context
+def update(
+    context: click.Context,
+    input: Optional[click.File],
+    metadata_url: Optional[str],
+    out: Optional[click.File],
+    dry_run: bool,
+) -> None:
+    """
+    Perform metadata update and send result to API.
 
-    if not save:
-        _warn_no_save()
+    * If `--metadata-url TEXT` is passed, the latest root will be fetched from
+    metadata storage.
+
+    * If `--in FILENAME` is passed, input is not read from API but from local
+    FILENAME.
+
+    * If both `--metadata-url TEXT` and `--in FILENAME` are passed, then
+    `--metadata-url TEXT` will have higher priority.
+
+    * If `--out [FILENAME]` is passed, result is written to local FILENAME
+    (in addition to being sent to API).
+
+    * If `--dry-run` is passed, result is not sent to API.
+    You can still pass `--out [FILENAME]` to store the result locally.
+
+    * If `--in` and `--dry-run` are passed, `--api-server` admin option and
+    `SERVER` from config will be ignored.
+    """
+    console.print("\n", Markdown("# Metadata Update Tool"))
+    if not input and not metadata_url:
+        raise click.ClickException("Either '--in' or '--metadata-url' needed")
+
+    settings = context.obj["settings"]
+    # Make sure user understands that result will be send to the API and if the
+    # the user wants something else should use '--dry-run'.
+    if not settings.get("SERVER") and not dry_run:
+        raise click.ClickException(
+            "Either '--api-server' admin option/'SERVER' in RSTUF config or "
+            "'--dry-run' needed"
+        )
 
     ###########################################################################
     # Load root
-    # TODO: load from API
-    prev_root_md = Metadata[Root].from_bytes(root_in.read())
+    prev_root_md: Metadata[Root]
+    if metadata_url:
+        prev_root_md = get_latest_md(metadata_url, Root.type)
+        console.print(
+            f"Latest root version found: {prev_root_md.signed.version}"
+        )
+    else:
+        prev_root_md = Metadata.from_bytes(input.read())  # type: ignore
+
     root = deepcopy(prev_root_md.signed)
 
     ###########################################################################
@@ -107,9 +200,21 @@ def update(root_in, save) -> None:
     _add_root_signatures_prompt(root_md, prev_root_md.signed)
 
     ###########################################################################
-    # Dump payload
-    # TODO: post to API
+    # Send payload to the API and/or save it locally
+
     payload = UpdatePayload(Metadatas(root_md.to_dict()))
-    if save:
-        json.dump(asdict(payload), save, indent=2)
-        console.print(f"Saved result to '{save.name}'")
+    if out:
+        json.dump(asdict(payload), out, indent=2)  # type: ignore
+        console.print(f"Saved result to '{out.name}'")
+
+    if settings.get("SERVER") and not dry_run:
+        task_id = send_payload(
+            settings=settings,
+            url=URL.METADATA.value,
+            payload=asdict(payload),
+            expected_msg="Metadata update accepted.",
+            command_name="Metadata Update",
+        )
+        task_status(task_id, settings, "Metadata Update status: ")
+
+        console.print("Root metadata update completed. 🔐 🎉")

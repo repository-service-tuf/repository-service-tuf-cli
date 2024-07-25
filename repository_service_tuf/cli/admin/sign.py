@@ -87,10 +87,7 @@ DEFAULT_PATH = "sign-payload.json"
     "--dry-run",
     is_flag=True,
     default=False,
-    help=(
-        "Run sign in dry-run mode without sending result to API. "
-        "Ignores options and configurations related to API."
-    ),
+    help="Run sign in dry-run mode without sending result to API. ",
 )
 @click.pass_context
 def sign(
@@ -111,7 +108,7 @@ def sign(
     * If `--dry-run` is passed, result is not sent to API.
     You can still pass `--out [FILENAME]` to store the result locally.
 
-    * If `--in` and `--dry-run` is passed, `--api-server` admin option and
+    * If `--in` and `--dry-run` are passed, `--api-server` admin option and
     `SERVER` from config will be ignored.
     """
     console.print("\n", Markdown("# Metadata Signing Tool"))
@@ -119,15 +116,15 @@ def sign(
     # Make sure there is a way to get a DAS metadata for signing.
     if settings.get("SERVER") is None and input is None:
         raise click.ClickException(
-            "Either '--api-sever' admin option/'SERVER' in RSTUF config or "
+            "Either '--api-server' admin option/'SERVER' in RSTUF config or "
             "'--in' needed"
         )
 
     # Make sure user understands that result will be send to the API and if the
     # the user wants something else should use '--dry-run'.
-    if settings.get("SERVER") is None and not dry_run:
+    if not settings.get("SERVER") and not dry_run:
         raise click.ClickException(
-            "Either '--api-sever' admin option/'SERVER' in RSTUF config or "
+            "Either '--api-server' admin option/'SERVER' in RSTUF config or "
             "'--dry-run' needed"
         )
     ###########################################################################
@@ -187,11 +184,11 @@ def sign(
     if settings.get("SERVER") and not dry_run:
         console.print(f"\nSending signature to {settings.SERVER}")
         task_id = send_payload(
-            settings,
-            URL.METADATA_SIGN.value,
-            asdict(payload),
-            "Metadata sign accepted.",
-            "Metadata sign",
+            settings=settings,
+            url=URL.METADATA_SIGN.value,
+            payload=asdict(payload),
+            expected_msg="Metadata sign accepted.",
+            command_name="Metadata sign",
         )
         task_status(task_id, settings, "Metadata sign status:")
         console.print("\nMetadata Signed and sent to the API! 🔑\n")

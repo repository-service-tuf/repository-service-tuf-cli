@@ -17,4 +17,4 @@ class TestSend:
         with pytest.raises(click.ClickException) as err:
             send._validate_settings(fake_context)
 
-        assert "Needed '--api-sever' admin option or 'SERVER'" in str(err)
+        assert "Needed '--api-server' admin option or 'SERVER'" in str(err)
