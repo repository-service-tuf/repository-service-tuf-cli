@@ -307,7 +307,7 @@ class TestCeremonyError:
     def test_ceremony_no_api_server_and_no_dry_run_option(self):
         result = invoke_command(ceremony.ceremony, [], [], std_err_empty=False)
 
-        err_prefix = "Either '--api-sever' admin option/'SERVER'"
+        err_prefix = "Either '--api-server' admin option/'SERVER'"
         err_suffix = "or '--dry-run'"
         assert err_prefix in result.stderr
         assert err_suffix in result.stderr

@@ -9,7 +9,7 @@ def _validate_settings(context: click.Context):
     settings = context.obj["settings"]
     if not settings.get("SERVER"):
         raise click.ClickException(
-            "Needed '--api-sever' admin option or 'SERVER' in RSTUF cofig"
+            "Needed '--api-server' admin option or 'SERVER' in RSTUF cofig"
         )
 
 
