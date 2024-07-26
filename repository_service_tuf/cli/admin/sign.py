@@ -36,10 +36,7 @@ from repository_service_tuf.helpers.api_client import (
 
 
 def _parse_pending_data(pending_roles_resp: Dict[str, Any]) -> Dict[str, Any]:
-    data = pending_roles_resp.get("data")
-    if data is None:
-        error = "'data' field missing from api server response/file input"
-        raise click.ClickException(error)
+    data = pending_roles_resp.get("data", {})
 
     pending_roles: Dict[str, Dict[str, Any]] = data.get("metadata", {})
     if len(pending_roles) == 0:
