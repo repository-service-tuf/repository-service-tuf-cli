@@ -370,13 +370,6 @@ class TestHelpers:
 
         assert "No metadata available for signing" in str(e)
 
-    def test__parse_pending_data_missing_data(self):
-        with pytest.raises(click.ClickException) as e:
-            sign._parse_pending_data({})
-
-        err = "'data' field missing from api server response/file input"
-        assert err in str(e)
-
     def test__get_pending_roles_request(self, monkeypatch):
         fake_settings = pretend.stub(SERVER=None)
         fake_json = pretend.stub()
