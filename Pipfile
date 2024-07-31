@@ -9,7 +9,7 @@ securesystemslib = "*"
 click = "*"
 rich = "*"
 auto-click-auto = "*"
-PyNaCl = "==1.5.0"
+PyNaCl = "*"
 requests = "*"
 dynaconf = {extras = ["yaml"], version = "*"}
 isort = "*"
@@ -17,6 +17,7 @@ sqlalchemy = "*"
 psycopg2 = "*"
 tuf = "*"
 beaupy = "*"
+sigstore = "*"
 
 [dev-packages]
 black = "*"
