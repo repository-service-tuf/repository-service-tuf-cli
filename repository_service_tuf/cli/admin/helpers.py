@@ -86,7 +86,7 @@ class ROOT_SIGNERS(str, enum.Enum):
     SIGSTORE = "SigStore"
 
     @classmethod
-    def values(self):
+    def values(self) -> List[str]:
         return [e.value for e in self]
 
 
@@ -235,7 +235,7 @@ def _load_key_from_sigstore_prompt() -> Optional[Key]:
 
 
 def _load_key_prompt(
-    root: Root, signer_type: Optional[ROOT_SIGNERS] = None
+    root: Root, signer_type: Optional[str] = None
 ) -> Optional[Key]:
     """Prompt and return Key, or None on error or if key is already loaded."""
     try:
@@ -261,7 +261,7 @@ def _load_key_prompt(
     return key
 
 
-def _key_name_prompt(root: Metadata[Root], name: Optional[str] = None) -> str:
+def _key_name_prompt(root: Root, name: Optional[str] = None) -> str:
     """Prompt for key name until success."""
     while True:
         name = Prompt.ask("Please enter key name", default=name)
@@ -324,7 +324,7 @@ def _root_threshold_prompt() -> int:
     return _MoreThan1Prompt.ask("Please enter root threshold")
 
 
-def _select(options: list[str]) -> str:
+def _select(options: List[str]) -> str:
     return beaupy.select(options=options, cursor=">", cursor_style="cyan")
 
 
