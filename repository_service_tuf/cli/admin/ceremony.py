@@ -8,7 +8,6 @@ from typing import Any, Optional
 
 import click
 from rich.markdown import Markdown
-from tuf.api.metadata import Metadata, Root
 
 # TODO: Should we use the global rstuf console exclusively? We do use it for
 # `console.print`, but not with `Confirm/Prompt.ask`. The latter uses a default
@@ -21,9 +20,11 @@ from repository_service_tuf.cli.admin import admin
 from repository_service_tuf.cli.admin.helpers import (
     BinsRole,
     CeremonyPayload,
+    Metadata,
     Metadatas,
     Role,
     Roles,
+    Root,
     Settings,
     _add_root_signatures_prompt,
     _configure_online_key_prompt,

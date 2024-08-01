@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
+import enum
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
@@ -17,7 +18,17 @@ from cryptography.hazmat.primitives.serialization import (
 )
 from rich.prompt import Confirm, IntPrompt, InvalidResponse, Prompt
 from rich.table import Table
-from securesystemslib.signer import CryptoSigner, Key, Signature, SSlibKey
+from securesystemslib.formats import encode_canonical
+from securesystemslib.hash import digest
+from securesystemslib.signer import (
+    KEY_FOR_TYPE_AND_SCHEME,
+    CryptoSigner,
+    Key,
+    Signature,
+    SigstoreKey,
+    SigstoreSigner,
+    SSlibKey,
+)
 from tuf.api.metadata import (
     Metadata,
     Root,
@@ -53,6 +64,30 @@ DEFAULT_EXPIRY = {
     "bins": 1,
 }
 DEFAULT_BINS_NUMBER = 256
+
+# SigStore issuers supported by RSTUF
+SIGSTORE_ISSUERS = [
+    "https://github.com/login/oauth",
+    "https://login.microsoft.com",
+    "https://accounts.google.com",
+]
+
+# SecureSystemsLib doesn't support SigstoreKey by default.
+KEY_FOR_TYPE_AND_SCHEME.update(
+    {
+        ("sigstore-oidc", "Fulcio"): SigstoreKey,
+    }
+)
+
+
+# Root signers supported by RSTUF
+class ROOT_SIGNERS(str, enum.Enum):
+    KEY_PEM = "Key PEM File"
+    SIGSTORE = "SigStore"
+
+    @classmethod
+    def values(self):
+        return [e.value for e in self]
 
 
 @dataclass
@@ -165,10 +200,54 @@ def _load_key_from_file_prompt() -> SSlibKey:
     return key
 
 
-def _load_key_prompt(root: Root) -> Optional[Key]:
+def _new_keyid(key: Key) -> str:
+    data: bytes = encode_canonical(key.to_dict()).encode()
+    hasher = digest("sha256")
+    hasher.update(data)
+    return hasher.hexdigest()
+
+
+def _load_key_from_sigstore_prompt() -> Optional[Key]:
+    console.print(
+        "\n:warning: SigStore is not supported by all TUF Clients.\n",
+        justify="left",
+        style="italic",
+    )
+    identity = Prompt.ask("Please enter SigStore identity")
+    console.print(
+        "\n:warning: RSTUF only support SigStore public issuers.\n",
+        justify="left",
+        style="italic",
+    )
+    issuer = _select(SIGSTORE_ISSUERS)
+
+    key = SigstoreKey(
+        keyid="temp",
+        keytype="sigstore-oidc",
+        scheme="Fulcio",
+        keyval={"issuer": issuer, "identity": identity},
+        unrecognized_fields={KEY_NAME_FIELD: identity},
+    )
+
+    key.keyid = _new_keyid(key)
+
+    return key
+
+
+def _load_key_prompt(
+    root: Root, signer_type: Optional[ROOT_SIGNERS] = None
+) -> Optional[Key]:
     """Prompt and return Key, or None on error or if key is already loaded."""
     try:
-        key = _load_key_from_file_prompt()
+        if not signer_type:
+            console.print("\nSelect a key type:")
+            signer_type = _select(ROOT_SIGNERS.values())
+
+        match signer_type:
+            case ROOT_SIGNERS.KEY_PEM:
+                key = _load_key_from_file_prompt()
+            case ROOT_SIGNERS.SIGSTORE:
+                key = _load_key_from_sigstore_prompt()
 
     except (OSError, ValueError) as e:
         console.print(f"Cannot load key: {e}")
@@ -182,10 +261,10 @@ def _load_key_prompt(root: Root) -> Optional[Key]:
     return key
 
 
-def _key_name_prompt(root) -> str:
+def _key_name_prompt(root: Metadata[Root], name: Optional[str] = None) -> str:
     """Prompt for key name until success."""
     while True:
-        name = Prompt.ask("Please enter key name")
+        name = Prompt.ask("Please enter key name", default=name)
         if not name:
             console.print("Key name cannot be empty.")
             continue
@@ -301,7 +380,9 @@ def _configure_root_keys_prompt(root: Root) -> None:
                 if not new_key:
                     continue
 
-                name = _key_name_prompt(root)
+                name = _key_name_prompt(
+                    root, new_key.unrecognized_fields.get(KEY_NAME_FIELD)
+                )
                 new_key.unrecognized_fields[KEY_NAME_FIELD] = name
                 root.add_key(new_key, Root.type)
                 console.print(f"Added root key '{name}'")
@@ -329,7 +410,7 @@ def _configure_online_key_prompt(root: Root) -> None:
             return
 
     while True:
-        if new_key := _load_key_prompt(root):
+        if new_key := _load_key_prompt(root, signer_type=ROOT_SIGNERS.KEY_PEM):
             break
 
     name = _key_name_prompt(root)
@@ -352,8 +433,14 @@ def _add_signature_prompt(metadata: Metadata, key: Key) -> Signature:
     while True:
         name = key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)
         try:
-            signer = _load_signer_from_file_prompt(key)
-            # TODO: Check if the signature is valid for the key?
+            if key.keytype == "sigstore-oidc":
+                signer = SigstoreSigner.from_priv_key_uri(
+                    "sigstore:?ambient=false", key
+                )
+            # Using Key PEM file
+            else:
+                signer = _load_signer_from_file_prompt(key)
+
             signature = metadata.sign(signer, append=True)
             break
 
@@ -423,7 +510,10 @@ def _print_root(root: Root):
 
     key_table = Table("Role", "ID", "Name", "Signing Scheme", "Public Value")
     for key in _get_root_keys(root).values():
-        public_value = key.keyval["public"]  # SSlibKey-specific
+        if isinstance(key, SigstoreKey):
+            public_value = f"{key.keyval['identity']}@{key.keyval['issuer']}"
+        else:
+            public_value = key.keyval["public"]  # SSlibKey-specific
         name = key.unrecognized_fields.get(KEY_NAME_FIELD)
         key_table.add_row("Root", key.keyid, name, key.scheme, public_value)
 
@@ -482,6 +572,7 @@ def _print_keys_for_signing(
                 f"- '{key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)}'"
             )
             keys.append(key)
+        console.print()
 
     return keys
 
