@@ -67,8 +67,14 @@ class TestHelpers:
 
         # return key
         fake_key = pretend.stub(keyid="abc")
-        with patch(
-            f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
+        with (
+            patch(
+                f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
+            ),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=[helpers.ROOT_SIGNERS.KEY_PEM],
+            ),
         ):
             key = helpers._load_key_prompt(fake_root)
 

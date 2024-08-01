@@ -97,8 +97,11 @@ def key_selection() -> lambda *a: str:
     selection_options = iter(
         (
             # selections for input_step4
+            "Key PEM File",  # select key type
             "add",  # add key
+            "Key PEM File",  # select key type
             "add",  # add key
+            "Key PEM File",  # select key type
             "remove",  # remove key
             "my rsa key",  # select key to remove
             "continue",  # continue
@@ -138,6 +141,7 @@ def update_key_selection() -> lambda *a: str:
             "remove",  # remove key
             "JimiHendrix's Key",  # select key to remove
             "add",  # add key
+            "Key PEM File",  # select key type
             "continue",  # continue
             # selection for inputs (signing root key)
             "JimiHendrix's Key",  # select key to sign
