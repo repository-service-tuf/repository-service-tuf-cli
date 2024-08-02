@@ -32,7 +32,8 @@ dependencies = [
   "rich",
   "rich-click",
   "securesystemslib[crypto]",
-  "tuf"
+  "tuf",
+  "sigstore",
 ]
 dynamic = ["version"]
 
