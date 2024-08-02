@@ -266,6 +266,7 @@ class TestMetadataUpdate:
             (
                 # selection for inputs (update root keys)
                 "add",  # remove key
+                "Key PEM File",  # select key type
                 "continue",  # continue
                 # selection for inputs (signing root key)
                 "JimiHendrix's Key",  # select key to sign

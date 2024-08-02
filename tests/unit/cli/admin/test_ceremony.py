@@ -1,6 +1,7 @@
 import json
 
 import pretend
+from tuf.api.metadata import Signature
 
 from repository_service_tuf.cli.admin import ceremony
 from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, invoke_command
@@ -40,6 +41,73 @@ class TestCeremony:
 
         assert [s["keyid"] for s in sigs_r] == [s["keyid"] for s in sigs_e]
         assert result.data == expected
+        assert f"Saved result to '{custom_path}'" in result.stdout
+        assert "Bootstrap completed." not in result.stdout
+
+    def test_ceremony_with_dry_run_and_custom_out_pem_and_sigstore_keys(
+        self,
+        monkeypatch,
+        ceremony_inputs,
+        key_selection,
+        client,
+        test_context,
+        patch_getpass,
+        patch_utcnow,
+    ):
+        """
+        Test that '--dry-run' and '--out' are compatible without connecting to
+        the API.
+        """
+        # public keys and signing keys selection options
+        selection = iter(
+            (
+                # selections for input_step4
+                "Key PEM File",  # select key type
+                "add",  # add key
+                "SigStore",  # select key type
+                "https://github.com/login/oauth",  # enter oidc issuer
+                "add",  # add key
+                "Key PEM File",  # select key type
+                "remove",  # remove key
+                "my rsa key",  # select key to remove
+                "continue",  # continue
+                # selections for input_step4
+                "JanisJoplin's Key",  # select key to sign
+                "user@domain.com",  # select key to sign
+                "continue",  # continue
+            )
+        )
+        mocked_select = pretend.call_recorder(lambda *a: next(selection))
+        monkeypatch.setattr(f"{_HELPERS}._select", mocked_select)
+        fake_sigstore_signer = pretend.stub(
+            from_priv_key_uri=lambda *a, **kw: pretend.stub(
+                sign=lambda *a, **kw: Signature(
+                    keyid="fake-keyid", sig="fake_sigstore"
+                )
+            )
+        )
+        monkeypatch.setattr(f"{_HELPERS}.SigstoreSigner", fake_sigstore_signer)
+
+        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
+        input_step2 = [  # Configure Root Keys
+            "2",  # Please enter root threshold
+            f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
+            "my rsa key",  # Please enter key name
+            "user@domain.com",  # Please enter path to public key
+            "",  # Please enter key name
+            f"{_PEMS / 'JJ.pub'}",  # Please enter path to public key
+            "JanisJoplin's Key",  # Please enter key name
+        ]
+        custom_path = "file.json"
+        result = invoke_command(
+            ceremony.ceremony,
+            input_step1 + input_step2 + input_step3 + input_step4,
+            args=["--dry-run", "--out", custom_path],
+        )
+
+        {"keyid": "fake-keyid", "sig": "fake_sigstore"} in result.data[
+            "metadata"
+        ]["root"]["signatures"]
         assert f"Saved result to '{custom_path}'" in result.stdout
         assert "Bootstrap completed." not in result.stdout
 
