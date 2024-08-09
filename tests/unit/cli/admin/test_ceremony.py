@@ -64,7 +64,7 @@ class TestCeremony:
                 # selections for input_step4
                 "Key PEM File",  # select key type
                 "add",  # add key
-                "SigStore",  # select key type
+                "Sigstore",  # select key type
                 "https://github.com/login/oauth",  # enter oidc issuer
                 "add",  # add key
                 "Key PEM File",  # select key type
