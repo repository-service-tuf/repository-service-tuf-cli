@@ -1,6 +1,6 @@
 -i https://pypi.org/simple
 alabaster==0.7.16; python_version >= '3.9'
-babel==2.15.0; python_version >= '3.8'
+babel==2.16.0; python_version >= '3.8'
 bandit==1.7.9; python_version >= '3.8'
 black==24.8.0; python_version >= '3.8'
 build==1.2.1; python_version >= '3.8'
