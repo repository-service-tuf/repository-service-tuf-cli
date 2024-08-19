@@ -22,12 +22,16 @@ from securesystemslib.formats import encode_canonical
 from securesystemslib.hash import digest
 from securesystemslib.signer import (
     KEY_FOR_TYPE_AND_SCHEME,
+    AWSSigner,
+    AzureSigner,
     CryptoSigner,
+    GCPSigner,
     Key,
     Signature,
     SigstoreKey,
     SigstoreSigner,
     SSlibKey,
+    VaultSigner,
 )
 from tuf.api.metadata import (
     Metadata,
@@ -80,14 +84,24 @@ KEY_FOR_TYPE_AND_SCHEME.update(
 )
 
 
-# Root signers supported by RSTUF
-class ROOT_SIGNERS(str, enum.Enum):
-    KEY_PEM = "Key PEM File"
-    SIGSTORE = "Sigstore"
-
+class SIGNERS(str, enum.Enum):
     @classmethod
     def values(self) -> List[str]:
         return [e.value for e in self]
+
+
+# Root signers supported by RSTUF
+class ROOT_SIGNERS(SIGNERS):
+    KEY_PEM = "Key PEM File"
+    SIGSTORE = "Sigstore"
+
+
+class ONLINE_SIGNERS(SIGNERS):
+    AWSKMS = "AWS KMS"
+    GCPKMS = "Google Cloud KMS"
+    AZKMS = "Azure KMS"
+    HV = "HashiCorp Vault"
+    KEY_PEM = "Key PEM File"
 
 
 @dataclass
@@ -261,6 +275,47 @@ def _load_key_prompt(
     return key
 
 
+def _load_key_online_prompt(
+    root: Root, signer_type: str
+) -> Tuple[Optional[str], Optional[Key]]:
+    """Prompt and return Key, or None on error or if key is already loaded."""
+    try:
+        match signer_type:
+            case ONLINE_SIGNERS.KEY_PEM:
+                key = _load_key_from_file_prompt()
+                uri = f"fn:{key.keyid}"
+
+            case ONLINE_SIGNERS.AWSKMS:
+                uri, key = AWSSigner.import_(Prompt.ask("AWS KMS KeyID"))
+
+            case ONLINE_SIGNERS.GCPKMS:
+                uri, key = GCPSigner.import_(Prompt.ask("GCP KeyID"))
+
+            case ONLINE_SIGNERS.HV:
+                uri, key = VaultSigner.import_(
+                    Prompt.ask("HashiCorp Key Name")
+                )
+
+            case ONLINE_SIGNERS.AZKMS:
+                azure_vault_name = Prompt.ask("Azure Vault Name")
+                azure_key_name = Prompt.ask("Azure Key Name")
+                uri, key = AzureSigner.import_(
+                    az_vault_name=azure_vault_name,
+                    az_key_name=azure_key_name,
+                )
+
+    except (OSError, ValueError) as e:
+        console.print(f"Cannot load key: {e}")
+        return None, None
+
+    # Disallow re-adding a key even if it is for a different role.
+    if key.keyid in root.keys:
+        console.print("\nKey already in use.", style="bold red")
+        return None, None
+
+    return uri, key
+
+
 def _key_name_prompt(root: Root, name: Optional[str] = None) -> str:
     """Prompt for key name until success."""
     while True:
@@ -409,14 +464,16 @@ def _configure_online_key_prompt(root: Root) -> None:
         ):
             return
 
+    console.print("\nSelect Online Key type:")
     while True:
-        if new_key := _load_key_prompt(root, signer_type=ROOT_SIGNERS.KEY_PEM):
+        online_key_signer = _select(ONLINE_SIGNERS.values())
+        uri, new_key = _load_key_online_prompt(root, online_key_signer)
+
+        if new_key:
             break
 
     name = _key_name_prompt(root)
     new_key.unrecognized_fields[KEY_NAME_FIELD] = name
-
-    uri = f"fn:{new_key.keyid}"
     new_key.unrecognized_fields[KEY_URI_FIELD] = uri
 
     for role_name in ONLINE_ROLE_NAMES:

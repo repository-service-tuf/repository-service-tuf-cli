@@ -106,6 +106,7 @@ def key_selection() -> lambda *a: str:
             "my rsa key",  # select key to remove
             "continue",  # continue
             # selections for input_step4
+            "Key PEM File",  # select Online Key type
             "JimiHendrix's Key",  # select key to sign
             "JanisJoplin's Key",  # select key to sign
             "continue",  # continue
@@ -143,6 +144,7 @@ def update_key_selection() -> lambda *a: str:
             "add",  # add key
             "Key PEM File",  # select key type
             "continue",  # continue
+            "Key PEM File",  # select Online Key type
             # selection for inputs (signing root key)
             "JimiHendrix's Key",  # select key to sign
             "JanisJoplin's Key",  # select key to sign

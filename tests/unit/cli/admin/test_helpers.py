@@ -97,6 +97,119 @@ class TestHelpers:
                 key = helpers._load_key_prompt(fake_root)
                 assert key is None
 
+    @pytest.mark.parametrize(
+        "signer_type, prompt_values, signer_mock, expected_uri, expected_key",
+        [
+            # Test for KEY_PEM
+            (
+                helpers.ONLINE_SIGNERS.KEY_PEM,  # signer_type
+                [],  # No prompt input needed for KEY_PEM
+                f"{_HELPERS}._load_key_from_file_prompt",  # Mocked signer
+                "fn:abc",  # Expected URI
+                pretend.stub(keyid="abc"),  # Expected key object
+            ),
+            # Test for AWS KMS
+            (
+                helpers.ONLINE_SIGNERS.AWSKMS,
+                ["aws-key-id"],
+                f"{_HELPERS}.AWSSigner.import_",
+                "aws-kms-uri",
+                pretend.stub(keyid="abc"),
+            ),
+            # Test for GCP KMS
+            (
+                helpers.ONLINE_SIGNERS.GCPKMS,
+                ["gcp-key-id"],
+                f"{_HELPERS}.GCPSigner.import_",
+                "gcp-kms-uri",
+                pretend.stub(keyid="abc"),
+            ),
+            # Test for HashiCorp Vault (HV)
+            (
+                helpers.ONLINE_SIGNERS.HV,
+                ["hv-key-name"],
+                f"{_HELPERS}.VaultSigner.import_",
+                "hv-uri",
+                pretend.stub(keyid="abc"),
+            ),
+            # Test for Azure KMS
+            (
+                helpers.ONLINE_SIGNERS.AZKMS,
+                ["azure-vault", "azure-key"],
+                f"{_HELPERS}.AzureSigner.import_",
+                "az-kms-uri",
+                pretend.stub(keyid="abc"),
+            ),
+        ],
+    )
+    def test_load_key_online_prompt_success_cases(
+        self,
+        signer_type,
+        prompt_values,
+        signer_mock,
+        expected_uri,
+        expected_key,
+    ):
+        fake_root = pretend.stub(keys={})
+
+        # Mocking the necessary methods based on the signer type
+        if signer_type == helpers.ONLINE_SIGNERS.KEY_PEM:
+            return_value = expected_key
+        else:
+            return_value = (expected_uri, expected_key)
+        with patch(signer_mock, return_value=return_value):
+            if prompt_values:
+                with patch(
+                    f"{_HELPERS}.Prompt.ask", side_effect=prompt_values
+                ):
+                    uri, key = helpers._load_key_online_prompt(
+                        fake_root, signer_type.value
+                    )
+            else:
+                uri, key = helpers._load_key_online_prompt(
+                    fake_root, signer_type.value
+                )
+
+        assert uri == expected_uri
+        assert key == expected_key
+
+    def test_load_key_online_prompt_key_already_in_use(self):
+        # Mocked root object with a preloaded key
+        fake_root = pretend.stub(keys={"abc"})
+        fake_key = pretend.stub(keyid="abc")
+
+        with patch(
+            f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
+        ):
+            uri, key = helpers._load_key_online_prompt(
+                fake_root, helpers.ONLINE_SIGNERS.KEY_PEM
+            )
+
+        assert key is None
+        assert uri is None
+
+    @pytest.mark.parametrize(
+        "signer_type, exception",
+        [
+            ("KEY_PEM", OSError),
+            ("KEY_PEM", ValueError),
+        ],
+    )
+    def test_load_key_online_prompt_exception_handling(
+        self, signer_type, exception
+    ):
+        fake_root = pretend.stub(keys={})
+
+        with patch(
+            f"{_HELPERS}._load_key_from_file_prompt", side_effect=exception
+        ):
+            uri, key = helpers._load_key_online_prompt(
+                fake_root, getattr(helpers.ONLINE_SIGNERS, signer_type)
+            )
+
+        assert key is None
+        assert uri is None
+
     def test_key_name_prompt(self):
         fake_key = pretend.stub(
             unrecognized_fields={helpers.KEY_NAME_FIELD: "taken"}
@@ -169,7 +282,7 @@ class TestHelpers:
             patch(f"{_HELPERS}._key_name_prompt", return_value="foo"),
             patch(
                 f"{_HELPERS}._select",
-                side_effect=["add", "add", "continue"],
+                side_effect=["add", "add", "continue", "Key PEM File"],
             ),
         ):
             helpers._configure_root_keys_prompt(root)
@@ -199,8 +312,15 @@ class TestHelpers:
 
         # Add new key (no user choice)
         with (
-            patch(f"{_HELPERS}._load_key_prompt", return_value=ed25519_key),
+            patch(
+                f"{_HELPERS}._load_key_online_prompt",
+                return_value=(f"fn:{ed25519_key.keyid}", ed25519_key),
+            ),
             patch(f"{_HELPERS}._key_name_prompt", return_value="foo"),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=["Key PEM File"],
+            ),
         ):
             helpers._configure_online_key_prompt(root)
 
@@ -215,10 +335,14 @@ class TestHelpers:
         with (
             patch(_PROMPT, side_effect=[""]),  # default user choice: change
             patch(
-                f"{_HELPERS}._load_key_prompt",
-                side_effect=[None, key2],
+                f"{_HELPERS}._load_key_online_prompt",
+                side_effect=[(None, None), (f"fn:{key2.keyid}", key2)],
             ),
             patch(f"{_HELPERS}._key_name_prompt", return_value="foo"),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=["Key PEM File", "Key PEM File"],
+            ),
         ):
             helpers._configure_online_key_prompt(root)
 
