@@ -65,7 +65,7 @@ DEFAULT_EXPIRY = {
 }
 DEFAULT_BINS_NUMBER = 256
 
-# SigStore issuers supported by RSTUF
+# Sigstore issuers supported by RSTUF
 SIGSTORE_ISSUERS = [
     "https://github.com/login/oauth",
     "https://login.microsoft.com",
@@ -83,7 +83,7 @@ KEY_FOR_TYPE_AND_SCHEME.update(
 # Root signers supported by RSTUF
 class ROOT_SIGNERS(str, enum.Enum):
     KEY_PEM = "Key PEM File"
-    SIGSTORE = "SigStore"
+    SIGSTORE = "Sigstore"
 
     @classmethod
     def values(self) -> List[str]:
@@ -209,13 +209,13 @@ def _new_keyid(key: Key) -> str:
 
 def _load_key_from_sigstore_prompt() -> Optional[Key]:
     console.print(
-        "\n:warning: SigStore is not supported by all TUF Clients.\n",
+        "\n:warning: Sigstore is not supported by all TUF Clients.\n",
         justify="left",
         style="italic",
     )
-    identity = Prompt.ask("Please enter SigStore identity")
+    identity = Prompt.ask("Please enter Sigstore identity")
     console.print(
-        "\n:warning: RSTUF only support SigStore public issuers.\n",
+        "\n:warning: RSTUF only support Sigstore public issuers.\n",
         justify="left",
         style="italic",
     )
