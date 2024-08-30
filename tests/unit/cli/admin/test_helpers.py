@@ -142,7 +142,7 @@ class TestHelpers:
             ),
         ],
     )
-    def test_load_key_online_prompt_success_cases(
+    def test_load_online_key_prompt_success_cases(
         self,
         signer_type,
         prompt_values,
@@ -162,18 +162,18 @@ class TestHelpers:
                 with patch(
                     f"{_HELPERS}.Prompt.ask", side_effect=prompt_values
                 ):
-                    uri, key = helpers._load_key_online_prompt(
+                    uri, key = helpers._load_online_key_prompt(
                         fake_root, signer_type.value
                     )
             else:
-                uri, key = helpers._load_key_online_prompt(
+                uri, key = helpers._load_online_key_prompt(
                     fake_root, signer_type.value
                 )
 
         assert uri == expected_uri
         assert key == expected_key
 
-    def test_load_key_online_prompt_key_already_in_use(self):
+    def test_load_online_key_prompt_key_already_in_use(self):
         # Mocked root object with a preloaded key
         fake_root = pretend.stub(keys={"abc"})
         fake_key = pretend.stub(keyid="abc")
@@ -181,7 +181,7 @@ class TestHelpers:
         with patch(
             f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
         ):
-            uri, key = helpers._load_key_online_prompt(
+            uri, key = helpers._load_online_key_prompt(
                 fake_root, helpers.ONLINE_SIGNERS.KEY_PEM
             )
 
@@ -195,7 +195,7 @@ class TestHelpers:
             ("KEY_PEM", ValueError),
         ],
     )
-    def test_load_key_online_prompt_exception_handling(
+    def test_load_online_key_prompt_exception_handling(
         self, signer_type, exception
     ):
         fake_root = pretend.stub(keys={})
@@ -203,7 +203,7 @@ class TestHelpers:
         with patch(
             f"{_HELPERS}._load_key_from_file_prompt", side_effect=exception
         ):
-            uri, key = helpers._load_key_online_prompt(
+            uri, key = helpers._load_online_key_prompt(
                 fake_root, getattr(helpers.ONLINE_SIGNERS, signer_type)
             )
 
@@ -313,7 +313,7 @@ class TestHelpers:
         # Add new key (no user choice)
         with (
             patch(
-                f"{_HELPERS}._load_key_online_prompt",
+                f"{_HELPERS}._load_online_key_prompt",
                 return_value=(f"fn:{ed25519_key.keyid}", ed25519_key),
             ),
             patch(f"{_HELPERS}._key_name_prompt", return_value="foo"),
@@ -335,7 +335,7 @@ class TestHelpers:
         with (
             patch(_PROMPT, side_effect=[""]),  # default user choice: change
             patch(
-                f"{_HELPERS}._load_key_online_prompt",
+                f"{_HELPERS}._load_online_key_prompt",
                 side_effect=[(None, None), (f"fn:{key2.keyid}", key2)],
             ),
             patch(f"{_HELPERS}._key_name_prompt", return_value="foo"),

@@ -275,7 +275,7 @@ def _load_key_prompt(
     return key
 
 
-def _load_key_online_prompt(
+def _load_online_key_prompt(
     root: Root, signer_type: str
 ) -> Tuple[Optional[str], Optional[Key]]:
     """Prompt and return Key, or None on error or if key is already loaded."""
@@ -467,7 +467,7 @@ def _configure_online_key_prompt(root: Root) -> None:
     console.print("\nSelect Online Key type:")
     while True:
         online_key_signer = _select(ONLINE_SIGNERS.values())
-        uri, new_key = _load_key_online_prompt(root, online_key_signer)
+        uri, new_key = _load_online_key_prompt(root, online_key_signer)
 
         if new_key:
             break
