@@ -71,6 +71,7 @@ class TestCeremony:
                 "remove",  # remove key
                 "my rsa key",  # select key to remove
                 "continue",  # continue
+                "Key PEM File",  # select Online Key type
                 # selections for input_step4
                 "JanisJoplin's Key",  # select key to sign
                 "user@domain.com",  # select key to sign
@@ -303,7 +304,6 @@ class TestCeremony:
         self,
         monkeypatch,
         ceremony_inputs,
-        key_selection,
         patch_getpass,
         patch_utcnow,
     ):
@@ -315,8 +315,30 @@ class TestCeremony:
             "Online Key",  # Please enter a key name
         ]
 
+        selection_options = iter(
+            (
+                # selections for input_step4
+                "Key PEM File",  # select key type
+                "add",  # add key
+                "Key PEM File",  # select key type
+                "add",  # add key
+                "Key PEM File",  # select key type
+                "remove",  # remove key
+                "my rsa key",  # select key to remove
+                "continue",  # continue
+                # selections for input_step4
+                "Key PEM File",  # select Online Key type
+                "Key PEM File",  # select Online Key type
+                "JimiHendrix's Key",  # select key to sign
+                "JanisJoplin's Key",  # select key to sign
+                "continue",  # continue
+            )
+        )
         # public keys and signing keys selection options
-        monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
+        monkeypatch.setattr(
+            f"{_HELPERS}._select",
+            pretend.call_recorder(lambda *a: next(selection_options)),
+        )
 
         result = invoke_command(
             ceremony.ceremony,

@@ -18,6 +18,10 @@ psycopg2 = "*"
 tuf = "*"
 beaupy = "*"
 sigstore = "*"
+boto3 = "*"
+google-cloud-kms = "*"
+hvac = "*"
+azure-keyvault-keys = "*"
 
 [dev-packages]
 black = "*"

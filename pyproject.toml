@@ -34,6 +34,10 @@ dependencies = [
   "securesystemslib[crypto]",
   "tuf",
   "sigstore",
+  "boto3",
+  "google-cloud-kms",
+  "hvac",
+  "azure-keyvault-keys",
 ]
 dynamic = ["version"]
 

@@ -268,6 +268,7 @@ class TestMetadataUpdate:
                 "add",  # remove key
                 "Key PEM File",  # select key type
                 "continue",  # continue
+                "Key PEM File",  # select key type
                 # selection for inputs (signing root key)
                 "JimiHendrix's Key",  # select key to sign
                 "JanisJoplin's Key",  # select key to sign
