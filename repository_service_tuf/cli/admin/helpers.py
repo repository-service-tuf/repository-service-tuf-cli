@@ -187,14 +187,20 @@ class _MoreThan1Prompt(IntPrompt):
 
 def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
     """Prompt for path to private key and password, return Signer."""
-    name = public_key.unrecognized_fields.get(KEY_NAME_FIELD)
-    path = Prompt.ask(f"\nPlease enter path to encrypted private key '{name}'")
+    name_value = public_key.unrecognized_fields.get(KEY_NAME_FIELD)
+    name_str = f"[green]{name_value}[/]"
+    path = Prompt.ask(
+        f"\nPlease enter [yellow]path[/] to encrypted private key '{name_str}'"
+    )
 
     with open(path, "rb") as f:
         private_pem = f.read()
 
+    # Because of click.prompt we are required to use click.style()
+    name_str = click.style(name_value, fg="green")
+    password_str = click.style("password", fg="yellow")
     password = click.prompt(
-        f"\nPlease enter password to encrypted private key '{name}'",
+        f"\nPlease enter {password_str} to encrypted private key '{name_str}'",
         hide_input=True,
     )
     private_key = load_pem_private_key(private_pem, password.encode())
@@ -389,8 +395,10 @@ def _select_key(keys: List[Key]) -> Key:
         for key in keys
     }
     sign_options = list(key_choices.keys())
+    sign_options = [f"[green]{option}[/]" for option in sign_options]
     choice = _select(sign_options)
-
+    # Remove beautification to get the actual key.
+    choice = choice.removeprefix("[green]").removesuffix("[/]")
     return key_choices[choice]
 
 
@@ -565,26 +573,33 @@ def _get_online_key(root: Root) -> Optional[Key]:
 def _print_root(root: Root):
     """Pretty print root metadata."""
 
-    key_table = Table("Role", "ID", "Name", "Signing Scheme", "Public Value")
+    key_table = Table("Role", "Name", "Signing Scheme", "Public Value")
     for key in _get_root_keys(root).values():
         if isinstance(key, SigstoreKey):
             public_value = f"{key.keyval['identity']}@{key.keyval['issuer']}"
         else:
             public_value = key.keyval["public"]  # SSlibKey-specific
-        name = key.unrecognized_fields.get(KEY_NAME_FIELD)
-        key_table.add_row("Root", key.keyid, name, key.scheme, public_value)
+
+        name = key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)
+        key_table.add_row(
+            "Root", f"[green]{name}[/]", key.scheme, public_value
+        )
 
     key = _get_online_key(root)
-    name = key.unrecognized_fields.get(KEY_NAME_FIELD)
+    name = key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)
     key_table.add_row(
-        "Online", key.keyid, name, key.scheme, key.keyval["public"]
+        "Online",
+        f"[green]{name}[/]",
+        key.scheme,
+        key.keyval["public"]
     )
 
     root_table = Table("Infos", "Keys", title="Root Metadata")
     root_table.add_row(
         (
             f"Expiration: {root.expires:%x}\n"
-            f"Threshold: {root.roles[Root.type].threshold}"
+            f"Threshold: {root.roles[Root.type].threshold}\n"
+            f"Version: {root.version}"
         ),
         key_table,
     )
@@ -625,9 +640,8 @@ def _print_keys_for_signing(
         s = "s" if m > 1 else ""
         console.print(f"Info: {m} signature{s} missing from any of:")
         for key in result.unsigned.values():
-            console.print(
-                f"- '{key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)}'"
-            )
+            name = key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)
+            console.print(f"- [green]{name}[/]")
             keys.append(key)
         console.print()
 
