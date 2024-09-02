@@ -588,10 +588,7 @@ def _print_root(root: Root):
     key = _get_online_key(root)
     name = key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)
     key_table.add_row(
-        "Online",
-        f"[green]{name}[/]",
-        key.scheme,
-        key.keyval["public"]
+        "Online", f"[green]{name}[/]", key.scheme, key.keyval["public"]
     )
 
     root_table = Table("Infos", "Keys", title="Root Metadata")
