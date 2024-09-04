@@ -18,7 +18,8 @@ from tests.conftest import _HELPERS, _PEMS, _PROMPT
 class TestHelpers:
     def test_load_signer_from_file_prompt(self, ed25519_key, monkeypatch):
         fake_click = pretend.stub(
-            prompt=pretend.call_recorder(lambda *a, **kw: "hunter2")
+            prompt=pretend.call_recorder(lambda *a, **kw: "hunter2"),
+            style=pretend.call_recorder(lambda *a, **kw: ""),
         )
         monkeypatch.setattr(f"{_HELPERS}.click", fake_click)
 

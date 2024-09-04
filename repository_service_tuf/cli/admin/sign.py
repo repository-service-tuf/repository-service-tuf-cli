@@ -160,7 +160,7 @@ def sign(
 
     ###########################################################################
     # Review metadata
-    console.print(Markdown("## Review"))
+    console.print(Markdown("## Review metadata to be signed"))
     _print_root(root_md.signed)
 
     ###########################################################################
@@ -168,6 +168,7 @@ def sign(
     console.print(Markdown("## Sign"))
     results = _filter_root_verification_results(root_result)
     keys = _print_keys_for_signing(results)
+    console.print(Markdown("Select key for signing:"))
     key = _select_key(keys)
     signature = _add_signature_prompt(root_md, key)
 
