@@ -16,7 +16,6 @@ from rich.markdown import Markdown
 # https://rich.readthedocs.io/en/stable/console.html#console-api
 # https://rich.readthedocs.io/en/stable/console.html#capturing-output
 from repository_service_tuf.cli import console
-from repository_service_tuf.cli.admin import metadata
 from repository_service_tuf.cli.admin.helpers import (
     Metadata,
     Root,
@@ -27,6 +26,7 @@ from repository_service_tuf.cli.admin.helpers import (
     _print_root,
     _select_key,
 )
+from repository_service_tuf.cli.admin.metadata import metadata
 from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,

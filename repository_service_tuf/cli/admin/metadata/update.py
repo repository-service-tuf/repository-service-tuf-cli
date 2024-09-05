@@ -23,7 +23,6 @@ from tuf.ngclient.updater import Updater
 # https://rich.readthedocs.io/en/stable/console.html#console-api
 # https://rich.readthedocs.io/en/stable/console.html#capturing-output
 from repository_service_tuf.cli import console
-from repository_service_tuf.cli.admin import metadata
 from repository_service_tuf.cli.admin.helpers import (
     EXPIRY_FORMAT,
     Metadatas,
@@ -35,6 +34,7 @@ from repository_service_tuf.cli.admin.helpers import (
     _print_root,
     _root_threshold_prompt,
 )
+from repository_service_tuf.cli.admin.metadata import metadata
 from repository_service_tuf.helpers.api_client import (
     URL,
     send_payload,
