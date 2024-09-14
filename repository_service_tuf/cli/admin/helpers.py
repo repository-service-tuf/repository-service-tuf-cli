@@ -5,6 +5,7 @@
 import enum
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from tempfile import TemporaryDirectory
 from typing import Any, Dict, List, Optional, Tuple
 
 import beaupy  # type: ignore
@@ -12,6 +13,7 @@ import click
 
 # Magic import to unbreak `load_pem_private_key` - pyca/cryptography#10315
 import cryptography.hazmat.backends.openssl.backend  # noqa: F401
+import requests
 from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_pem_public_key,
@@ -33,6 +35,7 @@ from securesystemslib.signer import (
     SSlibKey,
     VaultSigner,
 )
+from tuf.api.exceptions import DownloadError, RepositoryError
 from tuf.api.metadata import (
     Metadata,
     Root,
@@ -43,6 +46,7 @@ from tuf.api.metadata import (
     UnsignedMetadataError,
     VerificationResult,
 )
+from tuf.ngclient.updater import Updater
 
 # TODO: Should we use the global rstuf console exclusively? We do use it for
 # `console.print`, but not with `Confirm/Prompt.ask`. The latter uses a default
@@ -685,3 +689,29 @@ def _warn_no_save():
         justify="center",
         style="italic",
     )
+
+
+def _get_latest_md(metadata_url: str, role_name: str) -> Metadata:
+    try:
+        temp_dir = TemporaryDirectory()
+        initial_root_url = f"{metadata_url}/1.root.json"
+        response = requests.get(initial_root_url, timeout=300)
+        if response.status_code != 200:
+            raise click.ClickException(
+                f"Cannot fetch initial root {initial_root_url}"
+            )
+
+        with open(f"{temp_dir.name}/root.json", "w") as f:
+            f.write(response.text)
+
+        updater = Updater(
+            metadata_dir=temp_dir.name, metadata_base_url=metadata_url
+        )
+        updater.refresh()
+        md_bytes = updater._load_local_metadata(role_name)
+        metadata = Metadata.from_bytes(md_bytes)
+
+        return metadata
+
+    except (OSError, RepositoryError, DownloadError):
+        raise click.ClickException(f"Problem fetching latest {role_name}")

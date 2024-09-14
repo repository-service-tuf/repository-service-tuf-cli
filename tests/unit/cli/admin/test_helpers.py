@@ -6,6 +6,7 @@ import copy
 from datetime import datetime, timezone
 from unittest.mock import patch
 
+import click
 import pretend
 import pytest
 from securesystemslib.signer import CryptoSigner, SSlibKey
@@ -487,3 +488,106 @@ class TestHelpers:
                 options=["option1", "option2"], cursor=">", cursor_style="cyan"
             )
         ]
+
+    def test__get_latest_md_root_not_exists(self, monkeypatch):
+        fake_dir_name = "foo_bar_dir"
+
+        class FakeTempDir:
+            def __init__(self) -> None:
+                self.name = fake_dir_name
+
+        monkeypatch.setattr(f"{_HELPERS}.TemporaryDirectory", FakeTempDir)
+        fake_response = pretend.stub(status_code=200, text="foo bar")
+        fake_requests = pretend.stub(
+            get=pretend.call_recorder(lambda *a, **kw: fake_response)
+        )
+        monkeypatch.setattr(f"{_HELPERS}.requests", fake_requests)
+
+        # mock "open()"
+        fake_destination_file = pretend.stub(
+            write=pretend.call_recorder(lambda *a: None),
+            flush=pretend.call_recorder(lambda: None),
+            fileno=pretend.call_recorder(lambda: "fileno"),
+        )
+
+        class FakeFileDescriptor:
+            def __init__(self, file, mode):
+                return None
+
+            def __enter__(self):
+                return fake_destination_file
+
+            def __exit__(self, type, value, traceback):
+                pass
+
+        monkeypatch.setitem(
+            helpers.__builtins__, "open", lambda *a: FakeFileDescriptor(*a)
+        )
+
+        class FakeUpdater:
+            def __init__(self, **kw) -> None:
+                self.new_args = kw
+                self.refresh_calls_amount = 0
+
+            def refresh(self) -> None:
+                self.refresh_calls_amount += 1
+
+            def _load_local_metadata(self, *a):
+                return fake_metadata
+
+        monkeypatch.setattr(f"{_HELPERS}.Updater", FakeUpdater)
+        fake_root_result = pretend.stub()
+        fake_metadata = pretend.stub(
+            from_bytes=pretend.call_recorder(lambda a: fake_root_result)
+        )
+        monkeypatch.setattr(f"{_HELPERS}.Metadata", fake_metadata)
+        fake_url = "http://localhost:8080"
+
+        result = helpers._get_latest_md(fake_url, Root.type)
+
+        assert result == fake_root_result
+        assert fake_requests.get.calls == [
+            pretend.call(f"{fake_url}/1.root.json", timeout=300)
+        ]
+        assert fake_destination_file.write.calls == [
+            pretend.call(fake_response.text)
+        ]
+        assert fake_metadata.from_bytes.calls == [
+            pretend.call(FakeUpdater._load_local_metadata(Root.type))
+        ]
+
+    def test__get_latest_md_root_not_exist_response_not_200(self, monkeypatch):
+        fake_dir_name = "foo_bar_dir"
+
+        class FakeTempDir:
+            def __init__(self) -> None:
+                self.name = fake_dir_name
+
+        monkeypatch.setattr(f"{_HELPERS}.TemporaryDirectory", FakeTempDir)
+        fake_response = pretend.stub(status_code=400)
+        fake_requests = pretend.stub(
+            get=pretend.call_recorder(lambda *a, **kw: fake_response)
+        )
+        monkeypatch.setattr(f"{_HELPERS}.requests", fake_requests)
+
+        fake_url = "http://localhost:8080"
+
+        with pytest.raises(click.ClickException) as e:
+            helpers._get_latest_md(fake_url, Root.type)
+
+        assert "Cannot fetch initial root " in str(e)
+
+    def test__get_latest_md_root_OS_error(self, monkeypatch):
+        fake_dir_name = "foo_bar_dir"
+
+        class FakeTempDir:
+            def __init__(self) -> None:
+                self.name = fake_dir_name
+
+        monkeypatch.setattr(f"{_HELPERS}.TemporaryDirectory", FakeTempDir)
+        fake_url = "http://localhost:8080"
+
+        with pytest.raises(click.ClickException) as e:
+            helpers._get_latest_md(fake_url, Root.type)
+
+        assert "Problem fetching latest" in str(e)
