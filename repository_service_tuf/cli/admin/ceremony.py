@@ -27,12 +27,13 @@ from repository_service_tuf.cli.admin.helpers import (
     Root,
     Settings,
     _add_root_signatures_prompt,
+    _configure_delegations_prompt,
     _configure_online_key_prompt,
     _configure_root_keys_prompt,
     _expiry_prompt,
-    _online_settings_prompt,
     _print_root,
-    _root_threshold_prompt,
+    _settings_prompt,
+    _threshold_prompt,
 )
 from repository_service_tuf.helpers.api_client import (
     URL,
@@ -86,25 +87,35 @@ def ceremony(context: Any, out: Optional[click.File], dry_run: bool) -> None:
     ###########################################################################
     # Configure online role settings
     console.print(Markdown("##  Online role settings"))
-    online = _online_settings_prompt()
+    bs_settings = _settings_prompt()
+    _configure_delegations_prompt(bs_settings)
 
     console.print(Markdown("##  Root expiry"))
     root_days, root_date = _expiry_prompt("root")
     root.expires = root_date
 
+    # Using BINS or Custom Delegations
+    if bs_settings.delegations:
+        delegations = bs_settings.delegations.to_dict()
+        bins = None
+    else:
+        delegations = None
+        bins = BinsRole(bs_settings.bins_expiry, bs_settings.bins_number)
+
     roles = Roles(
         Role(root_days),
-        Role(online.timestamp_expiry),
-        Role(online.snapshot_expiry),
-        Role(online.targets_expiry),
-        BinsRole(online.bins_expiry, online.bins_number),
+        Role(bs_settings.timestamp_expiry),
+        Role(bs_settings.snapshot_expiry),
+        Role(bs_settings.targets_expiry),
+        bins,
+        delegations,
     )
 
     ###########################################################################
     # Configure Root Keys
     console.print(Markdown("## Root Keys"))
     root_role = root.get_delegated_role(Root.type)
-    root_role.threshold = _root_threshold_prompt()
+    root_role.threshold = _threshold_prompt("root")
     _configure_root_keys_prompt(root)
 
     ###########################################################################
@@ -126,8 +137,8 @@ def ceremony(context: Any, out: Optional[click.File], dry_run: bool) -> None:
 
     ###########################################################################
     metadatas = Metadatas(root_md.to_dict())
-    roles_settings = Settings(roles)
-    bootstrap_payload = CeremonyPayload(roles_settings, metadatas)
+    bootstrap_settings = Settings(roles)
+    bootstrap_payload = CeremonyPayload(bootstrap_settings, metadatas)
     # Dump payload when the user explicitly wants or doesn't send it to the API
     if out:
         json.dump(asdict(bootstrap_payload), out, indent=2)  # type: ignore

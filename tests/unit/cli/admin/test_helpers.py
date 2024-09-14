@@ -241,12 +241,12 @@ class TestHelpers:
 
             assert days == helpers.DEFAULT_EXPIRY[role]
 
-    def test_online_settings_prompt(self):
+    def test_settings_prompt(self):
         test_data = [
             (
                 [""] * 5,
                 (
-                    helpers._OnlineSettings(
+                    helpers._Settings(
                         helpers.DEFAULT_EXPIRY["timestamp"],
                         helpers.DEFAULT_EXPIRY["snapshot"],
                         helpers.DEFAULT_EXPIRY["targets"],
@@ -257,12 +257,12 @@ class TestHelpers:
             ),
             (
                 ["1", "2", "3", "4", "2048"],
-                helpers._OnlineSettings(1, 2, 3, 4, 2048),
+                helpers._Settings(1, 2, 3, 4, 2048),
             ),
         ]
         for inputs, expected in test_data:
             with patch(_PROMPT, side_effect=inputs):
-                result = helpers._online_settings_prompt()
+                result = helpers._settings_prompt()
 
         assert result == expected
 
