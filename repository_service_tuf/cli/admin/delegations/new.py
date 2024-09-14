@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: MIT
 
 import json
-from dataclasses import asdict
 from typing import Any, Dict, Optional
 
 import click
@@ -16,8 +15,8 @@ from rich.markdown import Markdown
 # https://rich.readthedocs.io/en/stable/console.html#console-api
 # https://rich.readthedocs.io/en/stable/console.html#capturing-output
 from repository_service_tuf.cli import console
-from repository_service_tuf.cli.admin.helpers import _configure_delegations
 from repository_service_tuf.cli.admin.delegations import delegations
+from repository_service_tuf.cli.admin.helpers import _configure_delegations
 from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,

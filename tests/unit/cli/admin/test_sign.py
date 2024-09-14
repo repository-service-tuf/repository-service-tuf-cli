@@ -8,7 +8,7 @@ import click
 import pretend
 import pytest
 
-from repository_service_tuf.cli.admin import sign
+from repository_service_tuf.cli.admin.metadata import sign
 from repository_service_tuf.helpers.api_client import URL, Methods
 from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
@@ -21,9 +21,10 @@ class TestSign:
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
         # selections interface
+        select_options = iter(("root", "JimiHendrix's Key"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
-            lambda *a: "JimiHendrix's Key",
+            lambda *a: next(select_options),
         )
 
         with open(f"{_PAYLOADS / 'sign_pending_roles.json'}") as f:
@@ -84,9 +85,10 @@ class TestSign:
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
         # selections interface
+        select_options = iter(("root", "JimiHendrix's Key"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
-            lambda *a: "JimiHendrix's Key",
+            lambda *a: next(select_options),
         )
 
         with open(f"{_ROOTS / 'v1.json'}") as f:
@@ -154,9 +156,10 @@ class TestSign:
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
         # selections interface
+        select_options = iter(("root", "JimiHendrix's Key"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
-            lambda *a: "JimiHendrix's Key",
+            lambda *a: next(select_options),
         )
         input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
         custom_out_path = "custom_sign_path.json"
@@ -184,9 +187,10 @@ class TestSign:
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
         # selections interface
+        select_options = iter(("root", "JimiHendrix's Key"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
-            lambda *a: "JimiHendrix's Key",
+            lambda *a: next(select_options),
         )
         sign.send_payload = pretend.call_recorder(lambda **kw: "fake-taskid")
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
@@ -240,9 +244,10 @@ class TestSign:
         Test that '--dry-run' is with higher priority than 'settings.SERVER'.
         """
         # selections interface
+        select_options = iter(("root", "JimiHendrix's Key"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
-            lambda *a: "JimiHendrix's Key",
+            lambda *a: next(select_options),
         )
         sign_input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
@@ -287,7 +292,7 @@ class TestSignError:
         assert err_suffix in result.stderr
 
     def test_sign_with_previous_root_but_wrong_version(
-        self, test_context, patch_getpass
+        self, test_context, patch_getpass, monkeypatch
     ):
         inputs = [
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
@@ -311,6 +316,12 @@ class TestSignError:
         )
         api_server = "http://127.0.0.1"
         test_context["settings"].SERVER = api_server
+        # selections interface
+        select_options = iter(("root", "JimiHendrix's Key"))
+        monkeypatch.setattr(
+            f"{_HELPERS}._select",
+            lambda *a: next(select_options),
+        )
 
         test_result = invoke_command(
             sign.sign, inputs, [], test_context, std_err_empty=False
@@ -322,7 +333,9 @@ class TestSignError:
             pretend.call(api_server, "api/v1/metadata/sign/", Methods.GET)
         ]
 
-    def test_sign_fully_signed_metadata(self, test_context, patch_getpass):
+    def test_sign_fully_signed_metadata(
+        self, test_context, patch_getpass, monkeypatch
+    ):
         inputs = [
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
@@ -345,6 +358,12 @@ class TestSignError:
         )
         api_server = "http://127.0.0.1"
         test_context["settings"].SERVER = api_server
+        # selections interface
+        select_options = iter(("root", "JimiHendrix's Key"))
+        monkeypatch.setattr(
+            f"{_HELPERS}._select",
+            lambda *a: next(select_options),
+        )
 
         test_result = invoke_command(
             sign.sign, inputs, [], test_context, std_err_empty=False

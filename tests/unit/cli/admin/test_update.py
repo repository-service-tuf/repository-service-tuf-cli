@@ -8,10 +8,10 @@ from datetime import datetime, timedelta, timezone
 import pretend
 from tuf.api.metadata import Metadata, Root
 
-from repository_service_tuf.cli.admin import update
+from repository_service_tuf.cli.admin.metadata import update
 from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
-MOCK_PATH = "repository_service_tuf.cli.admin.update"
+MOCK_PATH = "repository_service_tuf.cli.admin.metadata.update"
 
 
 class TestMetadataUpdate:

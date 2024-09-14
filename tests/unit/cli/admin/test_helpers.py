@@ -221,7 +221,7 @@ class TestHelpers:
         # iterate over name inputs until name is not empty and not taken
         inputs = ["", "taken", "new"]
         with patch(_PROMPT, side_effect=inputs):
-            name = helpers._key_name_prompt(fake_root)
+            name = helpers._key_name_prompt(fake_root.keys)
 
         assert name == "new"
 
@@ -250,14 +250,12 @@ class TestHelpers:
                         helpers.DEFAULT_EXPIRY["timestamp"],
                         helpers.DEFAULT_EXPIRY["snapshot"],
                         helpers.DEFAULT_EXPIRY["targets"],
-                        helpers.DEFAULT_EXPIRY["bins"],
-                        helpers.DEFAULT_BINS_NUMBER,
                     )
                 ),
             ),
             (
-                ["1", "2", "3", "4", "2048"],
-                helpers._Settings(1, 2, 3, 4, 2048),
+                ["1", "2", "3"],
+                helpers._Settings(1, 2, 3),
             ),
         ]
         for inputs, expected in test_data:
@@ -266,11 +264,11 @@ class TestHelpers:
 
         assert result == expected
 
-    def test_root_threshold_prompt(self):
+    def test__threshold_prompt(self):
         # prompt for threshold until positive integer
         inputs = ["-1", "0", "X", "5"]
         with patch(_PROMPT, side_effect=inputs):
-            result = helpers._root_threshold_prompt()
+            result = helpers._threshold_prompt("root")
         assert result == 5
 
     def test_configure_root_keys_prompt(self, ed25519_key):

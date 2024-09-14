@@ -16,7 +16,8 @@
       "bins": {
         "expiration": 1,
         "number_of_delegated_bins": 4
-      }
+      },
+      "delegations": null
     }
   },
   "metadata": {
