@@ -24,7 +24,8 @@ class URL(Enum):
     METADATA_SIGN_DELETE = "api/v1/metadata/sign/delete"
     ARTIFACTS = "api/v1/artifacts/"
     ARTIFACTS_DELETE = "api/v1/artifacts/delete"
-    METADATA_DELEGATION = "api/v1/metadata/delegation/"
+    DELEGATIONS = "api/v1/delegations/"
+    DELEGATIONS_DELETE = "api/v1/delegations/delete"
 
 
 class Methods(Enum):
