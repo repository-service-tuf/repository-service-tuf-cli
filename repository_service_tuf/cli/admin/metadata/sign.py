@@ -28,41 +28,15 @@ from repository_service_tuf.cli.admin.helpers import (
     _print_targets,
     _select_key,
     _select_role,
+    _parse_pending_data,
+    _get_pending_roles,
 )
 from repository_service_tuf.cli.admin.metadata import metadata
 from repository_service_tuf.helpers.api_client import (
     URL,
-    Methods,
-    request_server,
     send_payload,
     task_status,
 )
-
-
-def _parse_pending_data(pending_roles_resp: Dict[str, Any]) -> Dict[str, Any]:
-    data = pending_roles_resp.get("data", {})
-
-    pending_roles: Dict[str, Dict[str, Any]] = data.get("metadata", {})
-    if len(pending_roles) == 0:
-        raise click.ClickException("No metadata available for signing")
-
-    return pending_roles
-
-
-def _get_pending_roles(settings: Any) -> Dict[str, Dict[str, Any]]:
-    """Get dictionary of pending roles for signing."""
-    response = request_server(
-        settings.SERVER,
-        URL.METADATA_SIGN.value,
-        Methods.GET,
-        headers=settings.HEADERS,
-    )
-    if response.status_code != 200:
-        raise click.ClickException(
-            f"Failed to fetch metadata for signing. Error: {response.text}"
-        )
-
-    return _parse_pending_data(response.json())
 
 
 DEFAULT_PATH = "sign-payload.json"
