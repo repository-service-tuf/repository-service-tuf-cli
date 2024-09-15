@@ -70,6 +70,11 @@ from tuf.ngclient.updater import Updater
 # https://rich.readthedocs.io/en/stable/console.html#console-api
 # https://rich.readthedocs.io/en/stable/console.html#capturing-output
 from repository_service_tuf.cli import console
+from repository_service_tuf.helpers.api_client import (
+    URL,
+    Methods,
+    request_server
+)
 
 ONLINE_ROLE_NAMES = {Timestamp.type, Snapshot.type, Targets.type}
 
@@ -171,8 +176,8 @@ class DELEGATIONS_TYPE(str, enum.Enum):
     CUSTOM_DELEGATIONS = "Custom Delegations (online/offline key)"
 
     @classmethod
-    def values(self) -> List[str]:
-        return [e.value for e in self]
+    def values(cls) -> List[str]:
+        return [e.value for e in cls]
 
 
 @dataclass
@@ -1007,6 +1012,30 @@ def _get_online_key(root: Root) -> Optional[Key]:
         key = root.get_key(root.roles[Timestamp.type].keyids[0])
 
     return key
+
+
+def _parse_pending_data(pending_roles_resp: Dict[str, Any]) -> Dict[str, Any]:
+    data = pending_roles_resp.get("data", {})
+
+    all_roles: Dict[str, Dict[str, Any]] = data.get("metadata", {})
+    pending_roles = [x for x in all_roles if not x.startswith("trusted_")]
+    if len(pending_roles) == 0:
+        raise click.ClickException("No metadata available for signing")
+
+    return all_roles
+
+
+def _get_pending_roles(settings: Any) -> Dict[str, Dict[str, Any]]:
+    """Get dictionary of pending roles for signing."""
+    response = request_server(
+        settings.SERVER, URL.METADATA_SIGN.value, Methods.GET
+    )
+    if response.status_code != 200:
+        raise click.ClickException(
+            f"Failed to fetch metadata for signing. Error: {response.text}"
+        )
+
+    return _parse_pending_data(response.json())
 
 
 def _print_root(root: Root):

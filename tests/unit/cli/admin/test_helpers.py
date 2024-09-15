@@ -16,6 +16,11 @@ from securesystemslib.signer import CryptoSigner, SigstoreKey, SSlibKey
 from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.cli.admin import helpers
+from repository_service_tuf.helpers.api_client import (
+    URL,
+    Methods,
+    request_server
+)
 from tests.conftest import _HELPERS, _PEMS, _PROMPT, _PROMPT_TOOLKIT
 
 
@@ -530,6 +535,70 @@ class TestHelpers:
         # NOTE: cli doesn't validate that all online roles have the same key
         root.add_key(ed25519_key, "timestamp")
         assert helpers._get_online_key(root) == ed25519_key
+
+    def test__parse_pending_data(self):
+        fake_md = ["md1", "md2"]
+        result = helpers._parse_pending_data({"data": {"metadata": fake_md}})
+
+        assert result == fake_md
+
+    def test__parse_pending_data_missing_metadata(self):
+        with pytest.raises(click.ClickException) as e:
+            helpers._parse_pending_data({"data": {}})
+
+        assert "No metadata available for signing" in str(e)
+
+    def test__get_pending_roles_request(self, monkeypatch):
+        fake_settings = pretend.stub(SERVER=None)
+        fake_json = pretend.stub()
+        response = pretend.stub(
+            status_code=200, json=pretend.call_recorder(lambda: fake_json)
+        )
+        fake_request_server = pretend.call_recorder(lambda *a, **kw: response)
+        monkeypatch.setattr(
+            helpers, "request_server", fake_request_server
+        )
+
+        parsed_data = pretend.stub()
+        fake__parse_pending_data = pretend.call_recorder(lambda a: parsed_data)
+        monkeypatch.setattr(
+            helpers, "_parse_pending_data", fake__parse_pending_data
+        )
+
+        result = helpers._get_pending_roles(fake_settings)
+
+        assert result == parsed_data
+        assert fake_request_server.calls == [
+            pretend.call(
+                fake_settings.SERVER,
+                URL.METADATA_SIGN.value,
+                Methods.GET,
+            )
+        ]
+        assert response.json.calls == [pretend.call()]
+        assert fake__parse_pending_data.calls == [pretend.call(fake_json)]
+
+    def test__get_pending_roles_request_bad_status_code(self, monkeypatch):
+        fake_settings = pretend.stub(
+            SERVER="http://localhost:80",
+        )
+        response = pretend.stub(status_code=400, text="")
+        fake_request_server = pretend.call_recorder(lambda *a, **kw: response)
+        monkeypatch.setattr(
+            helpers, "request_server", fake_request_server
+        )
+        with pytest.raises(click.ClickException) as e:
+            helpers._get_pending_roles(fake_settings)
+
+        assert "Failed to fetch metadata for signing" in str(e)
+        assert fake_request_server.calls == [
+            pretend.call(
+                fake_settings.SERVER,
+                URL.METADATA_SIGN.value,
+                Methods.GET,
+            )
+        ]
+
 
     def test_filter_root_verification_results(self):
         data = [
