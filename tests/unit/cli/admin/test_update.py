@@ -5,15 +5,13 @@
 import json
 from datetime import datetime, timedelta, timezone
 
-import click
 import pretend
-import pytest
 from tuf.api.metadata import Metadata, Root
 
-from repository_service_tuf.cli.admin import update
+from repository_service_tuf.cli.admin.metadata import update
 from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
-MOCK_PATH = "repository_service_tuf.cli.admin.update"
+MOCK_PATH = "repository_service_tuf.cli.admin.metadata.update"
 
 
 class TestMetadataUpdate:
@@ -95,8 +93,8 @@ class TestMetadataUpdate:
         patch_getpass,
     ):
         root_md = Metadata.from_file(f"{_ROOTS / 'v1.json'}")
-        fake_get_latest_md = pretend.call_recorder(lambda *a: root_md)
-        monkeypatch.setattr(f"{MOCK_PATH}.get_latest_md", fake_get_latest_md)
+        fake__get_latest_md = pretend.call_recorder(lambda *a: root_md)
+        monkeypatch.setattr(f"{MOCK_PATH}._get_latest_md", fake__get_latest_md)
         fake_task_id = "123a"
         fake_send_payload = pretend.call_recorder(lambda **kw: fake_task_id)
         monkeypatch.setattr(f"{MOCK_PATH}.send_payload", fake_send_payload)
@@ -121,7 +119,7 @@ class TestMetadataUpdate:
 
         assert [s["keyid"] for s in sigs_r] == [s["keyid"] for s in sigs_e]
         assert result.data == expected
-        assert fake_get_latest_md.calls == [pretend.call(fake_url, Root.type)]
+        assert fake__get_latest_md.calls == [pretend.call(fake_url, Root.type)]
         # One of the used key with id "50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3"  # noqa
         # is an ecdsa type meaning it's not deterministic and have different
         # signature each run. That's why we do more granular check to work
@@ -146,8 +144,8 @@ class TestMetadataUpdate:
         self, monkeypatch, update_inputs, update_key_selection, patch_getpass
     ):
         root_md = Metadata.from_file(f"{_ROOTS / 'v1.json'}")
-        fake_get_latest_md = pretend.call_recorder(lambda *a: root_md)
-        monkeypatch.setattr(f"{MOCK_PATH}.get_latest_md", fake_get_latest_md)
+        fake__get_latest_md = pretend.call_recorder(lambda *a: root_md)
+        monkeypatch.setattr(f"{MOCK_PATH}._get_latest_md", fake__get_latest_md)
         fake_url = "http://fake-server/1.root.json"
         args = ["--metadata-url", fake_url, "--dry-run"]
 
@@ -164,15 +162,15 @@ class TestMetadataUpdate:
 
         assert [s["keyid"] for s in sigs_r] == [s["keyid"] for s in sigs_e]
         assert result.data == expected
-        assert fake_get_latest_md.calls == [pretend.call(fake_url, Root.type)]
+        assert fake__get_latest_md.calls == [pretend.call(fake_url, Root.type)]
 
     def test_update_metadata_url_and_input_file(
         self, monkeypatch, update_inputs, update_key_selection, patch_getpass
     ):
         """Test that '--metadata-url' is with higher priority than '--in'."""
         root_md = Metadata.from_file(f"{_ROOTS / 'v1.json'}")
-        fake_get_latest_md = pretend.call_recorder(lambda *a: root_md)
-        monkeypatch.setattr(f"{MOCK_PATH}.get_latest_md", fake_get_latest_md)
+        fake__get_latest_md = pretend.call_recorder(lambda *a: root_md)
+        monkeypatch.setattr(f"{MOCK_PATH}._get_latest_md", fake__get_latest_md)
         fake_url = "http://fake-server/1.root.json"
         args = [
             "--metadata-url",
@@ -195,7 +193,7 @@ class TestMetadataUpdate:
 
         assert [s["keyid"] for s in sigs_r] == [s["keyid"] for s in sigs_e]
         assert result.data == expected
-        assert fake_get_latest_md.calls == [pretend.call(fake_url, Root.type)]
+        assert fake__get_latest_md.calls == [pretend.call(fake_url, Root.type)]
         assert "Latest root version found" in result.stdout
 
     def test_update_dry_run_with_server_config_set(
@@ -306,105 +304,3 @@ class TestUpdateError:
         err_suffix = "or '--dry-run'"
         assert err_prefix in result.stderr
         assert err_suffix in result.stderr
-
-
-class TestMetadaUpdateHelpers:
-    def test_get_latest_md_root_not_exists(self, monkeypatch):
-        fake_dir_name = "foo_bar_dir"
-
-        class FakeTempDir:
-            def __init__(self) -> None:
-                self.name = fake_dir_name
-
-        monkeypatch.setattr(f"{MOCK_PATH}.TemporaryDirectory", FakeTempDir)
-        fake_response = pretend.stub(status_code=200, text="foo bar")
-        fake_requests = pretend.stub(
-            get=pretend.call_recorder(lambda *a, **kw: fake_response)
-        )
-        monkeypatch.setattr(f"{MOCK_PATH}.requests", fake_requests)
-
-        # mock "open()"
-        fake_destination_file = pretend.stub(
-            write=pretend.call_recorder(lambda *a: None),
-            flush=pretend.call_recorder(lambda: None),
-            fileno=pretend.call_recorder(lambda: "fileno"),
-        )
-
-        class FakeFileDescriptor:
-            def __init__(self, file, mode):
-                return None
-
-            def __enter__(self):
-                return fake_destination_file
-
-            def __exit__(self, type, value, traceback):
-                pass
-
-        monkeypatch.setitem(
-            update.__builtins__, "open", lambda *a: FakeFileDescriptor(*a)
-        )
-
-        class FakeUpdater:
-            def __init__(self, **kw) -> None:
-                self.new_args = kw
-                self.refresh_calls_amount = 0
-
-            def refresh(self) -> None:
-                self.refresh_calls_amount += 1
-
-        monkeypatch.setattr(f"{MOCK_PATH}.Updater", FakeUpdater)
-        fake_root_result = pretend.stub()
-        fake_metadata = pretend.stub(
-            from_file=pretend.call_recorder(lambda a: fake_root_result)
-        )
-        monkeypatch.setattr(f"{MOCK_PATH}.Metadata", fake_metadata)
-        fake_url = "http://localhost:8080"
-
-        result = update.get_latest_md(fake_url, Root.type)
-
-        assert result == fake_root_result
-        assert fake_requests.get.calls == [
-            pretend.call(f"{fake_url}/1.root.json", timeout=300)
-        ]
-        assert fake_destination_file.write.calls == [
-            pretend.call(fake_response.text)
-        ]
-        assert fake_metadata.from_file.calls == [
-            pretend.call(f"{fake_dir_name}/{Root.type}.json")
-        ]
-
-    def test_get_latest_md_root_not_exist_response_not_200(self, monkeypatch):
-        fake_dir_name = "foo_bar_dir"
-
-        class FakeTempDir:
-            def __init__(self) -> None:
-                self.name = fake_dir_name
-
-        monkeypatch.setattr(f"{MOCK_PATH}.TemporaryDirectory", FakeTempDir)
-        fake_response = pretend.stub(status_code=400)
-        fake_requests = pretend.stub(
-            get=pretend.call_recorder(lambda *a, **kw: fake_response)
-        )
-        monkeypatch.setattr(f"{MOCK_PATH}.requests", fake_requests)
-
-        fake_url = "http://localhost:8080"
-
-        with pytest.raises(click.ClickException) as e:
-            update.get_latest_md(fake_url, Root.type)
-
-        assert "Cannot fetch initial root " in str(e)
-
-    def test_get_latest_md_root_OS_error(self, monkeypatch):
-        fake_dir_name = "foo_bar_dir"
-
-        class FakeTempDir:
-            def __init__(self) -> None:
-                self.name = fake_dir_name
-
-        monkeypatch.setattr(f"{MOCK_PATH}.TemporaryDirectory", FakeTempDir)
-        fake_url = "http://localhost:8080"
-
-        with pytest.raises(click.ClickException) as e:
-            update.get_latest_md(fake_url, Root.type)
-
-        assert "Problem fetching latest" in str(e)

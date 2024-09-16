@@ -1,5 +1,5 @@
 # repository-service-tuf-cli
-metadata/
+./metadata/
 rstuf-umbrella/
 payload.json
 metadata-update-payload.json

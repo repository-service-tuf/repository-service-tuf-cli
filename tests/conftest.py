@@ -96,6 +96,8 @@ def key_selection() -> lambda *a: str:
     # public key selection options
     selection_options = iter(
         (
+            # select delegation type
+            "Bins (online key only)",
             # selections for input_step4
             "Key PEM File",  # select key type
             "add",  # add key

@@ -61,6 +61,8 @@ class TestCeremony:
         # public keys and signing keys selection options
         selection = iter(
             (
+                # select delegation type
+                "Bins (online key only)",
                 # selections for input_step4
                 "Key PEM File",  # select key type
                 "add",  # add key
@@ -317,6 +319,8 @@ class TestCeremony:
 
         selection_options = iter(
             (
+                # select delegation type
+                "Bins (online key only)",
                 # selections for input_step4
                 "Key PEM File",  # select key type
                 "add",  # add key

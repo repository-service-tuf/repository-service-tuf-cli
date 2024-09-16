@@ -5,6 +5,7 @@
 import enum
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from tempfile import TemporaryDirectory
 from typing import Any, Dict, List, Optional, Tuple
 
 import beaupy  # type: ignore
@@ -12,10 +13,13 @@ import click
 
 # Magic import to unbreak `load_pem_private_key` - pyca/cryptography#10315
 import cryptography.hazmat.backends.openssl.backend  # noqa: F401
+import requests
 from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_pem_public_key,
 )
+from rich.json import JSON
+from rich.markdown import Markdown
 from rich.prompt import Confirm, IntPrompt, InvalidResponse, Prompt
 from rich.table import Table
 from securesystemslib.formats import encode_canonical
@@ -33,7 +37,10 @@ from securesystemslib.signer import (
     SSlibKey,
     VaultSigner,
 )
+from tuf.api.exceptions import DownloadError, RepositoryError
 from tuf.api.metadata import (
+    DelegatedRole,
+    Delegations,
     Metadata,
     Root,
     RootVerificationResult,
@@ -43,6 +50,7 @@ from tuf.api.metadata import (
     UnsignedMetadataError,
     VerificationResult,
 )
+from tuf.ngclient.updater import Updater
 
 # TODO: Should we use the global rstuf console exclusively? We do use it for
 # `console.print`, but not with `Confirm/Prompt.ask`. The latter uses a default
@@ -104,15 +112,25 @@ class ONLINE_SIGNERS(SIGNERS):
     KEY_PEM = "Key PEM File"
 
 
+class DELEGATIONS_TYPE(str, enum.Enum):
+    BINS = "Bins (online key only)"
+    CUSTOM_DELEGATIONS = "Custom Delegations (online/offline key)"
+
+    @classmethod
+    def values(self) -> List[str]:
+        return [e.value for e in self]
+
+
 @dataclass
-class _OnlineSettings:
+class _Settings:
     """Internal data container to gather online role settings from prompt."""
 
     timestamp_expiry: int
     snapshot_expiry: int
     targets_expiry: int
-    bins_expiry: int
-    bins_number: int
+    bins_expiry: Optional[int] = None
+    bins_number: Optional[int] = None
+    delegations: Optional[Delegations] = None
 
 
 @dataclass
@@ -131,7 +149,8 @@ class Roles:
     timestamp: Role
     snapshot: Role
     targets: Role
-    bins: BinsRole
+    bins: Optional[BinsRole] = None
+    delegations: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -255,7 +274,9 @@ def _load_key_from_sigstore_prompt() -> Optional[Key]:
 
 
 def _load_key_prompt(
-    root: Root, signer_type: Optional[str] = None
+    keys: Dict[str, Key],
+    signer_type: Optional[str] = None,
+    duplicate: Optional[bool] = True,
 ) -> Optional[Key]:
     """Prompt and return Key, or None on error or if key is already loaded."""
     try:
@@ -274,7 +295,8 @@ def _load_key_prompt(
         return None
 
     # Disallow re-adding a key even if it is for a different role.
-    if key.keyid in root.keys:
+    # TODO: disallow only within the same role
+    if duplicate is False and key.keyid in keys:
         console.print("\nKey already in use.", style="bold red")
         return None
 
@@ -322,7 +344,23 @@ def _load_online_key_prompt(
     return uri, key
 
 
-def _key_name_prompt(root: Root, name: Optional[str] = None) -> str:
+def _delegated_target_role_name_prompt() -> str:
+    """Prompt for delegated target role name until success."""
+    while True:
+        name = Prompt.ask("Please enter delegated target role name")
+        if not name:
+            console.print("Role name cannot be empty.")
+            continue
+        break
+
+    return name
+
+
+def _key_name_prompt(
+    keys: Dict[str, Key],
+    name: Optional[str] = None,
+    duplicate: Optional[bool] = False,
+) -> str:
     """Prompt for key name until success."""
     while True:
         name = Prompt.ask("Please enter key name", default=name)
@@ -330,9 +368,8 @@ def _key_name_prompt(root: Root, name: Optional[str] = None) -> str:
             console.print("Key name cannot be empty.")
             continue
 
-        if name in [
-            k.unrecognized_fields.get(KEY_NAME_FIELD)
-            for k in root.keys.values()
+        if duplicate is False and name in [
+            k.unrecognized_fields.get(KEY_NAME_FIELD) for k in keys.values()
         ]:
             console.print("\nKey name already in use.", style="bold red")
             continue
@@ -348,8 +385,8 @@ def _expiry_prompt(role: str) -> Tuple[int, datetime]:
     Use per-role defaults from ExpirationSettings.
     """
     days = _PositiveIntPrompt.ask(
-        f"Please enter days until expiry for {role} role",
-        default=DEFAULT_EXPIRY[role],
+        f"Please enter days until expiry for '{role}' role",
+        default=DEFAULT_EXPIRY.get(role, 1),
     )
     today = datetime.now(timezone.utc).replace(microsecond=0)
     date = today + timedelta(days=days)
@@ -358,31 +395,21 @@ def _expiry_prompt(role: str) -> Tuple[int, datetime]:
     return days, date
 
 
-def _online_settings_prompt() -> _OnlineSettings:
+def _settings_prompt() -> _Settings:
     """Prompt for expiry days of online roles and number of delegated bins."""
     timestamp_expiry, _ = _expiry_prompt("timestamp")
     snapshot_expiry, _ = _expiry_prompt("snapshot")
     targets_expiry, _ = _expiry_prompt("targets")
-    bins_expiry, _ = _expiry_prompt("bins")
-    bins_number = IntPrompt.ask(
-        "Please enter number of delegated hash bins",
-        default=DEFAULT_BINS_NUMBER,
-        choices=[str(2**i) for i in range(1, 15)],
-        show_default=True,
-        show_choices=True,
-    )
 
-    return _OnlineSettings(
+    return _Settings(
         timestamp_expiry,
         snapshot_expiry,
         targets_expiry,
-        bins_expiry,
-        bins_number,
     )
 
 
-def _root_threshold_prompt() -> int:
-    return _MoreThan1Prompt.ask("Please enter root threshold")
+def _threshold_prompt(role: str) -> int:
+    return _MoreThan1Prompt.ask(f"Please enter '{role}' threshold")
 
 
 def _select(options: List[str]) -> str:
@@ -400,6 +427,12 @@ def _select_key(keys: List[Key]) -> Key:
     # Remove beautification to get the actual key.
     choice = choice.removeprefix("[green]").removesuffix("[/]")
     return key_choices[choice]
+
+
+def _select_role(roles: Dict[str, Dict[str, Any]]) -> str:
+    roles_options = [x for x in roles if not x.startswith("trusted_")]
+    choice = _select(roles_options)
+    return choice
 
 
 def _configure_root_keys_prompt(root: Root) -> None:
@@ -439,12 +472,12 @@ def _configure_root_keys_prompt(root: Root) -> None:
                 break
 
             case "add":
-                new_key = _load_key_prompt(root)
+                new_key = _load_key_prompt(root.keys)
                 if not new_key:
                     continue
 
                 name = _key_name_prompt(
-                    root, new_key.unrecognized_fields.get(KEY_NAME_FIELD)
+                    root.keys, new_key.unrecognized_fields.get(KEY_NAME_FIELD)
                 )
                 new_key.unrecognized_fields[KEY_NAME_FIELD] = name
                 root.add_key(new_key, Root.type)
@@ -480,7 +513,7 @@ def _configure_online_key_prompt(root: Root) -> None:
         if new_key:
             break
 
-    name = _key_name_prompt(root)
+    name = _key_name_prompt(root.keys)
     new_key.unrecognized_fields[KEY_NAME_FIELD] = name
     new_key.unrecognized_fields[KEY_URI_FIELD] = uri
 
@@ -551,6 +584,234 @@ def _add_root_signatures_prompt(
         _add_signature_prompt(root_md, key_choices[choice])
 
 
+# Delegations
+##############################################################################
+def _path_prompt() -> str:
+    """Prompt for path name until success."""
+    console.print(
+        "The 'path' delegates targets matching any path pattern.",
+        style="italic",
+    )
+    while True:
+        name = Prompt.ask("Please enter path")
+        if not name:
+            console.print("Path cannot be empty.")
+            continue
+
+        break
+
+    return name
+
+
+def _configure_delegations_paths(
+    delegated_role: DelegatedRole,
+) -> DelegatedRole:
+    if delegated_role.paths is None:
+        delegated_role.paths = []
+
+    while True:
+        console.print(f"\nCurrent paths for '{delegated_role.name}'")
+        for path in delegated_role.paths:
+            console.print(f"- '{path}'")
+
+        if bool(delegated_role.paths) is False:
+            delegated_role.paths.append(_path_prompt())
+            continue
+
+        # build the action choices
+        action_options = ["continue", "add new path", "remove path"]
+        console.print()
+        action = _select(action_options)
+        # apply choice
+        match action:
+            case "continue":
+                break
+
+            case "add new path":
+                delegated_role.paths.append(_path_prompt())
+
+            case "remove path":
+                console.print()
+                path = _select(delegated_role.paths)
+                delegated_role.paths.remove(path)
+                console.print(f"path '{path}' removed\n")
+
+    return delegated_role
+
+
+def _configure_delegations_keys(
+    delegated_role: DelegatedRole, delegations: Delegations
+) -> None:
+    while True:
+        for keyid, key in delegations.keys.items():
+            if keyid in delegated_role.keyids:
+                name = key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)
+                console.print(f"- '{name}'")
+
+        missing = max(
+            0,
+            delegated_role.threshold
+            - len(
+                [
+                    key
+                    for key in delegations.keys
+                    if key in delegated_role.keyids
+                ]
+            ),
+        )
+        _print_missing_key_info(delegated_role.threshold, missing)
+
+        # build the action choices
+        action_options = ["add", "remove"]
+        if not missing:
+            action_options.insert(0, "continue")
+
+        # prompt for user choice
+        if not delegations.keys:
+            action = "add"
+
+        else:
+            action = _select(action_options)
+
+        # apply choice
+        match action:
+            case "continue":
+                break
+
+            case "add":
+                new_key = _load_key_prompt(delegations.keys, duplicate=True)
+                if not new_key:
+                    continue
+
+                name = _key_name_prompt(
+                    delegations.keys,
+                    new_key.unrecognized_fields.get(KEY_NAME_FIELD),
+                    duplicate=True,
+                )
+                new_key.unrecognized_fields[KEY_NAME_FIELD] = name
+                delegations.keys[new_key.keyid] = new_key
+                delegated_role.keyids.append(new_key.keyid)
+                console.print(f"Added root key '{name}'")
+
+            case "remove":
+                # TODO:
+                # 1. List the key (by key name) for the role
+                # 2. Remove the KeyID from delegated role
+                # 3. Remove from delegation roles keys IF not
+                #    used by another role
+                raise NotImplementedError("TODO")
+
+
+def _configure_delegations() -> Delegations:
+    delegations = Delegations(keys={}, roles={})
+    while True:
+        if delegations.roles is None or len(delegations.roles) == 0:
+            action = "add new delegation"
+
+        else:
+            _print_delegation(delegations)
+            action = _select(
+                ["continue", "add new delegation", "remove delegation"]
+            )
+
+        match action:
+            case "continue":
+                break
+
+            case "add new delegation":
+                if delegations.roles is None:
+                    delegations.roles = {}
+                name = _delegated_target_role_name_prompt()
+                if delegations.roles.get(name):
+                    if not Confirm.ask(
+                        f"\nDelegation '{name}' exists. Do you want overwrite"
+                        f" '{name}'"
+                    ):
+                        continue
+
+                expire_days, _ = _expiry_prompt(name)
+                # ##########################################################
+                # Load the Public Keys used to sign the metadata
+                delegated_role = DelegatedRole(
+                    name=name,
+                    threshold=1,
+                    keyids=[],
+                    terminating=True,
+                    paths=[],
+                    unrecognized_fields={"x-rstuf-expire-policy": expire_days},
+                )
+                _configure_delegations_paths(delegated_role)
+                console.print("Select signing:")
+                signing_method = _select(
+                    ["Online Key (use the existing)", "Add Keys"]
+                )
+                if signing_method == "Add Keys":
+                    delegated_role.threshold = _threshold_prompt(
+                        delegated_role.name
+                    )
+                    _configure_delegations_keys(delegated_role, delegations)
+
+                delegations.roles[delegated_role.name] = delegated_role
+
+            case "remove delegation":
+                if delegations.roles is None:
+                    console.print("Delegations is empty")
+                    continue
+
+                role_name = _select(list(delegations.roles.keys()))
+                removed_role = delegations.roles[role_name]
+
+                delegations.roles.pop(role_name)
+                in_use_keyids: List[str] = []
+
+                for role in delegations.roles.values():
+                    in_use_keyids += role.keyids
+
+                for keyid in removed_role.keyids:
+                    if keyid not in in_use_keyids:
+                        delegations.keys.pop(keyid)
+
+                console.print(f"Delegation '{role_name}' removed.")
+
+    return delegations
+
+
+def _configure_delegations_prompt(settings: _Settings) -> None:
+    while True:
+        console.print(
+            Markdown(
+                "### Delegations\n"
+                "RSTUF supports two types of delegations:\n"
+                "- **Bins**:\n"
+                "Generates hash bin delegations and uses an online key for\n"
+                "signing.\n"
+                "- **Custom Delegations**:\n"
+                "Allows the creation of delegated roles for specified paths,\n"
+                " utilizing both offline and online keys."
+            )
+        )
+        console.print()
+        delegations_type = _select(DELEGATIONS_TYPE.values())
+        if delegations_type is None:
+            continue
+        if delegations_type == DELEGATIONS_TYPE.BINS:
+            bins_expiry, _ = _expiry_prompt("bins")
+            bins_number = IntPrompt.ask(
+                "Please enter number of delegated hash bins",
+                default=DEFAULT_BINS_NUMBER,
+                choices=[str(2**i) for i in range(1, 15)],
+                show_default=True,
+                show_choices=True,
+            )
+
+            settings.bins_expiry = bins_expiry
+            settings.bins_number = bins_number
+            break
+        else:
+            settings.delegations = _configure_delegations()
+            break
+
+
 ##############################################################################
 # Other helpers
 
@@ -602,6 +863,60 @@ def _print_root(root: Root):
     )
 
     console.print(root_table)
+
+
+def _print_targets(targets: Metadata):
+    """Pretty print targets metadata."""
+
+    targets_table = Table("Version", "Artifacts")
+    artifact_table = Table("Path", "Info", show_lines=True)
+
+    for path, info in targets.signed.targets.items():
+        artifact_table.add_row(
+            path, JSON.from_data(info.to_dict()), style="bold"
+        )
+    targets_table.add_row(str(targets.signed.version), artifact_table)
+    console.print(targets_table)
+
+
+def _print_delegation(delegations: Delegations):
+    """Pretty print target delegation metadata."""
+    if delegations.roles is None:
+        console.print("No delegations")
+        return None
+
+    delegations_table = Table(
+        "Role Name",
+        "Infos",
+        "Keys",
+        title="Delegation Metadata",
+        show_lines=True,
+    )
+
+    for rolename, delegation in delegations.roles.items():
+        key_table: Optional[Table] = None
+        key_table = Table("ID", "Name", "Signing Scheme")
+        for key in delegations.keys.values():
+            if key.keyid in delegations.roles[rolename].keyids:
+                name = key.unrecognized_fields.get(KEY_NAME_FIELD)
+                key_table.add_row(key.keyid, name, key.scheme)
+
+        if len(key_table.rows) == 0:
+            key_table = None
+
+        if delegation.paths is None:
+            delegation.paths = []
+        delegations_table.add_row(
+            delegation.name,
+            (
+                f"Expiration: {delegation.unrecognized_fields['x-rstuf-expire-policy']}\n"  # noqa
+                f"Threshold: {delegation.threshold}\n"
+                f"Paths: {', '.join(delegation.paths)}"
+            ),
+            key_table or "Online Key",
+        )
+
+    console.print(delegations_table)
 
 
 def _filter_root_verification_results(
@@ -685,3 +1000,29 @@ def _warn_no_save():
         justify="center",
         style="italic",
     )
+
+
+def _get_latest_md(metadata_url: str, role_name: str) -> Metadata:
+    try:
+        temp_dir = TemporaryDirectory()
+        initial_root_url = f"{metadata_url}/1.root.json"
+        response = requests.get(initial_root_url, timeout=300)
+        if response.status_code != 200:
+            raise click.ClickException(
+                f"Cannot fetch initial root {initial_root_url}"
+            )
+
+        with open(f"{temp_dir.name}/root.json", "w") as f:
+            f.write(response.text)
+
+        updater = Updater(
+            metadata_dir=temp_dir.name, metadata_base_url=metadata_url
+        )
+        updater.refresh()
+        md_bytes = updater._load_local_metadata(role_name)
+        metadata = Metadata.from_bytes(md_bytes)
+
+        return metadata
+
+    except (OSError, RepositoryError, DownloadError):
+        raise click.ClickException(f"Problem fetching latest {role_name}")

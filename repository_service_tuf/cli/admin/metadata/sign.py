@@ -16,17 +16,20 @@ from rich.markdown import Markdown
 # https://rich.readthedocs.io/en/stable/console.html#console-api
 # https://rich.readthedocs.io/en/stable/console.html#capturing-output
 from repository_service_tuf.cli import console
-from repository_service_tuf.cli.admin import metadata
 from repository_service_tuf.cli.admin.helpers import (
     Metadata,
     Root,
     SignPayload,
+    Targets,
     _add_signature_prompt,
     _filter_root_verification_results,
     _print_keys_for_signing,
     _print_root,
+    _print_targets,
     _select_key,
+    _select_role,
 )
+from repository_service_tuf.cli.admin.metadata import metadata
 from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,
@@ -133,49 +136,68 @@ def sign(
     else:
         pending_roles = _get_pending_roles(settings)
 
-    root_md = Metadata[Root].from_dict(pending_roles[Root.type])
+    role = _select_role(pending_roles)
+    role_md = Metadata.from_dict(pending_roles[role])
 
-    if pending_roles.get(f"trusted_{Root.type}"):
-        trusted_role = f"trusted_{Root.type}"
-        prev_root = Metadata[Root].from_dict(pending_roles[trusted_role])
-
-    else:
+    if role_md.signed.type == Root.type:
+        version = role_md.signed.version
         prev_root = None
-        version = root_md.signed.version
-        if version > 1:
+        if pending_roles.get("trusted_root"):
+            prev_root = Metadata[Root].from_dict(pending_roles["trusted_root"])
+
+        if version > 1 and not prev_root:
             raise click.ClickException(
                 f"Previous root v{version-1} needed "
                 f"to sign root v{version}."
             )
 
-    ###########################################################################
-    # Verify signatures
-    root_result = root_md.signed.get_root_verification_result(
-        prev_root.signed if prev_root is not None else None,
-        root_md.signed_bytes,
-        root_md.signatures,
-    )
-    if root_result.verified:
-        raise click.ClickException("Metadata already fully signed.")
+        #######################################################################
+        # Verify signatures
+        root_result = role_md.signed.get_root_verification_result(
+            prev_root.signed if prev_root is not None else None,
+            role_md.signed_bytes,
+            role_md.signatures,
+        )
+        if root_result.verified:
+            raise click.ClickException("Metadata already fully signed.")
 
-    ###########################################################################
-    # Review metadata
-    console.print(Markdown("## Review metadata to be signed"))
-    _print_root(root_md.signed)
+        #######################################################################
+        # Review metadata
+        console.print(Markdown("## Review metadata to be signed"))
+        _print_root(role_md.signed)
 
-    ###########################################################################
-    # Sign metadata
-    console.print(Markdown("## Sign"))
-    results = _filter_root_verification_results(root_result)
-    keys = _print_keys_for_signing(results)
-    console.print(Markdown("Select key for signing:"))
-    key = _select_key(keys)
-    signature = _add_signature_prompt(root_md, key)
+        #######################################################################
+        # Sign metadata
+        console.print(Markdown("## Sign"))
+        results = _filter_root_verification_results(root_result)
+        keys = _print_keys_for_signing(results)
+        console.print(Markdown("Select key for signing:"))
+        key = _select_key(keys)
+        signature = _add_signature_prompt(role_md, key)
+
+    else:
+        targets = Metadata[Targets].from_dict(pending_roles["trusted_targets"])
+        # sign Targets metadata
+        console.print(Markdown("## metadata to be signed"))
+        _print_targets(role_md)
+        keys = []
+        if targets.signed.delegations is None:
+            raise click.ClickException("No custom delegations")
+
+        if targets.signed.delegations.roles is None:
+            raise click.ClickException("No roles  in delegations")
+
+        for keyid in targets.signed.delegations.roles[role].keyids:
+            if keyid not in role_md.signatures:
+                keys.append(targets.signed.delegations.keys[keyid])
+
+        key = _select_key(keys)
+        signature = _add_signature_prompt(role_md, key)
 
     ###########################################################################
     # Send payload to the API and/or save it locally
 
-    payload = SignPayload(signature=signature.to_dict())
+    payload = SignPayload(signature=signature.to_dict(), role=role)
     if out:
         json.dump(asdict(payload), out, indent=2)  # type: ignore
         console.print(f"Saved result to '{out.name}'")

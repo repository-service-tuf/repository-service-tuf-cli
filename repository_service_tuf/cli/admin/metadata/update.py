@@ -5,16 +5,12 @@
 import json
 from copy import deepcopy
 from dataclasses import asdict
-from tempfile import TemporaryDirectory
 from typing import Optional
 
 import click
-import requests
 from rich.markdown import Markdown
 from rich.prompt import Confirm
-from tuf.api.exceptions import DownloadError, RepositoryError
 from tuf.api.metadata import Metadata, Root
-from tuf.ngclient.updater import Updater
 
 # TODO: Should we use the global rstuf console exclusively? We do use it for
 # `console.print`, but not with `Confirm/Prompt.ask`. The latter uses a default
@@ -23,7 +19,6 @@ from tuf.ngclient.updater import Updater
 # https://rich.readthedocs.io/en/stable/console.html#console-api
 # https://rich.readthedocs.io/en/stable/console.html#capturing-output
 from repository_service_tuf.cli import console
-from repository_service_tuf.cli.admin import metadata
 from repository_service_tuf.cli.admin.helpers import (
     EXPIRY_FORMAT,
     Metadatas,
@@ -32,9 +27,11 @@ from repository_service_tuf.cli.admin.helpers import (
     _configure_online_key_prompt,
     _configure_root_keys_prompt,
     _expiry_prompt,
+    _get_latest_md,
     _print_root,
-    _root_threshold_prompt,
+    _threshold_prompt,
 )
+from repository_service_tuf.cli.admin.metadata import metadata
 from repository_service_tuf.helpers.api_client import (
     URL,
     send_payload,
@@ -42,29 +39,6 @@ from repository_service_tuf.helpers.api_client import (
 )
 
 DEFAULT_PATH = "update-payload.json"
-
-
-def get_latest_md(metadata_url: str, md_name: str) -> Metadata:
-    try:
-        temp_dir = TemporaryDirectory()
-        initial_root_url = f"{metadata_url}/1.root.json"
-        response = requests.get(initial_root_url, timeout=300)
-        if response.status_code != 200:
-            raise click.ClickException(
-                f"Cannot fetch initial root {initial_root_url}"
-            )
-
-        with open(f"{temp_dir.name}/root.json", "w") as f:
-            f.write(response.text)
-
-        updater = Updater(
-            metadata_dir=temp_dir.name, metadata_base_url=metadata_url
-        )
-        updater.refresh()
-        return Metadata.from_file(f"{temp_dir.name}/{md_name}.json")
-
-    except (OSError, RepositoryError, DownloadError):
-        raise click.ClickException(f"Problem fetching latest {md_name}")
 
 
 @metadata.command()  # type: ignore
@@ -140,7 +114,7 @@ def update(
     # Load root
     prev_root_md: Metadata[Root]
     if metadata_url:
-        prev_root_md = get_latest_md(metadata_url, Root.type)
+        prev_root_md = _get_latest_md(metadata_url, Root.type)
         console.print(
             f"Latest root version found: {prev_root_md.signed.version}"
         )
@@ -173,7 +147,7 @@ def update(
     if Confirm.ask(
         f"{threshold_str} Do you want to change the threshold?", default=False
     ):
-        root_role.threshold = _root_threshold_prompt()
+        root_role.threshold = _threshold_prompt("root")
 
     _configure_root_keys_prompt(root)
 
