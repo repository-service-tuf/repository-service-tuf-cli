@@ -31,7 +31,7 @@ class TestSign:
             full_data = json.load(f)
 
         sign._get_pending_roles = pretend.call_recorder(
-            lambda *a, **kw:  full_data["data"]["metadata"]
+            lambda *a, **kw: full_data["data"]["metadata"]
         )
         sign.send_payload = pretend.call_recorder(lambda **kw: "fake-taskid")
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
