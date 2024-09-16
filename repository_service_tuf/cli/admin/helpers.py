@@ -893,7 +893,7 @@ def _print_delegation(delegations: Delegations):
             (
                 f"Expiration: {delegation.unrecognized_fields['x-rstuf-expire-policy']}\n"  # noqa
                 f"Threshold: {delegation.threshold}\n"
-                f"Paths: \n - {'\n - '.join(delegation.paths)}"
+                f"Paths: {', '.join(delegation.paths)}"
             ),
             key_table or "Online Key",
         )
