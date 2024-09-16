@@ -18,6 +18,7 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_pem_public_key,
 )
+from rich.json import JSON
 from rich.markdown import Markdown
 from rich.prompt import Confirm, IntPrompt, InvalidResponse, Prompt
 from rich.table import Table
@@ -149,7 +150,7 @@ class Roles:
     snapshot: Role
     targets: Role
     bins: Optional[BinsRole] = None
-    delegations: Optional[Delegations] = None
+    delegations: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -274,7 +275,7 @@ def _load_key_from_sigstore_prompt() -> Optional[Key]:
 
 def _load_key_prompt(
     keys: Dict[str, Key],
-    signer_type: Optional[ROOT_SIGNERS] = None,
+    signer_type: Optional[str] = None,
     duplicate: Optional[bool] = True,
 ) -> Optional[Key]:
     """Prompt and return Key, or None on error or if key is already loaded."""
@@ -605,6 +606,9 @@ def _path_prompt() -> str:
 def _configure_delegations_paths(
     delegated_role: DelegatedRole,
 ) -> DelegatedRole:
+    if delegated_role.paths is None:
+        delegated_role.paths = []
+
     while True:
         console.print(f"\nCurrent paths for '{delegated_role.name}'")
         for path in delegated_role.paths:
@@ -701,7 +705,7 @@ def _configure_delegations_keys(
 def _configure_delegations() -> Delegations:
     delegations = Delegations(keys={}, roles={})
     while True:
-        if len(delegations.roles) == 0:
+        if delegations.roles is None or len(delegations.roles) == 0:
             action = "add new delegation"
 
         else:
@@ -715,6 +719,8 @@ def _configure_delegations() -> Delegations:
                 break
 
             case "add new delegation":
+                if delegations.roles is None:
+                    delegations.roles = {}
                 name = _delegated_target_role_name_prompt()
                 if delegations.roles.get(name):
                     if not Confirm.ask(
@@ -724,7 +730,7 @@ def _configure_delegations() -> Delegations:
                         continue
 
                 expire_days, _ = _expiry_prompt(name)
-                # #####################################################################
+                # ##########################################################
                 # Load the Public Keys used to sign the metadata
                 delegated_role = DelegatedRole(
                     name=name,
@@ -748,13 +754,19 @@ def _configure_delegations() -> Delegations:
                 delegations.roles[delegated_role.name] = delegated_role
 
             case "remove delegation":
+                if delegations.roles is None:
+                    console.print("Delegations is empty")
+                    continue
+
                 role_name = _select(list(delegations.roles.keys()))
-                removed_role = delegations.roles.get(role_name)
+                removed_role = delegations.roles[role_name]
+
                 delegations.roles.pop(role_name)
                 in_use_keyids: List[str] = []
 
                 for role in delegations.roles.values():
                     in_use_keyids += role.keyids
+
                 for keyid in removed_role.keyids:
                     if keyid not in in_use_keyids:
                         delegations.keys.pop(keyid)
@@ -853,12 +865,11 @@ def _print_root(root: Root):
     console.print(root_table)
 
 
-def _print_targets(targets: Targets):
-    """Pretty print root metadata."""
+def _print_targets(targets: Metadata):
+    """Pretty print targets metadata."""
 
     targets_table = Table("Version", "Artifacts")
     artifact_table = Table("Path", "Info", show_lines=True)
-    from rich.json import JSON
 
     for path, info in targets.signed.targets.items():
         artifact_table.add_row(
@@ -870,6 +881,10 @@ def _print_targets(targets: Targets):
 
 def _print_delegation(delegations: Delegations):
     """Pretty print target delegation metadata."""
+    if delegations.roles is None:
+        console.print("No delegations")
+        return None
+
     delegations_table = Table(
         "Role Name",
         "Infos",
@@ -879,6 +894,7 @@ def _print_delegation(delegations: Delegations):
     )
 
     for rolename, delegation in delegations.roles.items():
+        key_table: Optional[Table] = None
         key_table = Table("ID", "Name", "Signing Scheme")
         for key in delegations.keys.values():
             if key.keyid in delegations.roles[rolename].keyids:
@@ -888,6 +904,8 @@ def _print_delegation(delegations: Delegations):
         if len(key_table.rows) == 0:
             key_table = None
 
+        if delegation.paths is None:
+            delegation.paths = []
         delegations_table.add_row(
             delegation.name,
             (

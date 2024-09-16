@@ -96,11 +96,12 @@ def ceremony(context: Any, out: Optional[click.File], dry_run: bool) -> None:
 
     # Using BINS or Custom Delegations
     if bs_settings.delegations:
-        delegations = bs_settings.delegations.to_dict()
+        delegations = bs_settings.delegations
         bins = None
     else:
         delegations = None
-        bins = BinsRole(bs_settings.bins_expiry, bs_settings.bins_number)
+        if bs_settings.bins_expiry and bs_settings.bins_number:
+            bins = BinsRole(bs_settings.bins_expiry, bs_settings.bins_number)
 
     roles = Roles(
         Role(root_days),
@@ -108,7 +109,7 @@ def ceremony(context: Any, out: Optional[click.File], dry_run: bool) -> None:
         Role(bs_settings.snapshot_expiry),
         Role(bs_settings.targets_expiry),
         bins,
-        delegations,
+        delegations.to_dict() if delegations else None,
     )
 
     ###########################################################################

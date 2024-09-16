@@ -6,7 +6,7 @@ import json
 from typing import Optional
 
 import click
-from beaupy import select_multiple
+from beaupy import select_multiple  # type: ignore
 from rich.markdown import Markdown
 
 # TODO: Should we use the global rstuf console exclusively? We do use it for
@@ -24,7 +24,7 @@ from repository_service_tuf.helpers.api_client import (
     task_status,
 )
 
-DEFAULT_PATH = "delete-targets.json"
+DEFAULT_PATH = "delegations-delete.json"
 
 
 @delegations.command()  # type: ignore
@@ -89,11 +89,7 @@ def delete(
     payload = {"delegations": {"roles": [{"name": role} for role in delete]}}
 
     if out:
-        json.dump(
-            payload,
-            out,
-            indent=2,  # type: ignore
-        )
+        json.dump(payload, out, indent=2)  # type: ignore
         console.print(f"Saved result to '{out.name}'")
 
     if settings.get("SERVER") and not dry_run:

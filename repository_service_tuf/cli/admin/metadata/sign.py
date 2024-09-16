@@ -181,6 +181,12 @@ def sign(
         console.print(Markdown("## metadata to be signed"))
         _print_targets(role_md)
         keys = []
+        if targets.signed.delegations is None:
+            raise click.ClickException("No custom delegations")
+
+        if targets.signed.delegations.roles is None:
+            raise click.ClickException("No roles  in delegations")
+
         for keyid in targets.signed.delegations.roles[role].keyids:
             if keyid not in role_md.signatures:
                 keys.append(targets.signed.delegations.keys[keyid])

@@ -52,7 +52,7 @@ def _get_pending_roles(settings: Any) -> Dict[str, Dict[str, Any]]:
     return _parse_pending_data(response.json())
 
 
-DEFAULT_PATH = "new-targets.json"
+DEFAULT_PATH = "delegations-new.json"
 
 
 @delegations.command()  # type: ignore
@@ -104,8 +104,8 @@ def new(
     if out:
         json.dump(
             {"delegations": delegations.to_dict()},
-            out,
-            indent=2,  # type: ignore
+            out,  # type: ignore
+            indent=2,
         )
         console.print(f"Saved result to '{out.name}'")
 
