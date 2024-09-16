@@ -73,7 +73,7 @@ from repository_service_tuf.cli import console
 from repository_service_tuf.helpers.api_client import (
     URL,
     Methods,
-    request_server
+    request_server,
 )
 
 ONLINE_ROLE_NAMES = {Timestamp.type, Snapshot.type, Targets.type}
@@ -1018,9 +1018,19 @@ def _parse_pending_data(pending_roles_resp: Dict[str, Any]) -> Dict[str, Any]:
     data = pending_roles_resp.get("data", {})
 
     all_roles: Dict[str, Dict[str, Any]] = data.get("metadata", {})
-    pending_roles = [x for x in all_roles if not x.startswith("trusted_")]
+    pending_roles = {
+        k: v for k, v in all_roles.items() if not k.startswith("trusted_")
+    }
     if len(pending_roles) == 0:
         raise click.ClickException("No metadata available for signing")
+
+    if any(
+        role["signed"]["_type"] not in [Root.type, Targets.type]
+        for role in pending_roles.values()
+    ):
+        raise click.ClickException(
+            "Supporting only root and targets pending role types"
+        )
 
     return all_roles
 
@@ -1072,17 +1082,17 @@ def _print_root(root: Root):
     console.print(root_table)
 
 
-def _print_targets(targets: Metadata):
+def _print_targets(targets: Targets):
     """Pretty print targets metadata."""
 
     targets_table = Table("Version", "Artifacts")
     artifact_table = Table("Path", "Info", show_lines=True)
 
-    for path, info in targets.signed.targets.items():
+    for path, info in targets.targets.items():
         artifact_table.add_row(
             path, JSON.from_data(info.to_dict()), style="bold"
         )
-    targets_table.add_row(str(targets.signed.version), artifact_table)
+    targets_table.add_row(str(targets.version), artifact_table)
     console.print(targets_table)
 
 

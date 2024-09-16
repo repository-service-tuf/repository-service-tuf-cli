@@ -23,6 +23,8 @@ from repository_service_tuf.cli.admin.helpers import (
     Targets,
     _add_signature_prompt,
     _filter_root_verification_results,
+    _get_pending_roles,
+    _parse_pending_data,
     _print_keys_for_signing,
     _print_root,
     _print_targets,
@@ -38,11 +40,11 @@ from repository_service_tuf.helpers.api_client import (
     task_status,
 )
 
-
 DEFAULT_PATH = "sign-payload.json"
 
 
-@metadata.command()  # type: ignore
+# Allow group to run without subcommand
+@metadata.group(invoke_without_command=True)
 @click.option(
     "--in",
     "input",
@@ -113,6 +115,7 @@ def sign(
     else:
         pending_roles = _get_pending_roles(settings)
 
+    console.print("\nSelect a role to sign:")
     role = _select_role(pending_roles)
     role_md = Metadata.from_dict(pending_roles[role])
 
@@ -156,7 +159,7 @@ def sign(
         targets = Metadata[Targets].from_dict(pending_roles["trusted_targets"])
         # sign Targets metadata
         console.print(Markdown("## metadata to be signed"))
-        _print_targets(role_md)
+        _print_targets(role_md.signed)
         keys = []
         if targets.signed.delegations is None:
             raise click.ClickException("No custom delegations")
