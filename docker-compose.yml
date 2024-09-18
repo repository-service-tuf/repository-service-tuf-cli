@@ -59,7 +59,7 @@ services:
       - RSTUF_ONLINE_KEY_DIR=/var/opt/repository-service-tuf/key_storage
       - RSTUF_BROKER_SERVER=redis://redis
       - RSTUF_REDIS_SERVER=redis://redis
-      - RSTUF_SQL_SERVER=postgres:secret@postgres:5432
+      - RSTUF_DB_SERVER=postgresql://postgres:secret@postgres:5432
     volumes:
       - repository-service-tuf-storage:/var/opt/repository-service-tuf/storage
       - ./tests/files/key_storage/:/var/opt/repository-service-tuf/key_storage
