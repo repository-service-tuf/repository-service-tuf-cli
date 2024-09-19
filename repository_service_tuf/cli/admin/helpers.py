@@ -481,14 +481,14 @@ def _configure_root_keys_prompt(root: Root) -> None:
                 )
                 new_key.unrecognized_fields[KEY_NAME_FIELD] = name
                 root.add_key(new_key, Root.type)
-                console.print(f"Added root key '{name}'")
+                console.print(f"Added key '{name}'")
 
             case "remove":
                 console.print("\nSelect a key to remove:")
                 key = _select_key(keys)
                 name = key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)
                 root.revoke_key(key.keyid, Root.type)
-                console.print(f"Removed root key '{name}'")
+                console.print(f"Removed key '{name}'")
 
 
 def _configure_online_key_prompt(root: Root) -> None:
@@ -691,7 +691,7 @@ def _configure_delegations_keys(
                 new_key.unrecognized_fields[KEY_NAME_FIELD] = name
                 delegations.keys[new_key.keyid] = new_key
                 delegated_role.keyids.append(new_key.keyid)
-                console.print(f"Added root key '{name}'")
+                console.print(f"Added key '{name}'")
 
             case "remove":
                 # TODO:
