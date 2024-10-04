@@ -241,7 +241,7 @@ def _load_key_from_file_prompt() -> SSlibKey:
     # Show only directories, or files ending with ".pub"
     file_filter = lambda f: os.path.isdir(f) or os.path.isfile(f) and f.endswith(".pub")
     completer = prompt_toolkit.completion.PathCompleter(file_filter=file_filter)
-    path = prompt_toolkit.prompt(message, completer=completer)
+    path = prompt_toolkit.prompt(message, completer=completer).strip()
 
     with open(path, "rb") as f:
         public_pem = f.read()
