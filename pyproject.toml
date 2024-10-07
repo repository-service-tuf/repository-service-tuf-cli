@@ -31,6 +31,7 @@ dependencies = [
   "requests",
   "rich",
   "rich-click",
+  "prompt-toolkit",
   "securesystemslib[crypto]",
   "tuf",
   "sigstore",
