@@ -11,49 +11,29 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import beaupy  # type: ignore
 import click
-import prompt_toolkit
-import prompt_toolkit.completion
-
 # Magic import to unbreak `load_pem_private_key` - pyca/cryptography#10315
 import cryptography.hazmat.backends.openssl.backend  # noqa: F401
+import prompt_toolkit
+import prompt_toolkit.completion
 import prompt_toolkit.filters
 import requests
-from cryptography.hazmat.primitives.serialization import (
-    load_pem_private_key,
-    load_pem_public_key,
-)
+from cryptography.hazmat.primitives.serialization import (load_pem_private_key,
+                                                          load_pem_public_key)
 from rich.json import JSON
 from rich.markdown import Markdown
 from rich.prompt import Confirm, IntPrompt, InvalidResponse, Prompt
 from rich.table import Table
 from securesystemslib.formats import encode_canonical
 from securesystemslib.hash import digest
-from securesystemslib.signer import (
-    KEY_FOR_TYPE_AND_SCHEME,
-    AWSSigner,
-    AzureSigner,
-    CryptoSigner,
-    GCPSigner,
-    Key,
-    Signature,
-    SigstoreKey,
-    SigstoreSigner,
-    SSlibKey,
-    VaultSigner,
-)
+from securesystemslib.signer import (KEY_FOR_TYPE_AND_SCHEME, AWSSigner,
+                                     AzureSigner, CryptoSigner, GCPSigner, Key,
+                                     Signature, SigstoreKey, SigstoreSigner,
+                                     SSlibKey, VaultSigner)
 from tuf.api.exceptions import DownloadError, RepositoryError
-from tuf.api.metadata import (
-    DelegatedRole,
-    Delegations,
-    Metadata,
-    Root,
-    RootVerificationResult,
-    Snapshot,
-    Targets,
-    Timestamp,
-    UnsignedMetadataError,
-    VerificationResult,
-)
+from tuf.api.metadata import (DelegatedRole, Delegations, Metadata, Root,
+                              RootVerificationResult, Snapshot, Targets,
+                              Timestamp, UnsignedMetadataError,
+                              VerificationResult)
 from tuf.ngclient.updater import Updater
 
 # TODO: Should we use the global rstuf console exclusively? We do use it for
@@ -486,7 +466,9 @@ def _configure_root_keys_prompt(root: Root) -> None:
 
                 # The default name of the key has either been explicitly set
                 # by the user inside the key object itself, or it is the keyid.
-                name = new_key.unrecognized_fields.get(KEY_NAME_FIELD) or new_key.keyid
+                name = new_key.unrecognized_fields.get(
+                    KEY_NAME_FIELD, new_key.keyid
+                )
                 name = _key_name_prompt(
                     root.keys, name
                 )
