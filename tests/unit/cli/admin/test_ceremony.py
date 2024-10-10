@@ -25,7 +25,9 @@ class TestCeremony:
         """
         # public keys and signing keys selection options
         monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
-        monkeypatch.setattr(f"{_HELPERS}._prompt_public_key", public_key_prompt)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", public_key_prompt
+        )
 
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
         custom_path = "file.json"
@@ -93,7 +95,9 @@ class TestCeremony:
             )
         )
         monkeypatch.setattr(f"{_HELPERS}.SigstoreSigner", fake_sigstore_signer)
-        monkeypatch.setattr(f"{_HELPERS}._prompt_public_key", public_key_prompt)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", public_key_prompt
+        )
 
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
         input_step2 = [  # Configure Root Keys
@@ -142,7 +146,9 @@ class TestCeremony:
 
         # public keys and signing keys selection options
         monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
-        monkeypatch.setattr(f"{_HELPERS}._prompt_public_key", public_key_prompt)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", public_key_prompt
+        )
 
         result = invoke_command(
             ceremony.ceremony,
@@ -182,7 +188,9 @@ class TestCeremony:
         ]
         # public keys and signing keys selection options
         monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
-        monkeypatch.setattr(f"{_HELPERS}._prompt_public_key", public_key_prompt)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", public_key_prompt
+        )
 
         result = invoke_command(
             ceremony.ceremony,
@@ -219,7 +227,9 @@ class TestCeremony:
         test_context["settings"].SERVER = "http://localhost:80"
         # public keys and signing keys selection options
         monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
-        monkeypatch.setattr(f"{_HELPERS}._prompt_public_key", public_key_prompt)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", public_key_prompt
+        )
 
         result = invoke_command(
             ceremony.ceremony,
@@ -276,7 +286,9 @@ class TestCeremony:
         custom_path = "file.json"
         # public keys and signing keys selection options
         monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
-        monkeypatch.setattr(f"{_HELPERS}._prompt_public_key", public_key_prompt)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", public_key_prompt
+        )
 
         result = invoke_command(
             ceremony.ceremony,
@@ -356,7 +368,9 @@ class TestCeremony:
             f"{_HELPERS}._select",
             pretend.call_recorder(lambda *a: next(selection_options)),
         )
-        monkeypatch.setattr(f"{_HELPERS}._prompt_public_key", public_key_prompt)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", public_key_prompt
+        )
 
         result = invoke_command(
             ceremony.ceremony,
@@ -390,7 +404,9 @@ class TestCeremony:
         """
         # public keys and signing keys selection options
         monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
-        monkeypatch.setattr(f"{_HELPERS}._prompt_public_key", public_key_prompt)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", public_key_prompt
+        )
 
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
         test_context["settings"].SERVER = "http://localhost:80"
