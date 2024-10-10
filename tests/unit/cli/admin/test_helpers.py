@@ -9,12 +9,12 @@ from unittest.mock import patch
 import click
 import pretend
 import pytest
-from securesystemslib.signer import CryptoSigner, SSlibKey, SigstoreKey
+from email_validator import EmailNotValidError
+from securesystemslib.signer import CryptoSigner, SigstoreKey, SSlibKey
 from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.cli.admin import helpers
 from tests.conftest import _HELPERS, _PEMS, _PROMPT
-from email_validator import EmailNotValidError
 
 
 class TestHelpers:
@@ -593,13 +593,13 @@ class TestHelpers:
 
     def test_load_key_from_sigstore_prompt(self):
         # success
-        inputs = [f"abc@gmail.com"]
+        inputs = ["abc@gmail.com"]
         with patch(_PROMPT, side_effect=inputs):
             key = helpers._load_key_from_sigstore_prompt()
         assert isinstance(key, SigstoreKey)
 
         # fail with non-email identity
-        inputs = [f"abc"]
+        inputs = ["abc"]
         with patch(_PROMPT, side_effect=inputs):
             with pytest.raises(EmailNotValidError):
                 _ = helpers._load_key_from_sigstore_prompt()
