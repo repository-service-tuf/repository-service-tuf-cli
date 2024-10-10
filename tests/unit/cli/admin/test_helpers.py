@@ -592,6 +592,8 @@ class TestHelpers:
         assert "Problem fetching latest" in str(e)
 
     def test_load_key_from_sigstore_prompt(self):
+        fake_issuer = "TUF"
+        helpers._select = pretend.call_recorder(lambda *a, **kw: fake_issuer)
         # success
         inputs = ["abc@gmail.com"]
         with patch(_PROMPT, side_effect=inputs):
