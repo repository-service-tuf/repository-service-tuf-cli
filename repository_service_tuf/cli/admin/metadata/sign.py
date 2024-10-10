@@ -23,6 +23,8 @@ from repository_service_tuf.cli.admin.helpers import (
     Targets,
     _add_signature_prompt,
     _filter_root_verification_results,
+    _get_pending_roles,
+    _parse_pending_data,
     _print_keys_for_signing,
     _print_root,
     _print_targets,
@@ -32,40 +34,15 @@ from repository_service_tuf.cli.admin.helpers import (
 from repository_service_tuf.cli.admin.metadata import metadata
 from repository_service_tuf.helpers.api_client import (
     URL,
-    Methods,
-    request_server,
     send_payload,
     task_status,
 )
 
-
-def _parse_pending_data(pending_roles_resp: Dict[str, Any]) -> Dict[str, Any]:
-    data = pending_roles_resp.get("data", {})
-
-    pending_roles: Dict[str, Dict[str, Any]] = data.get("metadata", {})
-    if len(pending_roles) == 0:
-        raise click.ClickException("No metadata available for signing")
-
-    return pending_roles
-
-
-def _get_pending_roles(settings: Any) -> Dict[str, Dict[str, Any]]:
-    """Get dictionary of pending roles for signing."""
-    response = request_server(
-        settings.SERVER, URL.METADATA_SIGN.value, Methods.GET
-    )
-    if response.status_code != 200:
-        raise click.ClickException(
-            f"Failed to fetch metadata for signing. Error: {response.text}"
-        )
-
-    return _parse_pending_data(response.json())
-
-
 DEFAULT_PATH = "sign-payload.json"
 
 
-@metadata.command()  # type: ignore
+# Allow group to run without subcommand
+@metadata.group(invoke_without_command=True)
 @click.option(
     "--in",
     "input",
@@ -136,6 +113,7 @@ def sign(
     else:
         pending_roles = _get_pending_roles(settings)
 
+    console.print("\nSelect a role to sign:")
     role = _select_role(pending_roles)
     role_md = Metadata.from_dict(pending_roles[role])
 
@@ -179,7 +157,7 @@ def sign(
         targets = Metadata[Targets].from_dict(pending_roles["trusted_targets"])
         # sign Targets metadata
         console.print(Markdown("## metadata to be signed"))
-        _print_targets(role_md)
+        _print_targets(targets.signed)
         keys = []
         if targets.signed.delegations is None:
             raise click.ClickException("No custom delegations")

@@ -431,6 +431,93 @@ class TestHelpers:
         root.add_key(ed25519_key, "timestamp")
         assert helpers._get_online_key(root) == ed25519_key
 
+    def test__parse_pending_data(self):
+        md_data = {"signed": {"_type": "root"}}
+        result = helpers._parse_pending_data(
+            {"data": {"metadata": {"root": md_data}}}
+        )
+
+        assert result == {"root": md_data}
+
+    def test__parse_pending_data_custom_delegation(self):
+        md_data = {"signed": {"_type": "targets"}}
+        result = helpers._parse_pending_data(
+            {"data": {"metadata": {"custom_target": md_data}}}
+        )
+
+        assert result == {"custom_target": md_data}
+
+    def test__parse_pending_not_root_or_targets_type(self):
+        md_data = {"signed": {"_type": "timestamp"}}
+        with pytest.raises(click.ClickException) as e:
+            helpers._parse_pending_data(
+                {"data": {"metadata": {"timestamp": md_data}}}
+            )
+
+        assert "Supporting only root and targets pending role types" in str(e)
+
+    def test__parse_pending_data_missing_metadata(self):
+        with pytest.raises(click.ClickException) as e:
+            helpers._parse_pending_data({"data": {}})
+
+        assert "No metadata available for signing" in str(e)
+
+    def test__parse_pending_data_all_trusted_metadata(self):
+        data = {"data": {"trusted_root": "Foo", "trusted_targets": "Bar"}}
+        with pytest.raises(click.ClickException) as e:
+            helpers._parse_pending_data(data)
+
+        assert "No metadata available for signing" in str(e)
+
+    def test__get_pending_roles_request(self, monkeypatch):
+        fake_settings = pretend.stub(SERVER=None)
+        fake_json = pretend.stub()
+        response = pretend.stub(
+            status_code=200, json=pretend.call_recorder(lambda: fake_json)
+        )
+        helpers.request_server = pretend.call_recorder(
+            lambda *a, **kw: response
+        )
+
+        parsed_data = pretend.stub()
+        fake__parse_pending_data = pretend.call_recorder(lambda a: parsed_data)
+        monkeypatch.setattr(
+            helpers, "_parse_pending_data", fake__parse_pending_data
+        )
+
+        result = helpers._get_pending_roles(fake_settings)
+
+        assert result == parsed_data
+        assert helpers.request_server.calls == [
+            pretend.call(
+                fake_settings.SERVER,
+                helpers.URL.METADATA_SIGN.value,
+                helpers.Methods.GET,
+            )
+        ]
+        assert response.json.calls == [pretend.call()]
+        assert fake__parse_pending_data.calls == [pretend.call(fake_json)]
+
+    def test__get_pending_roles_request_bad_status_code(self):
+        fake_settings = pretend.stub(
+            SERVER="http://localhost:80",
+        )
+        response = pretend.stub(status_code=400, text="")
+        helpers.request_server = pretend.call_recorder(
+            lambda *a, **kw: response
+        )
+        with pytest.raises(click.ClickException) as e:
+            helpers._get_pending_roles(fake_settings)
+
+        assert "Failed to fetch metadata for signing" in str(e)
+        assert helpers.request_server.calls == [
+            pretend.call(
+                fake_settings.SERVER,
+                helpers.URL.METADATA_SIGN.value,
+                helpers.Methods.GET,
+            )
+        ]
+
     def test_filter_root_verification_results(self):
         data = [
             (True, True, None, None, None, None, 0),

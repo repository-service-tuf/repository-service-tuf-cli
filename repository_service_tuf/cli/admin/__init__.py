@@ -31,11 +31,3 @@ def admin(context: click.Context, api_server: Optional[str]):
     """Administrative Commands"""
     # Because of tests it has to be in a separate function.
     _set_settings(context, api_server)  # pragma: no cover
-
-
-@admin.group()
-@click.pass_context
-def metadata(context):
-    """
-    Metadata management.
-    """
