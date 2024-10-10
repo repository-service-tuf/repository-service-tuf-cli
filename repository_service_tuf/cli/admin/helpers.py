@@ -18,6 +18,7 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_pem_public_key,
 )
+from email_validator import validate_email
 from rich.json import JSON
 from rich.markdown import Markdown
 from rich.prompt import Confirm, IntPrompt, InvalidResponse, Prompt
@@ -253,6 +254,10 @@ def _load_key_from_sigstore_prompt() -> Optional[Key]:
         style="italic",
     )
     identity = Prompt.ask("Please enter Sigstore identity")
+
+    # Validate if the identity is email
+    validate_email(identity)
+
     console.print(
         "\n:warning: RSTUF only support Sigstore public issuers.\n",
         justify="left",
