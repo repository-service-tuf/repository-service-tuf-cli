@@ -260,13 +260,13 @@ def invoke_command(
             catch_exceptions=False,
         )
 
-        result_obj.context = test_context # type: ignore
+        result_obj.context = test_context  # type: ignore
         if std_err_empty:
             assert result_obj.stderr == ""
             if len(out_args) > 0:
                 # There are commands that doesn't save a file like
                 # 'import_artifacts'. For them out_args is empty.
                 with open(out_file_name) as f:
-                    result_obj.data = json.load(f) # type: ignore
+                    result_obj.data = json.load(f)  # type: ignore
 
     return result_obj

@@ -16,13 +16,19 @@ MOCK_PATH = "repository_service_tuf.cli.admin.metadata.update"
 
 class TestMetadataUpdate:
     def test_update_input_dry_run(
-        self, monkeypatch, update_inputs, update_key_selection, patch_getpass,
+        self,
+        monkeypatch,
+        update_inputs,
+        update_key_selection,
+        patch_getpass,
         public_key_prompt,
     ):
         args = ["--in", f"{_ROOTS / 'v1.json'}", "--dry-run"]
         # public key selection options
         monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
-        monkeypatch.setattr(f"{_HELPERS}._prompt_public_key", public_key_prompt)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", public_key_prompt
+        )
 
         result = invoke_command(update.update, update_inputs, args)
 
@@ -54,7 +60,9 @@ class TestMetadataUpdate:
 
         # public key selection options
         monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
-        monkeypatch.setattr(f"{_HELPERS}._prompt_public_key", public_key_prompt)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", public_key_prompt
+        )
 
         result = invoke_command(
             update.update, update_inputs, args, test_context
@@ -111,7 +119,9 @@ class TestMetadataUpdate:
 
         # public key selection options
         monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
-        monkeypatch.setattr(f"{_HELPERS}._prompt_public_key", public_key_prompt)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", public_key_prompt
+        )
 
         result = invoke_command(
             update.update, update_inputs, args, test_context
@@ -147,7 +157,11 @@ class TestMetadataUpdate:
         assert "Root metadata update completed. 🔐 🎉" in result.stdout
 
     def test_update_metadata_url_dry_run(
-        self, monkeypatch, update_inputs, update_key_selection, patch_getpass,
+        self,
+        monkeypatch,
+        update_inputs,
+        update_key_selection,
+        patch_getpass,
         public_key_prompt,
     ):
         root_md = Metadata.from_file(f"{_ROOTS / 'v1.json'}")
@@ -158,7 +172,9 @@ class TestMetadataUpdate:
 
         # public key selection options
         monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
-        monkeypatch.setattr(f"{_HELPERS}._prompt_public_key", public_key_prompt)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", public_key_prompt
+        )
 
         result = invoke_command(update.update, update_inputs, args)
 
@@ -173,7 +189,11 @@ class TestMetadataUpdate:
         assert fake__get_latest_md.calls == [pretend.call(fake_url, Root.type)]
 
     def test_update_metadata_url_and_input_file(
-        self, monkeypatch, update_inputs, update_key_selection, patch_getpass,
+        self,
+        monkeypatch,
+        update_inputs,
+        update_key_selection,
+        patch_getpass,
         public_key_prompt,
     ):
         """Test that '--metadata-url' is with higher priority than '--in'."""
@@ -191,7 +211,9 @@ class TestMetadataUpdate:
 
         # public key selection options
         monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
-        monkeypatch.setattr(f"{_HELPERS}._prompt_public_key", public_key_prompt)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", public_key_prompt
+        )
 
         result = invoke_command(update.update, update_inputs, args)
 
@@ -221,7 +243,9 @@ class TestMetadataUpdate:
         """
         # public key selection options
         monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
-        monkeypatch.setattr(f"{_HELPERS}._prompt_public_key", public_key_prompt)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", public_key_prompt
+        )
 
         args = ["--in", f"{_ROOTS / 'v1.json'}", "--dry-run"]
         test_context["settings"].SERVER = "http://localhost:80"
@@ -243,7 +267,9 @@ class TestMetadataUpdate:
         assert "Bootstrap completed." not in result.stdout
 
     def test_update_change_expiration_and_threshold(
-        self, monkeypatch, patch_getpass,
+        self,
+        monkeypatch,
+        patch_getpass,
         public_key_prompt,
     ):
         future_date = datetime(2030, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
@@ -294,7 +320,9 @@ class TestMetadataUpdate:
 
         # public key selection options
         monkeypatch.setattr(f"{_HELPERS}._select", mocked_select)
-        monkeypatch.setattr(f"{_HELPERS}._prompt_public_key", public_key_prompt)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", public_key_prompt
+        )
 
         result = invoke_command(update.update, inputs, args)
 

@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import beaupy  # type: ignore
 import click
+
 # Magic import to unbreak `load_pem_private_key` - pyca/cryptography#10315
 import cryptography.hazmat.backends.openssl.backend  # noqa: F401
 import prompt_toolkit
@@ -27,15 +28,32 @@ from rich.prompt import Confirm, IntPrompt, InvalidResponse, Prompt
 from rich.table import Table
 from securesystemslib.formats import encode_canonical
 from securesystemslib.hash import digest
-from securesystemslib.signer import (KEY_FOR_TYPE_AND_SCHEME, AWSSigner,
-                                     AzureSigner, CryptoSigner, GCPSigner, Key,
-                                     Signature, SigstoreKey, SigstoreSigner,
-                                     SSlibKey, VaultSigner)
+from securesystemslib.signer import (
+    KEY_FOR_TYPE_AND_SCHEME,
+    AWSSigner,
+    AzureSigner,
+    CryptoSigner,
+    GCPSigner,
+    Key,
+    Signature,
+    SigstoreKey,
+    SigstoreSigner,
+    SSlibKey,
+    VaultSigner,
+)
 from tuf.api.exceptions import DownloadError, RepositoryError
-from tuf.api.metadata import (DelegatedRole, Delegations, Metadata, Root,
-                              RootVerificationResult, Snapshot, Targets,
-                              Timestamp, UnsignedMetadataError,
-                              VerificationResult)
+from tuf.api.metadata import (
+    DelegatedRole,
+    Delegations,
+    Metadata,
+    Root,
+    RootVerificationResult,
+    Snapshot,
+    Targets,
+    Timestamp,
+    UnsignedMetadataError,
+    VerificationResult,
+)
 from tuf.ngclient.updater import Updater
 
 # TODO: Should we use the global rstuf console exclusively? We do use it for
@@ -218,6 +236,7 @@ def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
 
 def _prompt_public_key() -> str:
     """Prompt for a string using prompt_toolkit."""
+
     # Show only directories, or files ending with ".pub"
     def file_filter(f):
         return os.path.isdir(f) or os.path.isfile(f) and f.endswith(".pub")
@@ -490,9 +509,7 @@ def _configure_root_keys_prompt(root: Root) -> None:
                 name = new_key.unrecognized_fields.get(
                     KEY_NAME_FIELD, new_key.keyid
                 )
-                name = _key_name_prompt(
-                    root.keys, name
-                )
+                name = _key_name_prompt(root.keys, name)
                 new_key.unrecognized_fields[KEY_NAME_FIELD] = name
                 root.add_key(new_key, Root.type)
                 console.print(f"Added key '{name}'")
