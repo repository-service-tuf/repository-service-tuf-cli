@@ -14,7 +14,7 @@ from securesystemslib.signer import CryptoSigner, SigstoreKey, SSlibKey
 from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.cli.admin import helpers
-from tests.conftest import _HELPERS, _PEMS, _PROMPT
+from tests.conftest import _HELPERS, _PEMS, _PROMPT, _PROMPT_TOOLKIT
 
 
 class TestHelpers:
@@ -54,14 +54,14 @@ class TestHelpers:
     def test_load_key_from_file_prompt(self):
         # success
         inputs = [f"{_PEMS / 'JH.pub'}"]
-        with patch(_PROMPT, side_effect=inputs):
+        with patch(_PROMPT_TOOLKIT, side_effect=inputs):
             key = helpers._load_key_from_file_prompt()
 
         assert isinstance(key, SSlibKey)
 
         # fail with wrong file
         inputs = [f"{_PEMS / 'JH.ed25519'}"]
-        with patch(_PROMPT, side_effect=inputs):
+        with patch(_PROMPT_TOOLKIT, side_effect=inputs):
             with pytest.raises(ValueError):
                 _ = helpers._load_key_from_file_prompt()
 

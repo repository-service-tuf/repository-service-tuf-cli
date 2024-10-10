@@ -15,7 +15,6 @@ import click
 import cryptography.hazmat.backends.openssl.backend  # noqa: F401
 import prompt_toolkit
 import prompt_toolkit.completion
-import prompt_toolkit.filters
 import requests
 from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
@@ -217,13 +216,23 @@ def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
     return CryptoSigner(private_key, public_key)
 
 
+def _prompt_public_key() -> str:
+    """Prompt for a string using prompt_toolkit."""
+    # Show only directories, or files ending with ".pub"
+    def file_filter(f):
+        return os.path.isdir(f) or os.path.isfile(f) and f.endswith(".pub")
+
+    message = prompt_toolkit.HTML("Enter file path to a <b>PUBLIC</b> key: ")
+    completer = prompt_toolkit.completion.PathCompleter(
+        file_filter=file_filter
+    )
+    return prompt_toolkit.prompt(message, completer=completer)
+
+
 def _load_key_from_file_prompt() -> SSlibKey:
     """Prompt for path to public key, return Key."""
-    message = prompt_toolkit.HTML("Enter file path to a <b>PUBLIC</b> key: ")
     # Show only directories, or files ending with ".pub"
-    file_filter = lambda f: os.path.isdir(f) or os.path.isfile(f) and f.endswith(".pub")
-    completer = prompt_toolkit.completion.PathCompleter(file_filter=file_filter)
-    path = prompt_toolkit.prompt(message, completer=completer).strip()
+    path = _prompt_public_key()
 
     with open(path, "rb") as f:
         public_pem = f.read()

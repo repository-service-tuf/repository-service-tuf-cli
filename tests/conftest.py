@@ -7,11 +7,11 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import pretend
 import pytest  # type: ignore
-from click import Command, Context
+from click import Command
 from click.testing import CliRunner, Result  # type: ignore
 from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
@@ -36,6 +36,7 @@ _PAYLOADS = _FILES / "payload"
 # Constants for mocking:
 _HELPERS = "repository_service_tuf.cli.admin.helpers"
 _PROMPT = "rich.console.Console.input"
+_PROMPT_TOOLKIT = "prompt_toolkit.prompt"
 
 
 def _create_test_context() -> Dict[str, Any]:
@@ -72,15 +73,11 @@ def ceremony_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
     ]
     input_step2 = [  # Configure Root Keys
         "2",  # Please enter root threshold
-        f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
         "my rsa key",  # Please enter key name
-        f"{_PEMS / 'JH.pub'}",  # Please enter path to public key
         "JimiHendrix's Key",  # Please enter key name
-        f"{_PEMS / 'JJ.pub'}",  # Please enter path to public key
         "JanisJoplin's Key",  # Please enter key name
     ]
     input_step3 = [  # Configure Online Key
-        f"{_PEMS / '0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043.pub'}",  # Please enter path to public key  # noqa
         "Online Key",  # Please enter a key name
     ]
     input_step4 = [  # Sign Metadata
@@ -117,6 +114,19 @@ def key_selection() -> lambda *a: str:
     mocked_select = pretend.call_recorder(lambda *a: next(selection_options))
 
     return mocked_select
+
+
+@pytest.fixture
+def public_key_prompt() -> Callable[..., str]:
+    prompt_options = iter(
+        (
+            f"{_PEMS / 'JC.pub'}",
+            f"{_PEMS / 'JH.pub'}",
+            f"{_PEMS / 'JJ.pub'}",
+            f"{_PEMS / '0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043.pub'}",
+        )
+    )
+    return lambda *args: next(prompt_options)
 
 
 @pytest.fixture
@@ -218,7 +228,7 @@ def invoke_command(
     cmd: Command,
     inputs: List[str],
     args: List[str],
-    test_context: Optional[Context] = None,
+    test_context: Dict[str, Any] = {},
     std_err_empty: bool = True,
 ) -> Result:
     client = _create_client()
@@ -250,13 +260,13 @@ def invoke_command(
             catch_exceptions=False,
         )
 
-        result_obj.context = test_context
+        result_obj.context = test_context # type: ignore
         if std_err_empty:
             assert result_obj.stderr == ""
             if len(out_args) > 0:
                 # There are commands that doesn't save a file like
                 # 'import_artifacts'. For them out_args is empty.
                 with open(out_file_name) as f:
-                    result_obj.data = json.load(f)
+                    result_obj.data = json.load(f) # type: ignore
 
     return result_obj
