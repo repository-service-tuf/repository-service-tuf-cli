@@ -9,11 +9,12 @@ from unittest.mock import patch
 import click
 import pretend
 import pytest
-from securesystemslib.signer import CryptoSigner, SSlibKey
+from securesystemslib.signer import CryptoSigner, SSlibKey, SigstoreKey
 from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.cli.admin import helpers
 from tests.conftest import _HELPERS, _PEMS, _PROMPT
+from email_validator import EmailNotValidError
 
 
 class TestHelpers:
@@ -589,3 +590,22 @@ class TestHelpers:
             helpers._get_latest_md(fake_url, Root.type)
 
         assert "Problem fetching latest" in str(e)
+
+    def test_load_key_from_sigstore_prompt(self):
+        # success
+        inputs = [f"abc@gmail.com"]
+        with patch(_PROMPT, side_effect=inputs):
+            key = helpers._load_key_from_sigstore_prompt()
+        assert isinstance(key, SigstoreKey)
+
+        # fail with non-email identity
+        inputs = [f"abc"]
+        with patch(_PROMPT, side_effect=inputs):
+            with pytest.raises(EmailNotValidError):
+                _ = helpers._load_key_from_sigstore_prompt()
+
+        # fail with blank identity
+        inputs = [""]
+        with patch(_PROMPT, side_effect=inputs):
+            with pytest.raises(EmailNotValidError):
+                _ = helpers._load_key_from_sigstore_prompt()

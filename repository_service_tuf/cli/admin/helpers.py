@@ -59,6 +59,7 @@ from tuf.ngclient.updater import Updater
 # https://rich.readthedocs.io/en/stable/console.html#console-api
 # https://rich.readthedocs.io/en/stable/console.html#capturing-output
 from repository_service_tuf.cli import console
+from email_validator import validate_email
 
 ONLINE_ROLE_NAMES = {Timestamp.type, Snapshot.type, Targets.type}
 
@@ -253,6 +254,10 @@ def _load_key_from_sigstore_prompt() -> Optional[Key]:
         style="italic",
     )
     identity = Prompt.ask("Please enter Sigstore identity")
+    
+    # Validate if the identity is email
+    validate_email(identity)
+    
     console.print(
         "\n:warning: RSTUF only support Sigstore public issuers.\n",
         justify="left",
