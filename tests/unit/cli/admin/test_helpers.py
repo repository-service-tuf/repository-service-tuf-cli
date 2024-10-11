@@ -598,7 +598,18 @@ class TestHelpers:
         inputs = ["abc@gmail.com"]
         with patch(_PROMPT, side_effect=inputs):
             key = helpers._load_key_from_sigstore_prompt()
+
         assert isinstance(key, SigstoreKey)
+        assert key.keyval == {"identity": inputs[0], "issuer": fake_issuer}
+        assert helpers._select.calls == [
+            pretend.call(
+                [
+                    "https://github.com/login/oauth",
+                    "https://login.microsoft.com",
+                    "https://accounts.google.com",
+                ]
+            )
+        ]        
 
         # fail with non-email identity
         inputs = ["abc"]
