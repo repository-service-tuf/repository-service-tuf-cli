@@ -110,6 +110,7 @@ class ONLINE_SIGNERS(SIGNERS):
     KEY_PEM = "Key PEM File"
 
 
+# Sigstore issuers supported by RSTUF
 class SIGSTORE_ISSUERS(SIGNERS):
     GitHub = "https://github.com/login/oauth"
     Google = "https://accounts.google.com"
@@ -268,7 +269,6 @@ def _load_key_from_sigstore_prompt() -> Optional[Key]:
     )
     issuer_name = _select(SIGSTORE_ISSUERS.names())
     issuer = SIGSTORE_ISSUERS[issuer_name].value
-    print("You have selected:", issuer)
 
     key = SigstoreKey(
         keyid="temp",
