@@ -615,7 +615,7 @@ class TestHelpers:
         inputs = ["abc"]
         with patch(_PROMPT, side_effect=inputs):
             with pytest.raises(EmailNotValidError):
-               helpers._load_key_from_sigstore_prompt()
+                helpers._load_key_from_sigstore_prompt()
 
         # fail with blank identity
         inputs = [""]
