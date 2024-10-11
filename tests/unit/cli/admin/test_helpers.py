@@ -609,7 +609,7 @@ class TestHelpers:
                     "https://accounts.google.com",
                 ]
             )
-        ]        
+        ]
 
         # fail with non-email identity
         inputs = ["abc"]
