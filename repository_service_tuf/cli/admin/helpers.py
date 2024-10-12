@@ -78,13 +78,6 @@ DEFAULT_EXPIRY = {
 }
 DEFAULT_BINS_NUMBER = 256
 
-# Sigstore issuers supported by RSTUF
-SIGSTORE_ISSUERS = [
-    "https://github.com/login/oauth",
-    "https://login.microsoft.com",
-    "https://accounts.google.com",
-]
-
 # SecureSystemsLib doesn't support SigstoreKey by default.
 KEY_FOR_TYPE_AND_SCHEME.update(
     {
@@ -97,6 +90,10 @@ class SIGNERS(str, enum.Enum):
     @classmethod
     def values(self) -> List[str]:
         return [e.value for e in self]
+
+    @classmethod
+    def names(self) -> List[str]:
+        return [e.name for e in self]
 
 
 # Root signers supported by RSTUF
@@ -111,6 +108,13 @@ class ONLINE_SIGNERS(SIGNERS):
     AZKMS = "Azure KMS"
     HV = "HashiCorp Vault"
     KEY_PEM = "Key PEM File"
+
+
+# Sigstore issuers supported by RSTUF
+class SIGSTORE_ISSUERS(SIGNERS):
+    GitHub = "https://github.com/login/oauth"
+    Google = "https://accounts.google.com"
+    Microsoft = "https://login.microsoft.com"
 
 
 class DELEGATIONS_TYPE(str, enum.Enum):
@@ -263,7 +267,8 @@ def _load_key_from_sigstore_prompt() -> Optional[Key]:
         justify="left",
         style="italic",
     )
-    issuer = _select(SIGSTORE_ISSUERS)
+    issuer_name = _select(SIGSTORE_ISSUERS.names())
+    issuer = SIGSTORE_ISSUERS[issuer_name].value
 
     key = SigstoreKey(
         keyid="temp",

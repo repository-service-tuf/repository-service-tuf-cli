@@ -67,7 +67,7 @@ class TestCeremony:
                 "Key PEM File",  # select key type
                 "add",  # add key
                 "Sigstore",  # select key type
-                "https://github.com/login/oauth",  # enter oidc issuer
+                "GitHub",  # enter oidc issuer
                 "add",  # add key
                 "Key PEM File",  # select key type
                 "remove",  # remove key
