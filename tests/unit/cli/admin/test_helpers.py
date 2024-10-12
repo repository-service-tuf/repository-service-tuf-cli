@@ -592,7 +592,7 @@ class TestHelpers:
         assert "Problem fetching latest" in str(e)
 
     def test_load_key_from_sigstore_prompt(self):
-        fake_issuer = "TUF"
+        fake_issuer = "Google"
         helpers._select = pretend.call_recorder(lambda *a, **kw: fake_issuer)
         # success
         inputs = ["abc@gmail.com"]
@@ -600,15 +600,12 @@ class TestHelpers:
             key = helpers._load_key_from_sigstore_prompt()
 
         assert isinstance(key, SigstoreKey)
-        assert key.keyval == {"identity": inputs[0], "issuer": fake_issuer}
+        assert key.keyval == {
+            "identity": inputs[0],
+            "issuer": helpers.SIGSTORE_ISSUERS.Google.value,
+        }
         assert helpers._select.calls == [
-            pretend.call(
-                [
-                    "https://github.com/login/oauth",
-                    "https://login.microsoft.com",
-                    "https://accounts.google.com",
-                ]
-            )
+            pretend.call(helpers.SIGSTORE_ISSUERS.names())
         ]
 
         # fail with non-email identity
