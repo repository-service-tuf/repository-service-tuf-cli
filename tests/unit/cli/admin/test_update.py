@@ -9,7 +9,13 @@ import pretend
 from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.cli.admin.metadata import update
-from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
+from tests.conftest import (
+    _HELPERS,
+    _PAYLOADS,
+    _PEMS,
+    _ROOTS,
+    invoke_command,
+)
 
 MOCK_PATH = "repository_service_tuf.cli.admin.metadata.update"
 
@@ -21,13 +27,14 @@ class TestMetadataUpdate:
         update_inputs,
         update_key_selection,
         patch_getpass,
-        public_key_prompt,
+        update_pubkey_prompt,
     ):
         args = ["--in", f"{_ROOTS / 'v1.json'}", "--dry-run"]
         # public key selection options
         monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
+
         monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
+            f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
         )
 
         result = invoke_command(update.update, update_inputs, args)
@@ -48,7 +55,7 @@ class TestMetadataUpdate:
         update_key_selection,
         test_context,
         patch_getpass,
-        public_key_prompt,
+        update_pubkey_prompt,
     ):
         fake_task_id = "123a"
         fake_send_payload = pretend.call_recorder(lambda **kw: fake_task_id)
@@ -60,8 +67,9 @@ class TestMetadataUpdate:
 
         # public key selection options
         monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
+
         monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
+            f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
         )
 
         result = invoke_command(
@@ -103,7 +111,7 @@ class TestMetadataUpdate:
         update_key_selection,
         test_context,
         patch_getpass,
-        public_key_prompt,
+        update_pubkey_prompt,
     ):
         root_md = Metadata.from_file(f"{_ROOTS / 'v1.json'}")
         fake__get_latest_md = pretend.call_recorder(lambda *a: root_md)
@@ -119,8 +127,9 @@ class TestMetadataUpdate:
 
         # public key selection options
         monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
+
         monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
+            f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
         )
 
         result = invoke_command(
@@ -162,7 +171,7 @@ class TestMetadataUpdate:
         update_inputs,
         update_key_selection,
         patch_getpass,
-        public_key_prompt,
+        update_pubkey_prompt,
     ):
         root_md = Metadata.from_file(f"{_ROOTS / 'v1.json'}")
         fake__get_latest_md = pretend.call_recorder(lambda *a: root_md)
@@ -172,8 +181,9 @@ class TestMetadataUpdate:
 
         # public key selection options
         monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
+
         monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
+            f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
         )
 
         result = invoke_command(update.update, update_inputs, args)
@@ -194,7 +204,7 @@ class TestMetadataUpdate:
         update_inputs,
         update_key_selection,
         patch_getpass,
-        public_key_prompt,
+        update_pubkey_prompt,
     ):
         """Test that '--metadata-url' is with higher priority than '--in'."""
         root_md = Metadata.from_file(f"{_ROOTS / 'v1.json'}")
@@ -211,8 +221,9 @@ class TestMetadataUpdate:
 
         # public key selection options
         monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
+
         monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
+            f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
         )
 
         result = invoke_command(update.update, update_inputs, args)
@@ -236,15 +247,16 @@ class TestMetadataUpdate:
         test_context,
         client,
         patch_getpass,
-        public_key_prompt,
+        update_pubkey_prompt,
     ):
         """
         Test that '--dry-run' is with higher priority than 'settings.SERVER'.
         """
         # public key selection options
         monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
+
         monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
+            f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
         )
 
         args = ["--in", f"{_ROOTS / 'v1.json'}", "--dry-run"]
@@ -270,7 +282,7 @@ class TestMetadataUpdate:
         self,
         monkeypatch,
         patch_getpass,
-        public_key_prompt,
+        update_pubkey_prompt,
     ):
         future_date = datetime(2030, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
         fake_replace = pretend.stub(
@@ -288,10 +300,8 @@ class TestMetadataUpdate:
             f"{additional_days}",  # Please enter days until expiry for root role  # noqa
             "y",  # Do you want to change the threshold? [y/n] (n)
             "3",  # "Please enter root threshold"
-            f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
             "JoeCocker's Key",  # Please enter a key name
             "y",  # Do you want to change the online key? [y/n] (y)
-            f"{_PEMS / 'cb20fa1061dde8e6267e0bef0981766aaadae168e917030f7f26edc7a0bab9c2.pub'}",  # Please enter path to public key  # noqa
             "New Online Key",  # Please enter a key name
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
             f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
@@ -320,8 +330,9 @@ class TestMetadataUpdate:
 
         # public key selection options
         monkeypatch.setattr(f"{_HELPERS}._select", mocked_select)
+
         monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
+            f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
         )
 
         result = invoke_command(update.update, inputs, args)

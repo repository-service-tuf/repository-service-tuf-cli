@@ -4,7 +4,13 @@ import pretend
 from tuf.api.metadata import Signature
 
 from repository_service_tuf.cli.admin import ceremony
-from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, invoke_command
+from tests.conftest import (
+    _HELPERS,
+    _PAYLOADS,
+    _PEMS,
+    invoke_command,
+    public_key_prompter,
+)
 
 
 class TestCeremony:
@@ -17,7 +23,7 @@ class TestCeremony:
         test_context,
         patch_getpass,
         patch_utcnow,
-        public_key_prompt,
+        ceremony_pubkey_prompt,
     ):
         """
         Test that '--dry-run' and '--out' are compatible without connecting to
@@ -26,7 +32,7 @@ class TestCeremony:
         # public keys and signing keys selection options
         monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
         monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
+            f"{_HELPERS}._prompt_public_key", ceremony_pubkey_prompt
         )
 
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
@@ -57,6 +63,7 @@ class TestCeremony:
         test_context,
         patch_getpass,
         patch_utcnow,
+        ceremony_pubkey_prompt,
     ):
         """
         Test that '--dry-run' and '--out' are compatible without connecting to
@@ -96,15 +103,8 @@ class TestCeremony:
         )
         monkeypatch.setattr(f"{_HELPERS}.SigstoreSigner", fake_sigstore_signer)
 
-        selection = iter(
-            (
-                f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
-                f"{_PEMS / 'JJ.pub'}",  # Please enter path to public key
-            )
-        )
-        public_key_prompt = pretend.call_recorder(lambda *a: next(selection))
         monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
+            f"{_HELPERS}._prompt_public_key", ceremony_pubkey_prompt
         )
 
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
@@ -135,6 +135,7 @@ class TestCeremony:
         key_selection,
         patch_getpass,
         patch_utcnow,
+        ceremony_pubkey_prompt,
     ):
         input_step1, _, input_step3, input_step4 = ceremony_inputs
         input_step2 = [  # Configure Root Keys
@@ -149,16 +150,8 @@ class TestCeremony:
         # public keys and signing keys selection options
         monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
 
-        selection = iter(
-            (
-                f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
-                f"{_PEMS / 'JH.pub'}",  # Please enter path to public key
-                f"{_PEMS / 'JJ.pub'}",  # Please enter path to public key
-            )
-        )
-        public_key_prompt = pretend.call_recorder(lambda *a: next(selection))
         monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
+            f"{_HELPERS}._prompt_public_key", ceremony_pubkey_prompt
         )
 
         result = invoke_command(
@@ -184,7 +177,7 @@ class TestCeremony:
         key_selection,
         patch_getpass,
         patch_utcnow,
-        public_key_prompt,
+        ceremony_pubkey_prompt,
     ):
         _, input_step2, input_step3, input_step4 = ceremony_inputs
         input_step1 = [  # Configure online role settings and root expiration
@@ -200,7 +193,7 @@ class TestCeremony:
         # public keys and signing keys selection options
         monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
         monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
+            f"{_HELPERS}._prompt_public_key", ceremony_pubkey_prompt
         )
 
         result = invoke_command(
@@ -227,7 +220,7 @@ class TestCeremony:
         patch_getpass,
         patch_utcnow,
         test_context,
-        public_key_prompt,
+        ceremony_pubkey_prompt,
     ):
         fake_task_id = "123ab"
         fake_send_payload = pretend.call_recorder(lambda **kw: fake_task_id)
@@ -239,7 +232,7 @@ class TestCeremony:
         # public keys and signing keys selection options
         monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
         monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
+            f"{_HELPERS}._prompt_public_key", ceremony_pubkey_prompt
         )
 
         result = invoke_command(
@@ -285,7 +278,7 @@ class TestCeremony:
         test_context,
         patch_getpass,
         patch_utcnow,
-        public_key_prompt,
+        ceremony_pubkey_prompt,
     ):
         fake_task_id = "123ab"
         fake_send_payload = pretend.call_recorder(lambda **kw: fake_task_id)
@@ -298,7 +291,7 @@ class TestCeremony:
         # public keys and signing keys selection options
         monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
         monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
+            f"{_HELPERS}._prompt_public_key", ceremony_pubkey_prompt
         )
 
         result = invoke_command(
@@ -350,17 +343,6 @@ class TestCeremony:
             "Online Key",  # Please enter a key name
         ]
 
-        selection = iter(
-            (
-                f"{_PEMS / 'JH.pub'}",  # Please enter path to public key
-                f"{_PEMS / '0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043.pub'}",  # Please enter path to public key  # noqa
-            )
-        )
-        public_key_prompt = pretend.call_recorder(lambda *a: next(selection))
-        monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
-        )
-
         selection_options = iter(
             (
                 # select delegation type
@@ -387,8 +369,18 @@ class TestCeremony:
             f"{_HELPERS}._select",
             pretend.call_recorder(lambda *a: next(selection_options)),
         )
+
         monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
+            f"{_HELPERS}._prompt_public_key",
+            public_key_prompter(
+                [
+                    f"{_PEMS / 'JC.pub'}",  # Root key 1
+                    f"{_PEMS / 'JH.pub'}",  # Root key 2
+                    f"{_PEMS / 'JJ.pub'}",  # Root key 3
+                    f"{_PEMS / 'JH.pub'}",  # Please enter path to public key
+                    f"{_PEMS / '0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043.pub'}",  # Please enter path to public key  # noqa
+                ]
+            ),
         )
 
         result = invoke_command(
@@ -416,7 +408,7 @@ class TestCeremony:
         test_context,
         patch_getpass,
         patch_utcnow,
-        public_key_prompt,
+        ceremony_pubkey_prompt,
     ):
         """
         Test that '--dry-run' is with higher priority than 'settings.SERVER'.
@@ -424,7 +416,7 @@ class TestCeremony:
         # public keys and signing keys selection options
         monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
         monkeypatch.setattr(
-            f"{_HELPERS}._prompt_public_key", public_key_prompt
+            f"{_HELPERS}._prompt_public_key", ceremony_pubkey_prompt
         )
 
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
