@@ -7,7 +7,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 import pretend
 import pytest  # type: ignore
@@ -128,7 +128,7 @@ def ceremony_pubkey_prompt() -> Callable[..., str]:
             f"{_PEMS / 'JC.pub'}",  # root key 1
             f"{_PEMS / 'JH.pub'}",  # root key 2
             f"{_PEMS / 'JJ.pub'}",  # root key 3
-            f"{_PEMS / '0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043.pub'}",  # online key
+            f"{_PEMS / '0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043.pub'}",  # online key  # noqa
         ]
     )
 
