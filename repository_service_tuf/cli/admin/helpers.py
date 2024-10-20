@@ -238,7 +238,7 @@ def _prompt_public_key() -> str:
     """Prompt for a string using prompt_toolkit."""
 
     # Show only directories, or files ending with ".pub"
-    def file_filter(f): # pragma: no cover
+    def file_filter(f):  # pragma: no cover
         return os.path.isdir(f) or os.path.isfile(f) and f.endswith(".pub")
 
     message = prompt_toolkit.HTML("Enter file path to a <b>PUBLIC</b> key: ")
