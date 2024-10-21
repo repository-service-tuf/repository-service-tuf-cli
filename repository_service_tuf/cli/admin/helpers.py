@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import enum
+import os.path
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from tempfile import TemporaryDirectory
@@ -13,6 +14,8 @@ import click
 
 # Magic import to unbreak `load_pem_private_key` - pyca/cryptography#10315
 import cryptography.hazmat.backends.openssl.backend  # noqa: F401
+import prompt_toolkit
+import prompt_toolkit.completion
 import requests
 from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
@@ -231,14 +234,29 @@ def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
     return CryptoSigner(private_key, public_key)
 
 
+def _prompt_public_key() -> str:
+    """Prompt for a string using prompt_toolkit."""
+
+    # Show only directories, or files ending with ".pub"
+    def file_filter(f):  # pragma: no cover
+        return os.path.isdir(f) or os.path.isfile(f) and f.endswith(".pub")
+
+    message = prompt_toolkit.HTML("Enter file path to a <b>PUBLIC</b> key: ")
+    completer = prompt_toolkit.completion.PathCompleter(
+        file_filter=file_filter
+    )
+    return prompt_toolkit.prompt(message, completer=completer)
+
+
 def _load_key_from_file_prompt() -> SSlibKey:
     """Prompt for path to public key, return Key."""
-    path = Prompt.ask("\nPlease enter path to public key")
+    # Show only directories, or files ending with ".pub"
+    path = _prompt_public_key()
+
     with open(path, "rb") as f:
         public_pem = f.read()
 
     crypto = load_pem_public_key(public_pem)
-
     key = SSlibKey.from_crypto(crypto)
 
     return key
@@ -486,9 +504,12 @@ def _configure_root_keys_prompt(root: Root) -> None:
                 if not new_key:
                     continue
 
-                name = _key_name_prompt(
-                    root.keys, new_key.unrecognized_fields.get(KEY_NAME_FIELD)
+                # The default name of the key has either been explicitly set
+                # by the user inside the key object itself, or it is the keyid.
+                name = new_key.unrecognized_fields.get(
+                    KEY_NAME_FIELD, new_key.keyid
                 )
+                name = _key_name_prompt(root.keys, name)
                 new_key.unrecognized_fields[KEY_NAME_FIELD] = name
                 root.add_key(new_key, Root.type)
                 console.print(f"Added key '{name}'")
