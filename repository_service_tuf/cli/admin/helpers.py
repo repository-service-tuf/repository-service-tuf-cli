@@ -7,7 +7,7 @@ import os.path
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import beaupy  # type: ignore
 import click
@@ -22,6 +22,7 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_public_key,
 )
 from email_validator import validate_email
+from prompt_toolkit.formatted_text.base import AnyFormattedText
 from rich.json import JSON
 from rich.markdown import Markdown
 from rich.prompt import Confirm, IntPrompt, InvalidResponse, Prompt
@@ -212,13 +213,33 @@ class _MoreThan1Prompt(IntPrompt):
         return return_value
 
 
+def _prompt_key(
+    message: AnyFormattedText,
+    file_filter: Callable[[str], bool] = lambda f: True,
+) -> str:
+    """Prompt for a private or public key using prompt_toolkit."""
+
+    completer = prompt_toolkit.completion.PathCompleter(
+        file_filter=file_filter
+    )
+    return prompt_toolkit.prompt(message, completer=completer)
+
+
+def _prompt_private_key(name_value: str) -> str:
+    """Prompt for a private key."""
+
+    name_str = f"[green]{name_value}[/]"
+    message = (
+        f"\nPlease enter [yellow]path[/] to encrypted private key '{name_str}'"
+    )
+    formatted_text = prompt_toolkit.formatted_text.to_formatted_text(message)
+    return _prompt_key(formatted_text)
+
+
 def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
     """Prompt for path to private key and password, return Signer."""
     name_value = public_key.unrecognized_fields.get(KEY_NAME_FIELD)
-    name_str = f"[green]{name_value}[/]"
-    path = Prompt.ask(
-        f"\nPlease enter [yellow]path[/] to encrypted private key '{name_str}'"
-    )
+    path = _prompt_private_key(public_key)
 
     with open(path, "rb") as f:
         private_pem = f.read()
@@ -235,22 +256,19 @@ def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
 
 
 def _prompt_public_key() -> str:
-    """Prompt for a string using prompt_toolkit."""
+    """Prompt for a public key."""
 
     # Show only directories, or files ending with ".pub"
     def file_filter(f):  # pragma: no cover
         return os.path.isdir(f) or os.path.isfile(f) and f.endswith(".pub")
 
     message = prompt_toolkit.HTML("Enter file path to a <b>PUBLIC</b> key: ")
-    completer = prompt_toolkit.completion.PathCompleter(
-        file_filter=file_filter
-    )
-    return prompt_toolkit.prompt(message, completer=completer)
+    return _prompt_key(message, file_filter)
 
 
 def _load_key_from_file_prompt() -> SSlibKey:
     """Prompt for path to public key, return Key."""
-    # Show only directories, or files ending with ".pub"
+
     path = _prompt_public_key()
 
     with open(path, "rb") as f:

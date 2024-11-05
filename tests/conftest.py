@@ -80,10 +80,7 @@ def ceremony_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
     input_step3 = [  # Configure Online Key
         "Online Key",  # Please enter a key name
     ]
-    input_step4 = [  # Sign Metadata
-        f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-        f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
-    ]
+    input_step4: List[str] = []  # Sign Metadata
 
     return input_step1, input_step2, input_step3, input_step4
 
@@ -116,14 +113,14 @@ def key_selection() -> lambda *a: str:
     return mocked_select
 
 
-def public_key_prompter(options: list[str]) -> Callable[..., str]:
+def key_prompter(options: list[str]) -> Callable[..., str]:
     iterable = iter(options)
     return pretend.call_recorder(lambda *args: next(iterable))
 
 
 @pytest.fixture
 def ceremony_pubkey_prompt() -> Callable[..., str]:
-    return public_key_prompter(
+    return key_prompter(
         [
             f"{_PEMS / 'JC.pub'}",  # root key 1
             f"{_PEMS / 'JH.pub'}",  # root key 2
@@ -134,11 +131,32 @@ def ceremony_pubkey_prompt() -> Callable[..., str]:
 
 
 @pytest.fixture
+def ceremony_privkey_prompt() -> Callable[..., str]:
+    return key_prompter(
+        [
+            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
+            f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
+        ]
+    )
+
+
+@pytest.fixture
 def update_pubkey_prompt() -> Callable[..., str]:
-    return public_key_prompter(
+    return key_prompter(
         [
             f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
             f"{_PEMS / 'cb20fa1061dde8e6267e0bef0981766aaadae168e917030f7f26edc7a0bab9c2.pub'}",  # Please enter path to public key  # noqa
+        ]
+    )
+
+
+@pytest.fixture
+def update_privkey_prompt() -> Callable[..., str]:
+    return key_prompter(
+        [
+            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
+            f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
+            f"{_PEMS / 'JC.rsa'}",  # Please enter path to encrypted private key  # noqa
         ]
     )
 
@@ -151,9 +169,6 @@ def update_inputs():
         "JoeCocker's Key",  # Please enter a key name
         "y",  # Do you want to change the online key? [y/n] (y)
         "New Online Key",  # Please enter a key name
-        f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-        f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
-        f"{_PEMS / 'JC.rsa'}",  # Please enter path to encrypted private key  # noqa
     ]
 
 

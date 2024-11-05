@@ -22,6 +22,7 @@ class TestMetadataUpdate:
         update_key_selection,
         patch_getpass,
         update_pubkey_prompt,
+        update_privkey_prompt,
     ):
         args = ["--in", f"{_ROOTS / 'v1.json'}", "--dry-run"]
         # public key selection options
@@ -29,6 +30,9 @@ class TestMetadataUpdate:
 
         monkeypatch.setattr(
             f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", update_privkey_prompt
         )
 
         result = invoke_command(update.update, update_inputs, args)
@@ -50,6 +54,7 @@ class TestMetadataUpdate:
         test_context,
         patch_getpass,
         update_pubkey_prompt,
+        update_privkey_prompt,
     ):
         fake_task_id = "123a"
         fake_send_payload = pretend.call_recorder(lambda **kw: fake_task_id)
@@ -64,6 +69,9 @@ class TestMetadataUpdate:
 
         monkeypatch.setattr(
             f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", update_privkey_prompt
         )
 
         result = invoke_command(
@@ -106,6 +114,7 @@ class TestMetadataUpdate:
         test_context,
         patch_getpass,
         update_pubkey_prompt,
+        update_privkey_prompt,
     ):
         root_md = Metadata.from_file(f"{_ROOTS / 'v1.json'}")
         fake__get_latest_md = pretend.call_recorder(lambda *a: root_md)
@@ -124,6 +133,9 @@ class TestMetadataUpdate:
 
         monkeypatch.setattr(
             f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", update_privkey_prompt
         )
 
         result = invoke_command(
@@ -166,6 +178,7 @@ class TestMetadataUpdate:
         update_key_selection,
         patch_getpass,
         update_pubkey_prompt,
+        update_privkey_prompt,
     ):
         root_md = Metadata.from_file(f"{_ROOTS / 'v1.json'}")
         fake__get_latest_md = pretend.call_recorder(lambda *a: root_md)
@@ -178,6 +191,9 @@ class TestMetadataUpdate:
 
         monkeypatch.setattr(
             f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", update_privkey_prompt
         )
 
         result = invoke_command(update.update, update_inputs, args)
@@ -199,6 +215,7 @@ class TestMetadataUpdate:
         update_key_selection,
         patch_getpass,
         update_pubkey_prompt,
+        update_privkey_prompt,
     ):
         """Test that '--metadata-url' is with higher priority than '--in'."""
         root_md = Metadata.from_file(f"{_ROOTS / 'v1.json'}")
@@ -218,6 +235,9 @@ class TestMetadataUpdate:
 
         monkeypatch.setattr(
             f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", update_privkey_prompt
         )
 
         result = invoke_command(update.update, update_inputs, args)
@@ -242,6 +262,7 @@ class TestMetadataUpdate:
         client,
         patch_getpass,
         update_pubkey_prompt,
+        update_privkey_prompt,
     ):
         """
         Test that '--dry-run' is with higher priority than 'settings.SERVER'.
@@ -251,6 +272,9 @@ class TestMetadataUpdate:
 
         monkeypatch.setattr(
             f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", update_privkey_prompt
         )
 
         args = ["--in", f"{_ROOTS / 'v1.json'}", "--dry-run"]
@@ -277,6 +301,7 @@ class TestMetadataUpdate:
         monkeypatch,
         patch_getpass,
         update_pubkey_prompt,
+        update_privkey_prompt,
     ):
         future_date = datetime(2030, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
         fake_replace = pretend.stub(
@@ -327,6 +352,9 @@ class TestMetadataUpdate:
 
         monkeypatch.setattr(
             f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", update_privkey_prompt
         )
 
         result = invoke_command(update.update, inputs, args)
