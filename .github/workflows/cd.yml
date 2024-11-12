@@ -44,7 +44,7 @@ jobs:
 
       - id: gh-release
         name: Publish GitHub release candidate
-        uses: softprops/action-gh-release@c062e08bd532815e2082a85e87e3ef29c3e6d191
+        uses: softprops/action-gh-release@01570a1f39cb168c169c802c3bceb9e93fb10974
         with:
           name: ${{ github.ref_name }}-rc
           tag_name: ${{ github.ref }}
