@@ -27,19 +27,19 @@ class TestHelpers:
 
         # success
         inputs = [f"{_PEMS / 'JH.ed25519'}"]
-        with patch(_PROMPT, side_effect=inputs):
+        with patch(_PROMPT_TOOLKIT, side_effect=inputs):
             signer = helpers._load_signer_from_file_prompt(ed25519_key)
 
         assert isinstance(signer, CryptoSigner)
         inputs = [f"{_PEMS / 'JH.ed25519'}"]
-        with patch(_PROMPT, side_effect=inputs):
+        with patch(_PROMPT_TOOLKIT, side_effect=inputs):
             signer = helpers._load_signer_from_file_prompt(ed25519_key)
 
         assert isinstance(signer, CryptoSigner)
 
         # fail with wrong file for key
         inputs = [f"{_PEMS / 'JC.rsa'}"]
-        with patch(_PROMPT, side_effect=inputs):
+        with patch(_PROMPT_TOOLKIT, side_effect=inputs):
             with pytest.raises(ValueError):
                 signer = helpers._load_signer_from_file_prompt(ed25519_key)
 
@@ -47,7 +47,7 @@ class TestHelpers:
         fake_click.prompt = pretend.call_recorder(lambda *a, **kw: "hunter1")
         monkeypatch.setattr(f"{_HELPERS}.click", fake_click)
         inputs = [f"{_PEMS / 'JH.ed25519'}"]
-        with patch(_PROMPT, side_effect=inputs):
+        with patch(_PROMPT_TOOLKIT, side_effect=inputs):
             with pytest.raises(ValueError):
                 signer = helpers._load_signer_from_file_prompt(ed25519_key)
 
