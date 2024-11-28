@@ -91,7 +91,7 @@ jobs:
           name: testpypi
           url: https://pypi.org/p/repository-service-tuf
         if: github.repository == 'repository-service-tuf/repository-service-tuf-cli'
-        uses: pypa/gh-action-pypi-publish@f7600683efdcb7656dec5b29656edb7bc586e597
+        uses: pypa/gh-action-pypi-publish@15c56dba361d8335944d31a2ecd17d700fc7bcbc
         with:
           repository-url: https://test.pypi.org/legacy/
 
@@ -101,4 +101,4 @@ jobs:
           url: https://pypi.org/p/repository-service-tuf
         # Only attempt PyPI upload in upstream repository
         if: github.repository == 'repository-service-tuf/repository-service-tuf-cli'
-        uses: pypa/gh-action-pypi-publish@f7600683efdcb7656dec5b29656edb7bc586e597
+        uses: pypa/gh-action-pypi-publish@15c56dba361d8335944d31a2ecd17d700fc7bcbc
