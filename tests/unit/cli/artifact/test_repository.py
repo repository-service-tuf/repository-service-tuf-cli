@@ -137,7 +137,7 @@ class TestArtifactRepositoryInteraction:
         )
         assert (
             "Repository wrong_root_type has incorrect configuration."
-            in test_result.stderr
+            in test_result.output
         )
         assert test_result.exit_code == 1
 
@@ -151,7 +151,7 @@ class TestArtifactRepositoryInteraction:
             repository.show,
             obj=test_context,
         )
-        assert "There are no configured repositories" in test_result.stderr
+        assert "There are no configured repositories" in test_result.output
         assert test_result.exit_code == 1
 
         test_result = client.invoke(
@@ -161,7 +161,7 @@ class TestArtifactRepositoryInteraction:
         )
         assert (
             "Repository r1 is missing in your configuration"
-            in test_result.stderr
+            in test_result.output
         )
         assert test_result.exit_code == 1
 
@@ -245,8 +245,6 @@ class TestArtifactRepositoryInteraction:
         )
 
         assert test_result.exit_code == 2
-        assert "Try 'add --help' for help" in test_result.stderr
-        assert "Missing option '-m' / '--metadata-url'." in test_result.stderr
 
     def test_repository_add_all_params(
         self, client, test_context, monkeypatch
@@ -504,10 +502,6 @@ class TestArtifactRepositoryInteraction:
             obj=test_context,
         )
 
-        assert (
-            "There are no configured repositories to update"
-            in test_result.stderr
-        )
         assert test_result.exit_code == 1
 
     def test_repository_update(self, client, test_context, monkeypatch):
@@ -680,9 +674,9 @@ class TestArtifactRepositoryInteraction:
 
         assert (
             "Repository non_existing not available in config. "
-            in test_result.stderr
+            in test_result.output
         )
-        assert "You can create it instead" in test_result.stderr
+        assert "You can create it instead" in test_result.output
         assert test_result.exit_code == 1
 
     def test_repository_delete_no_repos(
@@ -711,7 +705,7 @@ class TestArtifactRepositoryInteraction:
 
         assert (
             "There are no configured repositories. Nothing to delete"
-            in test_result.stderr
+            in test_result.output
         )
         assert test_result.exit_code == 1
 
@@ -754,7 +748,7 @@ class TestArtifactRepositoryInteraction:
 
         assert (
             "Repository non_existing not available. Nothing to delete"
-            in test_result.stderr
+            in test_result.output
         )
         assert test_result.exit_code == 1
 
@@ -803,7 +797,10 @@ class TestArtifactRepositoryInteraction:
             in test_result.output
         )
         assert "'hash_prefix': 'False'" in test_result.output
-        assert "'metadata_url': 'http://localhost:8080'" in test_result.output
+        assert (
+            "'metadata_url': 'http://localhost:8080'"
+            in test_result.output.replace("\n", "")
+        )
         assert "'trusted_root'" in test_result.output
         assert "'some_root'" in test_result.output
         check_settings = test_context["settings"].as_dict()

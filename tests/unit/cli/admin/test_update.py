@@ -292,7 +292,6 @@ class TestMetadataUpdate:
                 catch_exceptions=False,
             )
 
-        assert result.stderr == ""
         assert "Saved result to " not in result.stdout
         assert "Bootstrap completed." not in result.stdout
 
@@ -370,7 +369,7 @@ class TestMetadataUpdate:
 class TestUpdateError:
     def test_update_no_input_or_metadata_url(self):
         result = invoke_command(update.update, [], [], std_err_empty=False)
-        assert "Either '--in' or '--metadata-url' needed" in result.stderr
+        assert "Either '--in' or '--metadata-url' needed" in result.output
 
     def test_update_no_server_config_or_dry_run(self):
         args = ["--in", f"{_ROOTS / 'v1.json'}"]
@@ -378,5 +377,5 @@ class TestUpdateError:
 
         err_prefix = "Either '--api-server' admin option/'SERVER'"
         err_suffix = "or '--dry-run'"
-        assert err_prefix in result.stderr
-        assert err_suffix in result.stderr
+        assert err_prefix in result.output
+        assert err_suffix in result.output

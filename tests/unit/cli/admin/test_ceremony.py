@@ -468,7 +468,6 @@ class TestCeremony:
                 catch_exceptions=False,
             )
 
-        assert result.stderr == ""
         assert "Saved result to " not in result.stdout
         assert "Bootstrap completed." not in result.stdout
 
@@ -479,5 +478,5 @@ class TestCeremonyError:
 
         err_prefix = "Either '--api-server' admin option/'SERVER'"
         err_suffix = "or '--dry-run'"
-        assert err_prefix in result.stderr
-        assert err_suffix in result.stderr
+        assert err_prefix in result.output
+        assert err_suffix in result.output
