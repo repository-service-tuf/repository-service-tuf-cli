@@ -15,16 +15,17 @@ from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 class TestSign:
     def test_sign_with_previous_root(
-        self, monkeypatch, test_context, patch_getpass
+        self, monkeypatch, test_context, patch_getpass, update_privkey_prompt
     ):
-        inputs = [
-            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-        ]
+        inputs = []
         # selections interface
         select_options = iter(("root", "JimiHendrix's Key"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", update_privkey_prompt
         )
 
         with open(f"{_PAYLOADS / 'sign_pending_roles.json'}") as f:
@@ -79,16 +80,21 @@ class TestSign:
         ]
 
     def test_sign_bootstrap_root(
-        self, monkeypatch, test_context, patch_getpass
+        self,
+        monkeypatch,
+        test_context,
+        patch_getpass,
+        update_privkey_prompt,
     ):
-        inputs = [
-            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-        ]
+        inputs = []
         # selections interface
         select_options = iter(("root", "JimiHendrix's Key"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", update_privkey_prompt
         )
 
         with open(f"{_ROOTS / 'v1.json'}") as f:
@@ -146,21 +152,27 @@ class TestSign:
         ]
 
     def test_sign_dry_run_and_input_option_and_custom_out(
-        self, monkeypatch, test_context, patch_getpass
+        self,
+        monkeypatch,
+        test_context,
+        patch_getpass,
+        update_privkey_prompt,
     ):
         """
         Test that '--dry-run', '--in' and '--out' are compatible options
         without connecting to the API.
         """
-        inputs = [
-            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-        ]
+        inputs = []
         # selections interface
         select_options = iter(("root", "JimiHendrix's Key"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
         )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", update_privkey_prompt
+        )
+
         input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
         custom_out_path = "custom_sign_path.json"
         args = ["--dry-run", "--in", input_path, "--out", custom_out_path]
@@ -181,17 +193,23 @@ class TestSign:
         assert "Metadata Signed and sent to the API" not in result.stdout
 
     def test_sign_with_input_option_and_api_server_set(
-        self, monkeypatch, test_context, patch_getpass
+        self,
+        monkeypatch,
+        test_context,
+        patch_getpass,
+        update_privkey_prompt,
     ):
-        inputs = [
-            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-        ]
+        inputs = []
         # selections interface
         select_options = iter(("root", "JimiHendrix's Key"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
         )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", update_privkey_prompt
+        )
+
         sign.send_payload = pretend.call_recorder(lambda **kw: "fake-taskid")
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
         sign_input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
@@ -239,6 +257,7 @@ class TestSign:
         test_context,
         patch_getpass,
         patch_utcnow,
+        update_privkey_prompt,
     ):
         """
         Test that '--dry-run' is with higher priority than 'settings.SERVER'.
@@ -249,6 +268,10 @@ class TestSign:
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
         )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", update_privkey_prompt
+        )
+
         sign_input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
         input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
         # We want to test when only "--dry-run" is used we will not save a file

@@ -7,11 +7,11 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 import pretend
 import pytest  # type: ignore
-from click import Command, Context
+from click import Command
 from click.testing import CliRunner, Result  # type: ignore
 from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
@@ -36,6 +36,7 @@ _PAYLOADS = _FILES / "payload"
 # Constants for mocking:
 _HELPERS = "repository_service_tuf.cli.admin.helpers"
 _PROMPT = "rich.console.Console.input"
+_PROMPT_TOOLKIT = "prompt_toolkit.prompt"
 
 
 def _create_test_context() -> Dict[str, Any]:
@@ -72,21 +73,14 @@ def ceremony_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
     ]
     input_step2 = [  # Configure Root Keys
         "2",  # Please enter root threshold
-        f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
         "my rsa key",  # Please enter key name
-        f"{_PEMS / 'JH.pub'}",  # Please enter path to public key
         "JimiHendrix's Key",  # Please enter key name
-        f"{_PEMS / 'JJ.pub'}",  # Please enter path to public key
         "JanisJoplin's Key",  # Please enter key name
     ]
     input_step3 = [  # Configure Online Key
-        f"{_PEMS / '0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043.pub'}",  # Please enter path to public key  # noqa
         "Online Key",  # Please enter a key name
     ]
-    input_step4 = [  # Sign Metadata
-        f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-        f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
-    ]
+    input_step4: List[str] = []  # Sign Metadata
 
     return input_step1, input_step2, input_step3, input_step4
 
@@ -119,19 +113,62 @@ def key_selection() -> lambda *a: str:
     return mocked_select
 
 
+def key_prompter(options: list[str]) -> Callable[..., str]:
+    iterable = iter(options)
+    return pretend.call_recorder(lambda *args: next(iterable))
+
+
+@pytest.fixture
+def ceremony_pubkey_prompt() -> Callable[..., str]:
+    return key_prompter(
+        [
+            f"{_PEMS / 'JC.pub'}",  # root key 1
+            f"{_PEMS / 'JH.pub'}",  # root key 2
+            f"{_PEMS / 'JJ.pub'}",  # root key 3
+            f"{_PEMS / '0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043.pub'}",  # online key  # noqa
+        ]
+    )
+
+
+@pytest.fixture
+def ceremony_privkey_prompt() -> Callable[..., str]:
+    return key_prompter(
+        [
+            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
+            f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
+        ]
+    )
+
+
+@pytest.fixture
+def update_pubkey_prompt() -> Callable[..., str]:
+    return key_prompter(
+        [
+            f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
+            f"{_PEMS / 'cb20fa1061dde8e6267e0bef0981766aaadae168e917030f7f26edc7a0bab9c2.pub'}",  # Please enter path to public key  # noqa
+        ]
+    )
+
+
+@pytest.fixture
+def update_privkey_prompt() -> Callable[..., str]:
+    return key_prompter(
+        [
+            f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
+            f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
+            f"{_PEMS / 'JC.rsa'}",  # Please enter path to encrypted private key  # noqa
+        ]
+    )
+
+
 @pytest.fixture
 def update_inputs():
     return [
         "n",  # Do you want to change the expiry date? [y/n] (y)
         "n",  # Do you want to change the threshold? [y/n] (n)
-        f"{_PEMS / 'JC.pub'}",  # Please enter path to public key
         "JoeCocker's Key",  # Please enter a key name
         "y",  # Do you want to change the online key? [y/n] (y)
-        f"{_PEMS / 'cb20fa1061dde8e6267e0bef0981766aaadae168e917030f7f26edc7a0bab9c2.pub'}",  # Please enter path to public key  # noqa
         "New Online Key",  # Please enter a key name
-        f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
-        f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
-        f"{_PEMS / 'JC.rsa'}",  # Please enter path to encrypted private key  # noqa
     ]
 
 
@@ -218,7 +255,7 @@ def invoke_command(
     cmd: Command,
     inputs: List[str],
     args: List[str],
-    test_context: Optional[Context] = None,
+    test_context: Dict[str, Any] = {},
     std_err_empty: bool = True,
 ) -> Result:
     client = _create_client()
@@ -250,13 +287,13 @@ def invoke_command(
             catch_exceptions=False,
         )
 
-        result_obj.context = test_context
+        result_obj.context = test_context  # type: ignore
         if std_err_empty:
             assert result_obj.stderr == ""
             if len(out_args) > 0:
                 # There are commands that doesn't save a file like
                 # 'import_artifacts'. For them out_args is empty.
                 with open(out_file_name) as f:
-                    result_obj.data = json.load(f)
+                    result_obj.data = json.load(f)  # type: ignore
 
     return result_obj
