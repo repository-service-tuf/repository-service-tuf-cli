@@ -342,8 +342,8 @@ class TestImportArtifactsGroupCLI:
         result = invoke_command(
             import_artifacts.import_artifacts, [], args, std_err_empty=False
         )
-        assert result.exit_code == 1, result.stderr
-        assert "Requires '--api-server' " in result.stderr
+        assert result.exit_code == 1, result.output
+        assert "Requires '--api-server' " in result.output
 
     def test_import_artifacts_skip_publish_artifacts(self, test_context):
         # Required to properly mock functions imported inside import_artifacts
@@ -466,7 +466,7 @@ class TestImportArtifactsGroupCLI:
             std_err_empty=False,
         )
         assert result.exit_code == 1
-        assert "Server ERROR" in result.stderr, result.stderr
+        assert "Server ERROR" in result.output, result.output
 
     def test_import_artifacts_without_bootstrap(self, test_context):
 
@@ -491,10 +491,10 @@ class TestImportArtifactsGroupCLI:
             test_context,
             std_err_empty=False,
         )
-        assert result.exit_code == 1, result.stderr
+        assert result.exit_code == 1, result.output
         assert (
             "import-artifacts` requires bootstrap process done."
-            in result.stderr
+            in result.output
         )
         assert import_artifacts.bootstrap_status.calls == [
             pretend.call(result.context["settings"])
