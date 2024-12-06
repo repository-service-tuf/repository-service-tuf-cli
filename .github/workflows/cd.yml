@@ -51,15 +51,6 @@ jobs:
           body: "Release waiting for review..."
           files: dist/*
 
-      - name: Publish distribution 📦 to Test PyPI
-        env:
-          name: testpypi
-          url: https://pypi.org/p/repository-service-tuf
-        if: github.repository == 'repository-service-tuf/repository-service-tuf-cli'
-        uses: pypa/gh-action-pypi-publish@15c56dba361d8335944d31a2ecd17d700fc7bcbc
-        with:
-          repository-url: https://test.pypi.org/legacy/
-
       - name: Store build artifacts
         uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
         # NOTE: The GitHub release page contains the release artifacts too, but using
