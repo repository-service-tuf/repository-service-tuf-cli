@@ -6,7 +6,8 @@ on:
     tags:
       - v*
 
-permissions: {}
+permissions:
+  contents: write
 
 jobs:
   functional-latest:
