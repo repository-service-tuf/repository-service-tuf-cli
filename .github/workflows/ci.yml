@@ -50,7 +50,7 @@ jobs:
         key: ${{ runner.os }}-py${{ matrix.python-versions }}-mypy-${{ hashFiles('**/.mypy_cache') }}
 
     - name: Codecov
-      uses: codecov/codecov-action@015f24e6818733317a2da2edd6290ab26238649a
+      uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e
       with:
         files: coverage.xml
         fail_ci_if_error: false
