@@ -119,6 +119,7 @@ class TestAPIClient:
                 test_context["settings"].SERVER,
                 api_client.URL.BOOTSTRAP.value,
                 api_client.Methods.GET,
+                headers=None,
             )
         ]
 
@@ -141,6 +142,7 @@ class TestAPIClient:
                 test_context["settings"].SERVER,
                 api_client.URL.BOOTSTRAP.value,
                 api_client.Methods.GET,
+                headers=None,
             )
         ]
 
@@ -163,6 +165,7 @@ class TestAPIClient:
                 test_context["settings"].SERVER,
                 api_client.URL.BOOTSTRAP.value,
                 api_client.Methods.GET,
+                headers=None,
             )
         ]
 
@@ -184,6 +187,7 @@ class TestAPIClient:
                 test_context["settings"].SERVER,
                 api_client.URL.BOOTSTRAP.value,
                 api_client.Methods.GET,
+                headers=None,
             )
         ]
 
@@ -220,21 +224,25 @@ class TestAPIClient:
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
         ]
 
@@ -272,6 +280,7 @@ class TestAPIClient:
                 status_code=200,
                 json=fake_json,
                 text="{'data': {'state': 'FAILURE', 'k': 'v'}",
+                headers=None,
             )
         )
 
@@ -287,16 +296,19 @@ class TestAPIClient:
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
         ]
 
@@ -320,6 +332,7 @@ class TestAPIClient:
                 status_code=200,
                 json=fake_json,
                 text="{'data': {'state': 'ERRORED', 'k': 'v'}",
+                headers=None,
             )
         )
 
@@ -334,16 +347,19 @@ class TestAPIClient:
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
         ]
 
@@ -369,6 +385,7 @@ class TestAPIClient:
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
         ]
 
@@ -393,6 +410,7 @@ class TestAPIClient:
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
         ]
 
@@ -417,6 +435,7 @@ class TestAPIClient:
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
         ]
 
@@ -456,16 +475,19 @@ class TestAPIClient:
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
             pretend.call(
                 "http://server",
                 "api/v1/task/?task_id=task_id",
                 api_client.Methods.GET,
+                headers=None,
             ),
         ]
 
@@ -488,6 +510,7 @@ class TestAPIClient:
                 test_context["settings"].SERVER,
                 api_client.URL.PUBLISH_ARTIFACTS.value,
                 api_client.Methods.POST,
+                headers=None,
             )
         ]
 
@@ -510,6 +533,7 @@ class TestAPIClient:
                 test_context["settings"].SERVER,
                 api_client.URL.PUBLISH_ARTIFACTS.value,
                 api_client.Methods.POST,
+                headers=None,
             )
         ]
 
@@ -542,6 +566,7 @@ class TestAPIClient:
                 api_client.URL.BOOTSTRAP.value,
                 api_client.Methods.POST,
                 {"payload": "data"},
+                headers=None,
             )
         ]
 
@@ -578,6 +603,7 @@ class TestAPIClient:
                 api_client.URL.BOOTSTRAP.value,
                 api_client.Methods.POST,
                 {"payload": "data"},
+                headers=None,
             )
         ]
 
@@ -613,6 +639,7 @@ class TestAPIClient:
                 api_client.URL.BOOTSTRAP.value,
                 api_client.Methods.POST,
                 {"payload": "data"},
+                headers=None,
             )
         ]
 
@@ -649,6 +676,7 @@ class TestAPIClient:
                 api_client.URL.BOOTSTRAP.value,
                 api_client.Methods.POST,
                 {"payload": "data"},
+                headers=None,
             )
         ]
 
@@ -685,5 +713,6 @@ class TestAPIClient:
                 api_client.URL.BOOTSTRAP.value,
                 api_client.Methods.POST,
                 {"payload": "data"},
+                headers=None,
             )
         ]
