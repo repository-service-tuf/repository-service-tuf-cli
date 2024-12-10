@@ -42,6 +42,7 @@ _PROMPT_TOOLKIT = "prompt_toolkit.prompt"
 def _create_test_context() -> Dict[str, Any]:
     setting_file = os.path.join(TemporaryDirectory().name, "test_settings.yml")
     test_settings = Dynaconf(settings_files=[setting_file])
+    test_settings.HEADERS = None
     return {"settings": test_settings, "config": setting_file}
 
 

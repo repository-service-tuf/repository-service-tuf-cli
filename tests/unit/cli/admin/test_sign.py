@@ -42,6 +42,7 @@ class TestSign:
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
         api_server = "http://127.0.0.1"
         test_context["settings"].SERVER = api_server
+        test_context["settings"].HEADERS = None
 
         result = invoke_command(sign.sign, inputs, [], test_context)
 
@@ -54,7 +55,9 @@ class TestSign:
         )
         assert "Metadata Signed and sent to the API! 🔑" in result.stdout
         assert sign.request_server.calls == [
-            pretend.call(api_server, "api/v1/metadata/sign/", Methods.GET)
+            pretend.call(
+                api_server, "api/v1/metadata/sign/", Methods.GET, headers=None
+            )
         ]
         assert sign.send_payload.calls == [
             pretend.call(
@@ -126,7 +129,9 @@ class TestSign:
         assert result.data["signature"]["keyid"] == expected["keyid"]
         assert "Metadata Signed and sent to the API! 🔑" in result.stdout
         assert sign.request_server.calls == [
-            pretend.call(api_server, "api/v1/metadata/sign/", Methods.GET)
+            pretend.call(
+                api_server, "api/v1/metadata/sign/", Methods.GET, headers=None
+            )
         ]
         assert sign.send_payload.calls == [
             pretend.call(
@@ -352,7 +357,9 @@ class TestSignError:
         assert test_result.exit_code == 1, test_result.stdout
         assert "Previous root v1 needed to sign root v2" in test_result.output
         assert sign.request_server.calls == [
-            pretend.call(api_server, "api/v1/metadata/sign/", Methods.GET)
+            pretend.call(
+                api_server, "api/v1/metadata/sign/", Methods.GET, headers=None
+            )
         ]
 
     def test_sign_fully_signed_metadata(
@@ -394,7 +401,9 @@ class TestSignError:
         assert test_result.exit_code == 1, test_result.stdout
         assert "Metadata already fully signed." in test_result.output
         assert sign.request_server.calls == [
-            pretend.call(api_server, "api/v1/metadata/sign/", Methods.GET)
+            pretend.call(
+                api_server, "api/v1/metadata/sign/", Methods.GET, headers=None
+            )
         ]
 
 
@@ -412,7 +421,7 @@ class TestHelpers:
         assert "No metadata available for signing" in str(e)
 
     def test__get_pending_roles_request(self, monkeypatch):
-        fake_settings = pretend.stub(SERVER=None)
+        fake_settings = pretend.stub(SERVER=None, HEADERS=None)
         fake_json = pretend.stub()
         response = pretend.stub(
             status_code=200, json=pretend.call_recorder(lambda: fake_json)
@@ -433,6 +442,7 @@ class TestHelpers:
                 fake_settings.SERVER,
                 sign.URL.METADATA_SIGN.value,
                 sign.Methods.GET,
+                headers=None,
             )
         ]
         assert response.json.calls == [pretend.call()]
@@ -440,7 +450,7 @@ class TestHelpers:
 
     def test__get_pending_roles_request_bad_status_code(self):
         fake_settings = pretend.stub(
-            SERVER="http://localhost:80",
+            SERVER="http://localhost:80", HEADERS=None
         )
         response = pretend.stub(status_code=400, text="")
         sign.request_server = pretend.call_recorder(lambda *a, **kw: response)
@@ -453,5 +463,6 @@ class TestHelpers:
                 fake_settings.SERVER,
                 sign.URL.METADATA_SIGN.value,
                 sign.Methods.GET,
+                headers=None,
             )
         ]
