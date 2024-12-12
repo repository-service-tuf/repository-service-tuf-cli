@@ -47,6 +47,7 @@ jobs:
         uses: softprops/action-gh-release@7b4da11513bf3f43f9999e90eabced41ab8bb048
         with:
           name: ${{ github.ref_name }}-rc
+          tag_name: ${{ github.ref }}
           body: "Release waiting for review..."
           files: dist/*
 
