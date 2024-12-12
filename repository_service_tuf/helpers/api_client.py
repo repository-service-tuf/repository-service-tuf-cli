@@ -81,7 +81,10 @@ def request_server(
 
 def bootstrap_status(settings: LazySettings) -> Dict[str, Any]:
     response = request_server(
-        settings.SERVER, URL.BOOTSTRAP.value, Methods.GET
+        settings.SERVER,
+        URL.BOOTSTRAP.value,
+        Methods.GET,
+        headers=settings.HEADERS,
     )
     if response.status_code == 404:
         raise click.ClickException(
@@ -111,6 +114,7 @@ def task_status(
             settings.SERVER,
             f"{URL.TASK.value}{task_id}",
             Methods.GET,
+            headers=settings.HEADERS,
         )
 
         if state_response.status_code != 200:
@@ -171,6 +175,7 @@ def publish_artifacts(settings: LazySettings) -> str:
         settings.SERVER,
         URL.PUBLISH_ARTIFACTS.value,
         Methods.POST,
+        headers=settings.HEADERS,
     )
     if publish_artifacts.status_code != 202:
         raise click.ClickException(
@@ -208,6 +213,7 @@ def send_payload(
         url,
         Methods.POST,
         payload,
+        headers=settings.HEADERS,
     )
 
     if response.status_code != expected_status_code:
