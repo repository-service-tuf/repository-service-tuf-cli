@@ -23,6 +23,7 @@ google-cloud-kms = "*"
 hvac = "*"
 azure-keyvault-keys = "*"
 prompt-toolkit = "*"
+setuptools = "*"
 
 [dev-packages]
 black = "*"
@@ -50,7 +51,6 @@ build = "*"
 pre-commit = "*"
 bandit = "*"
 types-requests = "*"
-setuptools = "*"
 
 [requires]
 python_version = "3.12"
