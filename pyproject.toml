@@ -27,6 +27,7 @@ dependencies = [
   "click",
   "auto-click-auto",
   "dynaconf[ini]==3.1.9",
+  "setuptools",
   "PyNaCl",
   "requests",
   "rich",
