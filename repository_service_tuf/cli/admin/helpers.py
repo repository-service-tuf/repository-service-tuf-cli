@@ -176,6 +176,7 @@ class Metadatas:  # accept bad spelling to disambiguate with Metadata
 class CeremonyPayload:
     settings: "Settings"
     metadata: "Metadatas"
+    timeout: int = 300
 
 
 @dataclass
