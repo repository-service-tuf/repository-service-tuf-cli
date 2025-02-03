@@ -10,7 +10,7 @@ from tuf.api.metadata import Root, Targets
 
 import repository_service_tuf.cli.admin.metadata.stop_sign as stop_sign
 from repository_service_tuf.helpers.api_client import URL
-from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, invoke_command
+from tests.conftest import _HELPERS, _PAYLOADS, invoke_command
 
 
 class TestStopSign:
