@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: MIT
 
 import copy
-from typing import Union
 
 import click
 from rich import prompt
@@ -49,9 +48,7 @@ def stop_sign(context: click.Context) -> None:
     while True:
         console.print("\nSelect which metadata signing process to stop:")
         role = _select_role(pending_roles)
-        md: Metadata[Union[Root, Targets]] = Metadata.from_dict(
-            copy.deepcopy(pending_roles[role])
-        )
+        md: Metadata = Metadata.from_dict(copy.deepcopy(pending_roles[role]))
         if md.signed.type == Root.type:
             _print_root(md.signed)
         elif md.signed.type == Targets.type:
