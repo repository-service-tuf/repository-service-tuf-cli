@@ -11,10 +11,9 @@ from repository_service_tuf.helpers.api_client import URL
 from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 
-
 class TestSign:
     def test_sign_with_previous_root(
-        self, monkeypatch, test_context, patch_getpass, update_privkey_prompt
+        self, monkeypatch, test_context, update_privkey_prompt
     ):
         inputs = []
         # selections interface

@@ -16,11 +16,7 @@ from securesystemslib.signer import CryptoSigner, SigstoreKey, SSlibKey
 from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.cli.admin import helpers
-from repository_service_tuf.helpers.api_client import (
-    URL,
-    Methods,
-    request_server
-)
+from repository_service_tuf.helpers.api_client import URL, Methods
 from tests.conftest import _HELPERS, _PEMS, _PROMPT, _PROMPT_TOOLKIT
 
 
@@ -555,9 +551,7 @@ class TestHelpers:
             status_code=200, json=pretend.call_recorder(lambda: fake_json)
         )
         fake_request_server = pretend.call_recorder(lambda *a, **kw: response)
-        monkeypatch.setattr(
-            helpers, "request_server", fake_request_server
-        )
+        monkeypatch.setattr(helpers, "request_server", fake_request_server)
 
         parsed_data = pretend.stub()
         fake__parse_pending_data = pretend.call_recorder(lambda a: parsed_data)
@@ -584,9 +578,7 @@ class TestHelpers:
         )
         response = pretend.stub(status_code=400, text="")
         fake_request_server = pretend.call_recorder(lambda *a, **kw: response)
-        monkeypatch.setattr(
-            helpers, "request_server", fake_request_server
-        )
+        monkeypatch.setattr(helpers, "request_server", fake_request_server)
         with pytest.raises(click.ClickException) as e:
             helpers._get_pending_roles(fake_settings)
 
@@ -598,7 +590,6 @@ class TestHelpers:
                 Methods.GET,
             )
         ]
-
 
     def test_filter_root_verification_results(self):
         data = [
