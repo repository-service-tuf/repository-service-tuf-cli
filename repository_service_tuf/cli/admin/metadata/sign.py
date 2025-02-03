@@ -30,8 +30,6 @@ from repository_service_tuf.cli.admin.helpers import (
     _print_targets,
     _select_key,
     _select_role,
-    _parse_pending_data,
-    _get_pending_roles,
 )
 from repository_service_tuf.cli.admin.metadata import metadata
 from repository_service_tuf.helpers.api_client import (
@@ -159,7 +157,7 @@ def sign(
         targets = Metadata[Targets].from_dict(pending_roles["trusted_targets"])
         # sign Targets metadata
         console.print(Markdown("## metadata to be signed"))
-        _print_targets(role_md.signed)
+        _print_targets(targets.signed)
         keys = []
         if targets.signed.delegations is None:
             raise click.ClickException("No custom delegations")
