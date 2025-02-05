@@ -533,7 +533,7 @@ class TestHelpers:
         assert helpers._get_online_key(root) == ed25519_key
 
     def test__parse_pending_data(self):
-        fake_md = ["md1", "md2"]
+        fake_md = {"root": Metadata(Root()).to_dict()}
         result = helpers._parse_pending_data({"data": {"metadata": fake_md}})
 
         assert result == fake_md
