@@ -80,7 +80,7 @@ jobs:
           name: pypi
         # Only attempt PyPI upload in upstream repository
         if: github.repository == 'repository-service-tuf/repository-service-tuf-cli'
-        uses: pypa/gh-action-pypi-publish@67339c736fd9354cd4f8cb0b744f2b82a74b5c70
+        uses: pypa/gh-action-pypi-publish@76f52bc884231f62b9a034ebfe128415bbaabdfc
 
       - name: Finalize GitHub release
         uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea
