@@ -192,5 +192,5 @@ class TestStopSignInvalidCases:
         )
         err_prefix = "Needed '--api-server' admin option"
         err_suffix = "or 'SERVER' in RSTUF cofig"
-        assert err_prefix in result.stderr
-        assert err_suffix in result.stderr
+        assert err_prefix in result.stdout
+        assert err_suffix in result.stdout
