@@ -55,7 +55,7 @@ supported_shell_types = {
 )
 # adds the --version parameter
 @click.version_option(prog_name=prog_name, version=version)
-@enable_click_shell_completion_option(
+@enable_click_shell_completion_option(  # type: ignore
     program_name=prog_name, shells=supported_shell_types
 )
 @click.pass_context
