@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 from click import Context
 
-from repository_service_tuf.cli import click
+from repository_service_tuf.cli import HEADERS_EXAMPLE, _set_settings, click
 from repository_service_tuf.cli.task import task
 from repository_service_tuf.helpers.api_client import task_status
 
@@ -20,15 +20,23 @@ from repository_service_tuf.helpers.api_client import task_status
     help="RSTUF API URL, i.e., http://127.0.0.1",
     required=False,
 )
+@click.option(
+    "--headers",
+    "-H",
+    help=("Headers to include in the request. " f"Example: {HEADERS_EXAMPLE}"),
+    required=False,
+)
 @click.pass_context
-def info(context: Context, task_id: str, api_server: str) -> Dict[str, Any]:
+def info(
+    context: Context, task_id: str, api_server: str, headers: str
+) -> Dict[str, Any]:
     """
     Retrieve task state.
 
     A GET /api/v1/task/ request to the RSTUF API service is carried out.
     """
 
-    settings = context.obj.get("settings")
+    settings = _set_settings(context, api_server, headers)
 
     if api_server:
         settings.SERVER = api_server

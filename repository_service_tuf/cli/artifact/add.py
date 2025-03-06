@@ -5,7 +5,12 @@ from typing import Optional
 from click import Context
 from rich import print_json
 
-from repository_service_tuf.cli import click, console
+from repository_service_tuf.cli import (
+    HEADERS_EXAMPLE,
+    _set_settings,
+    click,
+    console,
+)
 from repository_service_tuf.cli.artifact import artifact
 from repository_service_tuf.helpers.api_client import URL, send_payload
 from repository_service_tuf.helpers.cli import (
@@ -36,12 +41,19 @@ from repository_service_tuf.helpers.cli import (
     help="URL to an RSTUF API.",
     required=False,
 )
+@click.option(
+    "--headers",
+    "-H",
+    help=("Headers to include in the request. " f"Example: {HEADERS_EXAMPLE}"),
+    required=False,
+)
 @click.pass_context
 def add(
     context: Context,
     filepath: str,
     path: Optional[str],
     api_server: Optional[str],
+    headers: Optional[str],
 ) -> None:
     """
     Add artifacts to the TUF metadata.
@@ -54,7 +66,8 @@ def add(
     - `path` key of the payload is defined by the user
     """
 
-    settings = context.obj.get("settings")
+    settings = _set_settings(context, api_server, headers)
+
     if api_server:
         settings.SERVER = api_server
 
