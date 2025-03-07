@@ -18,6 +18,36 @@ from rich.console import Console
 from repository_service_tuf import Dynaconf
 from repository_service_tuf.__version__ import version
 
+HEADERS_EXAMPLE = (
+    "'Authorization: Bearer <token>, Content-Type: application/json'"
+)
+
+
+def _set_settings(
+    context: click.Context, api_server: Optional[str], headers: Optional[str]
+):
+    """Set context.obj['settings'] attributes."""
+    settings = context.obj["settings"]
+    if api_server:
+        settings.SERVER = api_server
+    if headers:
+        try:
+            settings.HEADERS = dict(
+                (key.strip(), value.strip())
+                for key, value in (
+                    header.split(":", 1) for header in headers.split(",")
+                )
+            )
+        except ValueError:
+            raise click.ClickException(
+                f"Invalid headers format. Example: {HEADERS_EXAMPLE}"
+            )
+    else:
+        settings.HEADERS = None
+
+    return settings
+
+
 console = Console()
 HOME = str(Path.home())
 
