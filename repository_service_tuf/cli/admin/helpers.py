@@ -368,9 +368,10 @@ def _load_key_from_hsm_prompt() -> Optional[Key]:
     cert = load_pem_x509_certificate(cert_pem)
 
     key = SSlibKey.from_crypto(cert.public_key())
+    common_name = cert.subject.get_attributes_for_oid(oid.NameOID.COMMON_NAME)
+
     key.unrecognized_fields[KEY_NAME_FIELD] = (
-        cert.subject.get_attributes_for_oid(oid.NameOID.COMMON_NAME)[0].value
-        or None
+        common_name[0].value if bool(common_name) else None
     )
 
     return key
