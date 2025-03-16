@@ -19,7 +19,7 @@ class TestSign:
     ):
         inputs = []
         # selections interface
-        select_options = iter(("root", "JimiHendrix's Key"))
+        select_options = iter(("root", "JimiHendrix's Key", "Key PEM File"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
@@ -91,7 +91,7 @@ class TestSign:
     ):
         inputs = []
         # selections interface
-        select_options = iter(("root", "JimiHendrix's Key"))
+        select_options = iter(("root", "JimiHendrix's Key", "Key PEM File"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
@@ -169,7 +169,7 @@ class TestSign:
         """
         inputs = []
         # selections interface
-        select_options = iter(("root", "JimiHendrix's Key"))
+        select_options = iter(("root", "JimiHendrix's Key", "Key PEM File"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
@@ -206,7 +206,7 @@ class TestSign:
     ):
         inputs = []
         # selections interface
-        select_options = iter(("root", "JimiHendrix's Key"))
+        select_options = iter(("root", "JimiHendrix's Key", "Key PEM File"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
@@ -268,7 +268,7 @@ class TestSign:
         Test that '--dry-run' is with higher priority than 'settings.SERVER'.
         """
         # selections interface
-        select_options = iter(("root", "JimiHendrix's Key"))
+        select_options = iter(("root", "JimiHendrix's Key", "Key PEM File"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
@@ -344,7 +344,7 @@ class TestSignError:
         api_server = "http://127.0.0.1"
         test_context["settings"].SERVER = api_server
         # selections interface
-        select_options = iter(("root", "JimiHendrix's Key"))
+        select_options = iter(("root", "JimiHendrix's Key", "Key PEM File"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
@@ -388,7 +388,7 @@ class TestSignError:
         api_server = "http://127.0.0.1"
         test_context["settings"].SERVER = api_server
         # selections interface
-        select_options = iter(("root", "JimiHendrix's Key"))
+        select_options = iter(("root", "JimiHendrix's Key", "Key PEM File"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),

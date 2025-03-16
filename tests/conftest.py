@@ -105,7 +105,9 @@ def key_selection() -> lambda *a: str:
             # selections for input_step4
             "Key PEM File",  # select Online Key type
             "JimiHendrix's Key",  # select key to sign
+            "Key PEM File",  # select Online Key type
             "JanisJoplin's Key",  # select key to sign
+            "Key PEM File",  # select Online Key type
             "continue",  # continue
         )
     )
@@ -187,8 +189,11 @@ def update_key_selection() -> lambda *a: str:
             "Key PEM File",  # select Online Key type
             # selection for inputs (signing root key)
             "JimiHendrix's Key",  # select key to sign
+            "Key PEM File",  # select Online Key type
             "JanisJoplin's Key",  # select key to sign
+            "Key PEM File",  # select Online Key type
             "JoeCocker's Key",  # select key to sign
+            "Key PEM File",  # select Online Key type
             "continue",  # continue
         )
     )

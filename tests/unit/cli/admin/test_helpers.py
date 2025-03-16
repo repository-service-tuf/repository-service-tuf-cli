@@ -360,9 +360,15 @@ class TestHelpers:
         # Sign until success (two attempts)
         # 1. load signer raises error
         # 2. load signer returns signer
-        with patch(
-            f"{_HELPERS}._load_signer_from_file_prompt",
-            side_effect=[ValueError(), ed25519_signer],
+        with (
+            patch(
+                f"{_HELPERS}._load_signer_from_file_prompt",
+                side_effect=[ValueError(), ed25519_signer],
+            ),
+            patch(
+                f"{_HELPERS}._select",
+                return_value=helpers.ONLINE_SIGNERS.KEY_PEM,
+            ),
         ):
             signature = helpers._add_signature_prompt(
                 metadata, ed25519_signer.public_key
