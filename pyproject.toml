@@ -40,6 +40,8 @@ dependencies = [
   "google-cloud-kms",
   "hvac",
   "azure-keyvault-keys",
+  "pykcs11",
+  "asn1crypto",
 ]
 dynamic = ["version"]
 
