@@ -132,7 +132,7 @@ CLI also needs access to a PKCS#11 module.
 
 > **_NOTE:_** Windows WSL users may need to attach a USB hardware device using [usbipd-win](https://learn.microsoft.com/en-us/windows/wsl/connect-usb)
 
-"""
+"""  # noqa
 
 
 class SIGNERS(str, enum.Enum):
@@ -312,7 +312,10 @@ def _load_signer_from_hsm_prompt(public_key: SSlibKey):
     os.environ["PYKCS11LIB"] = loc
 
     def get_secret(secret: str) -> str:
-        msg = f"\nEnter {secret} to sign (provide touch/bio authentication if needed)"
+        msg = (
+            f"\nEnter {secret} to sign (provide touch/bio authentication "
+            "if needed)"
+        )
 
         # special case for tests -- prompt() will lockup trying to hide STDIN:
         if not sys.stdin.isatty():
@@ -685,13 +688,9 @@ def _add_signature_prompt(metadata: Metadata, key: Key) -> Signature:
                 )
             # Using HSM or Key PEM file
             else:
-                if key.keytype == "ecdsa":
-                    signer_type = _select(
-                        [ROOT_SIGNERS.HSM.value, ROOT_SIGNERS.KEY_PEM.value]
-                    )
-                else:
-                    signer_type = ROOT_SIGNERS.KEY_PEM
-
+                signer_type = _select(
+                    [ROOT_SIGNERS.HSM.value, ROOT_SIGNERS.KEY_PEM.value]
+                )
                 if signer_type == ROOT_SIGNERS.KEY_PEM.value:
                     signer = _load_signer_from_file_prompt(key)
                 else:
