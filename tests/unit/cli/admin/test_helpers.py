@@ -10,6 +10,8 @@ import click
 import pretend
 import pytest
 from email_validator import EmailNotValidError
+from PyKCS11 import CKR_USER_NOT_LOGGED_IN, PyKCS11Error  # type: ignore
+from securesystemslib.exceptions import UnverifiedSignatureError
 from securesystemslib.signer import CryptoSigner, SigstoreKey, SSlibKey
 from tuf.api.metadata import Metadata, Root
 
@@ -18,6 +20,26 @@ from tests.conftest import _HELPERS, _PEMS, _PROMPT, _PROMPT_TOOLKIT
 
 
 class TestHelpers:
+    def test__get_secret(self, monkeypatch):
+        monkeypatch.setattr(
+            f"{_HELPERS}.click",
+            pretend.stub(
+                prompt=pretend.call_recorder(lambda *a, **kw: "hunter2"),
+            ),
+        )
+
+        result = helpers._get_secret("secret")
+        assert result == "hunter2"
+        assert helpers.click.prompt.calls == [
+            pretend.call(
+                (
+                    "\nEnter secret to sign (provide touch/bio authentication "
+                    "if needed)"
+                ),
+                hide_input=True,
+            )
+        ]
+
     def test_load_signer_from_file_prompt(self, ed25519_key, monkeypatch):
         fake_click = pretend.stub(
             prompt=pretend.call_recorder(lambda *a, **kw: "hunter2"),
@@ -65,18 +87,61 @@ class TestHelpers:
             with pytest.raises(ValueError):
                 _ = helpers._load_key_from_file_prompt()
 
-    def test_load_key_prompt(self):
+    def test_load_signer_from_hsm_prompt(self, hsm_signer, hsm_cert):
+        with (
+            patch("os.path.exists", return_value=True),
+            patch(
+                f"{_HELPERS}.HSMSigner.import_",
+                return_value=("hsm:2?label=YubiKey+PIV+%2315835999", "pb"),
+            ),
+            patch(f"{_HELPERS}._get_secret", return_value="hunter2"),
+            patch(
+                f"{_HELPERS}.Signer.from_priv_key_uri",
+                return_value=hsm_signer,
+            ),
+        ):
+            result = helpers._load_signer_from_hsm_prompt(hsm_cert)
+
+            assert result == hsm_signer
+
+    def test_load_signer_from_hsm_prompt_no_libykcs11(self):
+        with (patch("os.path.exists", return_value=False),):
+            with pytest.raises(click.ClickException) as err:
+                helpers._load_signer_from_hsm_prompt("fake-key")
+
+                assert "Failed to find libykcs11" in str(err)
+
+    def test_load_key_from_hsm_prompt(self):
+        # success
+        inputs = [f"{_PEMS / 'hsm-9c-ecc.crt'}"]
+        with patch(_PROMPT_TOOLKIT, side_effect=inputs):
+            key = helpers._load_key_from_hsm_prompt()
+
+        assert isinstance(key, SSlibKey)
+
+        # fail with wrong file
+        inputs = [f"{_PEMS / 'JH.ed25519'}"]
+        with patch(_PROMPT_TOOLKIT, side_effect=inputs):
+            with pytest.raises(ValueError):
+                _ = helpers._load_key_from_hsm_prompt()
+
+    @pytest.mark.parametrize(
+        "signer_type, key_load",
+        [
+            (helpers.ROOT_SIGNERS.KEY_PEM, "_load_key_from_file_prompt"),
+            (helpers.ROOT_SIGNERS.HSM, "_load_key_from_hsm_prompt"),
+        ],
+    )
+    def test_load_key_prompt(self, signer_type, key_load):
         fake_root = pretend.stub(keys={"123"})
 
         # return key
         fake_key = pretend.stub(keyid="abc")
         with (
-            patch(
-                f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
-            ),
+            patch(f"{_HELPERS}.{key_load}", return_value=fake_key),
             patch(
                 f"{_HELPERS}._select",
-                side_effect=[helpers.ROOT_SIGNERS.KEY_PEM],
+                side_effect=[signer_type],
             ),
         ):
             key = helpers._load_key_prompt(fake_root)
@@ -355,7 +420,7 @@ class TestHelpers:
 
         _assert_online_key(key2)
 
-    def test_add_signature_prompt(self, ed25519_signer):
+    def test_add_signature_prompt_using_pem(self, ed25519_signer):
         metadata = Metadata(Root())
         # Sign until success (two attempts)
         # 1. load signer raises error
@@ -363,15 +428,43 @@ class TestHelpers:
         with (
             patch(
                 f"{_HELPERS}._load_signer_from_file_prompt",
-                side_effect=[ValueError(), ed25519_signer],
+                side_effect=[
+                    ValueError(),
+                    UnverifiedSignatureError(),
+                    ed25519_signer,
+                ],
             ),
             patch(
                 f"{_HELPERS}._select",
-                return_value=helpers.ONLINE_SIGNERS.KEY_PEM,
+                return_value=helpers.ROOT_SIGNERS.KEY_PEM,
             ),
         ):
             signature = helpers._add_signature_prompt(
                 metadata, ed25519_signer.public_key
+            )
+        assert signature.keyid in metadata.signatures
+
+    def test_add_signature_prompt_using_hsm(self, hsm_signer):
+        metadata = Metadata(Root())
+        # Sign until success (two attempts)
+        # 1. load signer raises error
+        # 2. load signer returns signer
+        mocked_exception = ValueError()
+        mocked_exception.__context__ = PyKCS11Error(
+            value=CKR_USER_NOT_LOGGED_IN
+        )
+        with (
+            patch(
+                f"{_HELPERS}._load_signer_from_hsm_prompt",
+                side_effect=[mocked_exception, hsm_signer],
+            ),
+            patch(
+                f"{_HELPERS}._select",
+                return_value=helpers.ROOT_SIGNERS.HSM,
+            ),
+        ):
+            signature = helpers._add_signature_prompt(
+                metadata, hsm_signer.public_key
             )
         assert signature.keyid in metadata.signatures
 
