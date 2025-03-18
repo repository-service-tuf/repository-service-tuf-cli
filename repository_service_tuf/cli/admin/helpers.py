@@ -5,7 +5,6 @@
 import enum
 import os.path
 import platform
-import sys
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from tempfile import TemporaryDirectory
@@ -259,6 +258,18 @@ class _MoreThan1Prompt(IntPrompt):
         return return_value
 
 
+def _get_secret(secret: str) -> str:
+    msg = (
+        f"\nEnter {secret} to sign (provide touch/bio authentication "
+        "if needed)"
+    )
+
+    # # special case for tests -- prompt() will lockup trying to hide STDIN:
+    # if not sys.stdin.isatty():
+    #     return sys.stdin.readline().rstrip()
+    return click.prompt(msg, hide_input=True)
+
+
 def _prompt_key(
     message: AnyFormattedText,
     file_filter: Callable[[str], bool] = lambda f: True,
@@ -311,20 +322,9 @@ def _load_signer_from_hsm_prompt(public_key: SSlibKey):
 
     os.environ["PYKCS11LIB"] = loc
 
-    def get_secret(secret: str) -> str:
-        msg = (
-            f"\nEnter {secret} to sign (provide touch/bio authentication "
-            "if needed)"
-        )
-
-        # special case for tests -- prompt() will lockup trying to hide STDIN:
-        if not sys.stdin.isatty():
-            return sys.stdin.readline().rstrip()
-        return click.prompt(msg, hide_input=True)
-
     uri, _ = HSMSigner.import_()
 
-    signer = Signer.from_priv_key_uri(uri, public_key, get_secret)
+    signer = Signer.from_priv_key_uri(uri, public_key, _get_secret)
 
     return signer
 
