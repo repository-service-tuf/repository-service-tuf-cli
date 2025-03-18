@@ -26,7 +26,7 @@ from cryptography.hazmat.primitives.serialization import (
 from cryptography.x509 import load_pem_x509_certificate, oid
 from email_validator import validate_email
 from prompt_toolkit.formatted_text.base import AnyFormattedText
-from PyKCS11 import CKR_USER_NOT_LOGGED_IN, PyKCS11Error
+from PyKCS11 import CKR_USER_NOT_LOGGED_IN, PyKCS11Error  # type: ignore
 from rich.json import JSON
 from rich.markdown import Markdown
 from rich.prompt import Confirm, IntPrompt, InvalidResponse, Prompt
