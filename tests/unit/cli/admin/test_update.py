@@ -337,8 +337,11 @@ class TestMetadataUpdate:
                 "Key PEM File",  # select key type
                 # selection for inputs (signing root key)
                 "JimiHendrix's Key",  # select key to sign
+                "Key PEM File",  # select key type
                 "JanisJoplin's Key",  # select key to sign
+                "Key PEM File",  # select key type
                 "JoeCocker's Key",  # select key to sign
+                "Key PEM File",  # select key type
                 "continue",  # continue
             )
         )
