@@ -52,7 +52,7 @@ jobs:
           files: dist/*
 
       - name: Store build artifacts
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         # NOTE: The GitHub release page contains the release artifacts too, but using
         # GitHub upload/download actions seems robuster: there is no need to compute
         # download URLs and tampering with artifacts between jobs is more limited.
