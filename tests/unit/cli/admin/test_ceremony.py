@@ -92,6 +92,7 @@ class TestCeremony:
                 "Key PEM File",  # select Online Key type
                 # selections for input_step4
                 "JanisJoplin's Key",  # select key to sign
+                "Key PEM File",  # select Online Key type
                 "user@domain.com",  # select key to sign
                 "continue",  # continue
             )
@@ -103,7 +104,10 @@ class TestCeremony:
             from_priv_key_uri=lambda *a, **kw: pretend.stub(
                 sign=lambda *a, **kw: Signature(
                     keyid="fake-keyid", sig="fake_sigstore"
-                )
+                ),
+                public_key=pretend.stub(
+                    verify_signature=pretend.call_recorder(lambda *a: None)
+                ),
             )
         )
         monkeypatch.setattr(f"{_HELPERS}.SigstoreSigner", fake_sigstore_signer)
@@ -289,7 +293,7 @@ class TestCeremony:
         ]
         assert "Ceremony done. 🔐 🎉. Bootstrap completed." in result.stdout
 
-    def test_ceremony_api_server_with_out_option(
+    def test_ceremony_api_server_with_out_option_and_custom_timeout(
         self,
         ceremony_inputs,
         key_selection,
@@ -317,11 +321,12 @@ class TestCeremony:
         monkeypatch.setattr(
             f"{_HELPERS}._prompt_private_key", ceremony_privkey_prompt
         )
+        timeout_e = 450
 
         result = invoke_command(
             ceremony.ceremony,
             inputs=input_step1 + input_step2 + input_step3 + input_step4,
-            args=["--out", custom_path],
+            args=["--out", custom_path, "--timeout", timeout_e],
             test_context=test_context,
         )
 
@@ -331,7 +336,11 @@ class TestCeremony:
         sigs_r = result.data["metadata"]["root"].pop("signatures")
         sigs_e = expected["metadata"]["root"].pop("signatures")
 
+        timeout_r = result.data.pop("timeout")
+        # We don't want to use the default timeout, but a custom one.
+        expected.pop("timeout")
         assert [s["keyid"] for s in sigs_r] == [s["keyid"] for s in sigs_e]
+        assert timeout_r == timeout_e
         assert result.data == expected
 
         # One of the used key with id "50d7e110ad65f3b2dba5c3cfc8c5ca259be9774cc26be3410044ffd4be3aa5f3"  # noqa
@@ -385,7 +394,9 @@ class TestCeremony:
                 "Key PEM File",  # select Online Key type
                 "Key PEM File",  # select Online Key type
                 "JimiHendrix's Key",  # select key to sign
+                "Key PEM File",  # select Online Key type
                 "JanisJoplin's Key",  # select key to sign
+                "Key PEM File",  # select Online Key type
                 "continue",  # continue
             )
         )
