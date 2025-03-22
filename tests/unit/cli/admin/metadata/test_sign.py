@@ -13,7 +13,7 @@ from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 class TestSign:
     def test_sign_with_previous_root(
-        self, monkeypatch, test_context, update_privkey_prompt
+        self, monkeypatch, patch_getpass, test_context, update_privkey_prompt
     ):
         inputs = []
         # selections interface
