@@ -120,7 +120,7 @@ CLI also needs access to a PKCS#11 module.
 1. Generate a PIV signing key on your hardware key if you don't have one yet.
    For YubiKey owners, follow the [YubiKey setup instructions](https://github.com/theupdateframework/tuf-on-ci/blob/main/docs/YUBIKEY-PIV-SETUP.md).
 
-1. Install a PKCS#11 module. It has been tested with the Yubico ykcs11. Debian users can install it with
+2. Install a PKCS#11 module. It has been tested with the Yubico ykcs11. Debian users can install it with
    ```shell
    $ apt install ykcs11
    ```
