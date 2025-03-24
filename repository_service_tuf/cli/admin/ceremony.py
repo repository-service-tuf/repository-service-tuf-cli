@@ -58,8 +58,16 @@ DEFAULT_PATH = "ceremony-payload.json"
     default=False,
     help="Run ceremony in dry-run mode without sending result to API.",
 )
+@click.option(
+    "-t",
+    "--timeout",
+    default=300,
+    help="Timeout in seconds",
+)
 @click.pass_context
-def ceremony(context: Any, out: Optional[click.File], dry_run: bool) -> None:
+def ceremony(
+    context: Any, out: Optional[click.File], dry_run: bool, timeout: int
+) -> None:
     """
     Perform ceremony and send result to API to trigger bootstrap.
 
@@ -139,7 +147,7 @@ def ceremony(context: Any, out: Optional[click.File], dry_run: bool) -> None:
     ###########################################################################
     metadatas = Metadatas(root_md.to_dict())
     bootstrap_settings = Settings(roles)
-    bootstrap_payload = CeremonyPayload(bootstrap_settings, metadatas)
+    bootstrap_payload = CeremonyPayload(bootstrap_settings, metadatas, timeout)
     # Dump payload when the user explicitly wants or doesn't send it to the API
     if out:
         json.dump(asdict(bootstrap_payload), out, indent=2)  # type: ignore

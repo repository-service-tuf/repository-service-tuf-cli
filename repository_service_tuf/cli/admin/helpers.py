@@ -70,6 +70,11 @@ from tuf.ngclient.updater import Updater
 # https://rich.readthedocs.io/en/stable/console.html#console-api
 # https://rich.readthedocs.io/en/stable/console.html#capturing-output
 from repository_service_tuf.cli import console
+from repository_service_tuf.helpers.api_client import (
+    URL,
+    Methods,
+    request_server,
+)
 
 ONLINE_ROLE_NAMES = {Timestamp.type, Snapshot.type, Targets.type}
 
@@ -171,8 +176,8 @@ class DELEGATIONS_TYPE(str, enum.Enum):
     CUSTOM_DELEGATIONS = "Custom Delegations (online/offline key)"
 
     @classmethod
-    def values(self) -> List[str]:
-        return [e.value for e in self]
+    def values(cls) -> List[str]:
+        return [e.value for e in cls]
 
 
 @dataclass
@@ -221,6 +226,7 @@ class Metadatas:  # accept bad spelling to disambiguate with Metadata
 class CeremonyPayload:
     settings: "Settings"
     metadata: "Metadatas"
+    timeout: int = 300
 
 
 @dataclass
@@ -1008,6 +1014,40 @@ def _get_online_key(root: Root) -> Optional[Key]:
     return key
 
 
+def _parse_pending_data(pending_roles_resp: Dict[str, Any]) -> Dict[str, Any]:
+    data = pending_roles_resp.get("data", {})
+
+    all_roles: Dict[str, Dict[str, Any]] = data.get("metadata", {})
+    pending_roles = {
+        k: v for k, v in all_roles.items() if not k.startswith("trusted_")
+    }
+    if len(pending_roles) == 0:
+        raise click.ClickException("No metadata available for signing")
+
+    if any(
+        role["signed"]["_type"] not in [Root.type, Targets.type]
+        for role in pending_roles.values()
+    ):
+        raise click.ClickException(
+            "Supporting only root and targets pending role types"
+        )
+
+    return all_roles
+
+
+def _get_pending_roles(settings: Any) -> Dict[str, Dict[str, Any]]:
+    """Get dictionary of pending roles for signing."""
+    response = request_server(
+        settings.SERVER, URL.METADATA_SIGN.value, Methods.GET
+    )
+    if response.status_code != 200:
+        raise click.ClickException(
+            f"Failed to fetch metadata for signing. Error: {response.text}"
+        )
+
+    return _parse_pending_data(response.json())
+
+
 def _print_root(root: Root):
     """Pretty print root metadata."""
 
@@ -1042,17 +1082,17 @@ def _print_root(root: Root):
     console.print(root_table)
 
 
-def _print_targets(targets: Metadata):
+def _print_targets(targets: Targets):
     """Pretty print targets metadata."""
 
     targets_table = Table("Version", "Artifacts")
     artifact_table = Table("Path", "Info", show_lines=True)
 
-    for path, info in targets.signed.targets.items():
+    for path, info in targets.targets.items():
         artifact_table.add_row(
             path, JSON.from_data(info.to_dict()), style="bold"
         )
-    targets_table.add_row(str(targets.signed.version), artifact_table)
+    targets_table.add_row(str(targets.version), artifact_table)
     console.print(targets_table)
 
 
