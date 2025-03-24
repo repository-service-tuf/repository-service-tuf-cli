@@ -17,6 +17,7 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_pem_public_key,
 )
+from cryptography.x509 import load_pem_x509_certificate
 from dynaconf import Dynaconf
 from securesystemslib.signer import CryptoSigner, SSlibKey
 from tuf.api.metadata import Metadata, Root
@@ -105,7 +106,9 @@ def key_selection() -> lambda *a: str:
             # selections for input_step4
             "Key PEM File",  # select Online Key type
             "JimiHendrix's Key",  # select key to sign
+            "Key PEM File",  # select Online Key type
             "JanisJoplin's Key",  # select key to sign
+            "Key PEM File",  # select Online Key type
             "continue",  # continue
         )
     )
@@ -187,8 +190,11 @@ def update_key_selection() -> lambda *a: str:
             "Key PEM File",  # select Online Key type
             # selection for inputs (signing root key)
             "JimiHendrix's Key",  # select key to sign
+            "Key PEM File",  # select Online Key type
             "JanisJoplin's Key",  # select key to sign
+            "Key PEM File",  # select Online Key type
             "JoeCocker's Key",  # select key to sign
+            "Key PEM File",  # select Online Key type
             "continue",  # continue
         )
     )
@@ -250,6 +256,24 @@ def ed25519_signer(ed25519_key):
 
     private_key = load_pem_private_key(private_pem, b"hunter2")
     return CryptoSigner(private_key, ed25519_key)
+
+
+@pytest.fixture
+def hsm_cert():
+    with open(f"{_PEMS / 'hsm-9c-ecc.crt'}", "rb") as f:
+        cert_pem = f.read()
+
+    cert = load_pem_x509_certificate(cert_pem)
+    return SSlibKey.from_crypto(cert.public_key(), "fake_keyid")
+
+
+@pytest.fixture
+def hsm_signer(hsm_cert):
+    with open(f"{_PEMS / 'hsm-9c.ecdsa'}", "rb") as f:
+        private_pem = f.read()
+
+    private_key = load_pem_private_key(private_pem, b"hunter2")
+    return CryptoSigner(private_key, hsm_cert)
 
 
 def invoke_command(

@@ -1,9 +1,10 @@
-# SPDX-FileCopyrightText: 2023-2024 Repository Service for TUF Contributors
+# SPDX-FileCopyrightText: 2023-2025 Repository Service for TUF Contributors
 #
 # SPDX-License-Identifier: MIT
 
 import enum
 import os.path
+import platform
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from tempfile import TemporaryDirectory
@@ -21,12 +22,15 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_pem_public_key,
 )
+from cryptography.x509 import load_pem_x509_certificate, oid
 from email_validator import validate_email
 from prompt_toolkit.formatted_text.base import AnyFormattedText
+from PyKCS11 import CKR_USER_NOT_LOGGED_IN, PyKCS11Error  # type: ignore
 from rich.json import JSON
 from rich.markdown import Markdown
 from rich.prompt import Confirm, IntPrompt, InvalidResponse, Prompt
 from rich.table import Table
+from securesystemslib.exceptions import UnverifiedSignatureError
 from securesystemslib.formats import encode_canonical
 from securesystemslib.hash import digest
 from securesystemslib.signer import (
@@ -35,8 +39,10 @@ from securesystemslib.signer import (
     AzureSigner,
     CryptoSigner,
     GCPSigner,
+    HSMSigner,
     Key,
     Signature,
+    Signer,
     SigstoreKey,
     SigstoreSigner,
     SSlibKey,
@@ -82,12 +88,50 @@ DEFAULT_EXPIRY = {
 }
 DEFAULT_BINS_NUMBER = 256
 
+# some known locations where we might find libykcs11.
+# These should all be _system_ locations (not user writable)
+LIBYKCS11_LOCATIONS = {
+    "Linux": [
+        "/usr/lib/x86_64-linux-gnu/libykcs11.so",
+        "/usr/lib64/libykcs11.so",
+        "/usr/local/lib/libykcs11.so",
+    ],
+    "Darwin": [
+        "/opt/homebrew/lib/libykcs11.dylib",
+        "/usr/local/lib/libykcs11.dylib",
+    ],
+}
+
 # SecureSystemsLib doesn't support SigstoreKey by default.
 KEY_FOR_TYPE_AND_SCHEME.update(
     {
         ("sigstore-oidc", "Fulcio"): SigstoreKey,
     }
 )
+
+HSM_INSTRUCTIONS = """
+#### Hardware signing requirements
+
+(Source: https://github.com/theupdateframework/tuf-on-ci/tree/main/docs -- Thanks)
+
+A hardware signing key must contain a _PIV Digital Signature private key_ to be used.
+CLI also needs access to a PKCS#11 module.
+
+1. Generate a PIV signing key on your hardware key if you don't have one yet.
+   For YubiKey owners, follow the [YubiKey setup instructions](https://github.com/theupdateframework/tuf-on-ci/blob/main/docs/YUBIKEY-PIV-SETUP.md).
+
+2. Install a PKCS#11 module. It has been tested with the Yubico ykcs11. Debian users can install it with
+   ```shell
+   $ apt install ykcs11
+   ```
+   macOS users can install with
+   ```shell
+   $ brew install yubico-piv-tool
+   ```
+
+> **_NOTE:_** Windows WSL users may need to attach a USB hardware device using [usbipd-win](https://learn.microsoft.com/en-us/windows/wsl/connect-usb)
+
+"""  # noqa
 
 
 class SIGNERS(str, enum.Enum):
@@ -102,6 +146,7 @@ class SIGNERS(str, enum.Enum):
 
 # Root signers supported by RSTUF
 class ROOT_SIGNERS(SIGNERS):
+    HSM = "HSM"
     KEY_PEM = "Key PEM File"
     SIGSTORE = "Sigstore"
 
@@ -213,6 +258,18 @@ class _MoreThan1Prompt(IntPrompt):
         return return_value
 
 
+def _get_secret(secret: str) -> str:
+    msg = (
+        f"\nEnter {secret} to sign (provide touch/bio authentication "
+        "if needed)"
+    )
+
+    # # special case for tests -- prompt() will lockup trying to hide STDIN:
+    # if not sys.stdin.isatty():
+    #     return sys.stdin.readline().rstrip()
+    return click.prompt(msg, hide_input=True)
+
+
 def _prompt_key(
     message: AnyFormattedText,
     file_filter: Callable[[str], bool] = lambda f: True,
@@ -239,7 +296,7 @@ def _prompt_private_key(name_value: str) -> str:
 def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
     """Prompt for path to private key and password, return Signer."""
     name_value = public_key.unrecognized_fields.get(KEY_NAME_FIELD)
-    path = _prompt_private_key(public_key)
+    path = _prompt_private_key(name_value)
 
     with open(path, "rb") as f:
         private_pem = f.read()
@@ -253,6 +310,23 @@ def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
     )
     private_key = load_pem_private_key(private_pem, password.encode())
     return CryptoSigner(private_key, public_key)
+
+
+def _load_signer_from_hsm_prompt(public_key: SSlibKey):
+    console.print(Markdown(HSM_INSTRUCTIONS))
+    for loc in LIBYKCS11_LOCATIONS.get(platform.system(), []):
+        if os.path.exists(loc):
+            break
+    else:
+        raise click.ClickException("Failed to find libykcs11")
+
+    os.environ["PYKCS11LIB"] = loc
+
+    uri, _ = HSMSigner.import_()
+
+    signer = Signer.from_priv_key_uri(uri, public_key, _get_secret)
+
+    return signer
 
 
 def _prompt_public_key() -> str:
@@ -276,6 +350,32 @@ def _load_key_from_file_prompt() -> SSlibKey:
 
     crypto = load_pem_public_key(public_pem)
     key = SSlibKey.from_crypto(crypto)
+
+    return key
+
+
+def _load_key_from_hsm_prompt() -> Optional[Key]:
+    """Prompt for a public key."""
+
+    def file_filter(f):  # pragma: no cover
+        return os.path.isdir(f) or os.path.isfile(f)
+
+    message = prompt_toolkit.HTML(
+        "Enter file path to a <b>CERTIFICATE</b> PEM key: "
+    )
+    path = _prompt_key(message, file_filter)
+
+    with open(path, "rb") as f:
+        cert_pem = f.read()
+
+    cert = load_pem_x509_certificate(cert_pem)
+
+    key = SSlibKey.from_crypto(cert.public_key())
+    common_name = cert.subject.get_attributes_for_oid(oid.NameOID.COMMON_NAME)
+
+    key.unrecognized_fields[KEY_NAME_FIELD] = (
+        common_name[0].value if bool(common_name) else None
+    )
 
     return key
 
@@ -335,6 +435,8 @@ def _load_key_prompt(
                 key = _load_key_from_file_prompt()
             case ROOT_SIGNERS.SIGSTORE:
                 key = _load_key_from_sigstore_prompt()
+            case ROOT_SIGNERS.HSM:
+                key = _load_key_from_hsm_prompt()
 
     except (OSError, ValueError) as e:
         console.print(f"Cannot load key: {e}")
@@ -584,15 +686,41 @@ def _add_signature_prompt(metadata: Metadata, key: Key) -> Signature:
                 signer = SigstoreSigner.from_priv_key_uri(
                     "sigstore:?ambient=false", key
                 )
-            # Using Key PEM file
+            # Using HSM or Key PEM file
             else:
-                signer = _load_signer_from_file_prompt(key)
+                signer_type = _select(
+                    [ROOT_SIGNERS.HSM.value, ROOT_SIGNERS.KEY_PEM.value]
+                )
+                if signer_type == ROOT_SIGNERS.KEY_PEM.value:
+                    signer = _load_signer_from_file_prompt(key)
+                else:
+                    signer = _load_signer_from_hsm_prompt(key)
 
             signature = metadata.sign(signer, append=True)
+            signer.public_key.verify_signature(
+                signature, metadata.signed_bytes
+            )
+
             break
+        except UnverifiedSignatureError as e:
+            console.print(
+                f"\nFailed to verify {name} signature "
+                f"(is this the correct key?)\n    {e}"
+            )
 
         except (ValueError, OSError, UnsignedMetadataError) as e:
-            console.print(f"Cannot sign metadata with key '{name}': {e}")
+            # Very light error handling for specific PKCS11 errors
+            msg = str(e)
+            if isinstance(e.__context__, PyKCS11Error):
+                pkcs_err = e.__context__
+                if pkcs_err.value == CKR_USER_NOT_LOGGED_IN:
+                    msg = (
+                        "Required authentication (e.g. touch) did not happpen"
+                    )
+
+            console.print(
+                f"\nCannot sign metadata with key '{name}': {e}\n    {msg}"
+            )
 
     console.print(f"Signed metadata with key '{name}'")
     return signature

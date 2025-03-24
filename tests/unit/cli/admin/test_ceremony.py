@@ -92,6 +92,7 @@ class TestCeremony:
                 "Key PEM File",  # select Online Key type
                 # selections for input_step4
                 "JanisJoplin's Key",  # select key to sign
+                "Key PEM File",  # select Online Key type
                 "user@domain.com",  # select key to sign
                 "continue",  # continue
             )
@@ -103,7 +104,10 @@ class TestCeremony:
             from_priv_key_uri=lambda *a, **kw: pretend.stub(
                 sign=lambda *a, **kw: Signature(
                     keyid="fake-keyid", sig="fake_sigstore"
-                )
+                ),
+                public_key=pretend.stub(
+                    verify_signature=pretend.call_recorder(lambda *a: None)
+                ),
             )
         )
         monkeypatch.setattr(f"{_HELPERS}.SigstoreSigner", fake_sigstore_signer)
@@ -385,7 +389,9 @@ class TestCeremony:
                 "Key PEM File",  # select Online Key type
                 "Key PEM File",  # select Online Key type
                 "JimiHendrix's Key",  # select key to sign
+                "Key PEM File",  # select Online Key type
                 "JanisJoplin's Key",  # select key to sign
+                "Key PEM File",  # select Online Key type
                 "continue",  # continue
             )
         )
