@@ -130,4 +130,4 @@ class TestAddArtifactInteraction:
             result = client.invoke(add.add, input, obj=test_context)
 
         assert result.exit_code == 1, result.output
-        assert "Requires '--api-server'" in result.output
+        assert "Requires '--api-server'" in result.stderr

@@ -137,7 +137,7 @@ class TestArtifactRepositoryInteraction:
         )
         assert (
             "Repository wrong_root_type has incorrect configuration."
-            in test_result.output
+            in test_result.stderr
         )
         assert test_result.exit_code == 1
 
@@ -151,7 +151,7 @@ class TestArtifactRepositoryInteraction:
             repository.show,
             obj=test_context,
         )
-        assert "There are no configured repositories" in test_result.output
+        assert "There are no configured repositories" in test_result.stderr
         assert test_result.exit_code == 1
 
         test_result = client.invoke(
@@ -161,7 +161,7 @@ class TestArtifactRepositoryInteraction:
         )
         assert (
             "Repository r1 is missing in your configuration"
-            in test_result.output
+            in test_result.stderr
         )
         assert test_result.exit_code == 1
 
@@ -674,9 +674,9 @@ class TestArtifactRepositoryInteraction:
 
         assert (
             "Repository non_existing not available in config. "
-            in test_result.output
+            in test_result.stderr
         )
-        assert "You can create it instead" in test_result.output
+        assert "You can create it instead" in test_result.stderr
         assert test_result.exit_code == 1
 
     def test_repository_delete_no_repos(
@@ -705,7 +705,7 @@ class TestArtifactRepositoryInteraction:
 
         assert (
             "There are no configured repositories. Nothing to delete"
-            in test_result.output
+            in test_result.stderr
         )
         assert test_result.exit_code == 1
 
@@ -748,7 +748,7 @@ class TestArtifactRepositoryInteraction:
 
         assert (
             "Repository non_existing not available. Nothing to delete"
-            in test_result.output
+            in test_result.stderr
         )
         assert test_result.exit_code == 1
 
