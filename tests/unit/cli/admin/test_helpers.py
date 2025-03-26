@@ -66,6 +66,14 @@ class TestHelpers:
             with pytest.raises(ValueError):
                 signer = helpers._load_signer_from_file_prompt(ed25519_key)
 
+        # give key without password and good key after
+        inputs = [
+            f"{_PEMS / '0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043'}",  # noqa
+            f"{_PEMS / 'JH.ed25519'}",
+        ]
+        with patch(_PROMPT_TOOLKIT, side_effect=inputs):
+            signer = helpers._load_signer_from_file_prompt(ed25519_key)
+
         # fail with bad password
         fake_click.prompt = pretend.call_recorder(lambda *a, **kw: "hunter1")
         monkeypatch.setattr(f"{_HELPERS}.click", fake_click)
