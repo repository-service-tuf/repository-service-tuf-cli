@@ -291,30 +291,36 @@ def _prompt_key(
 def _prompt_private_key(name_value: str) -> str:
     """Prompt for a private key."""
 
-    name_str = f"[green]{name_value}[/]"
-    message = (
-        f"\nPlease enter [yellow]path[/] to encrypted private key '{name_str}'"
+    message = prompt_toolkit.HTML(
+        f"\nPlease enter the <b>path</b> to encrypted private key "
+        f"<b>{name_value}</b>: "
     )
-    formatted_text = prompt_toolkit.formatted_text.to_formatted_text(message)
-    return _prompt_key(formatted_text)
+
+    return _prompt_key(message)
 
 
 def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
     """Prompt for path to private key and password, return Signer."""
-    name_value = public_key.unrecognized_fields.get(KEY_NAME_FIELD)
-    path = _prompt_private_key(name_value)
+    while True:
+        name_value = public_key.unrecognized_fields.get(KEY_NAME_FIELD)
+        path = _prompt_private_key(name_value)
 
-    with open(path, "rb") as f:
-        private_pem = f.read()
+        with open(path, "rb") as f:
+            private_pem = f.read()
 
-    # Because of click.prompt we are required to use click.style()
-    name_str = click.style(name_value, fg="green")
-    password_str = click.style("password", fg="yellow")
-    password = click.prompt(
-        f"\nPlease enter {password_str} to encrypted private key '{name_str}'",
-        hide_input=True,
-    )
-    private_key = load_pem_private_key(private_pem, password.encode())
+        # Because of click.prompt we are required to use click.style()
+        name_str = click.style(name_value, fg="green")
+        password_str = click.style("password", fg="yellow")
+        password = click.prompt(
+            f"\nPlease enter {password_str} to encrypted private key '{name_str}'",  # noqa
+            hide_input=True,
+        )
+        try:
+            private_key = load_pem_private_key(private_pem, password.encode())
+            break
+        except TypeError as e:
+            console.print(f"Cannot load key: {e}")
+
     return CryptoSigner(private_key, public_key)
 
 
