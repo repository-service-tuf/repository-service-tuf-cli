@@ -116,18 +116,11 @@ def create_artifact_add_payload_from_filepath(
     return payload.to_dict()
 
 
-def create_artifact_delete_payload_from_filepath(
-    filepath: str, path: Optional[str]
-) -> Dict[str, Any]:
+def create_artifact_delete_payload_from_filepath(path: str) -> Dict[str, Any]:
     """
     Create the payload for the API request of `POST api/v1/artifacts/delete`.
     """
 
-    if path:
-        payload_path = f"{path.rstrip('/')}/{filepath.split('/')[-1]}"
-    else:
-        payload_path = f"{filepath.split('/')[-1]}"
-
-    payload = DeletePayload(artifacts=[payload_path])
+    payload = DeletePayload(artifacts=[path])
 
     return payload.to_dict()
