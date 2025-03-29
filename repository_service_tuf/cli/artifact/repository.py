@@ -102,11 +102,23 @@ def show(
 @click.pass_context
 @click.argument("repository")
 def set(context: Context, repository: str) -> None:
-    """
+   """
     Switch current repository.
     """
 
     rstuf_config = context.obj.get("settings").as_dict()
+
+    if not rstuf_config.get("REPOSITORIES"):
+        raise click.ClickException(
+            "There are no configured repositories to Set"
+        )
+
+    if not rstuf_config["REPOSITORIES"].get(repository):
+        raise click.ClickException(
+            f"Repository {repository} not available in config. "
+            "You can create it instead"
+        )
+
 
     rstuf_config["CURRENT_REPOSITORY"] = repository
     if context.obj.get("config"):
