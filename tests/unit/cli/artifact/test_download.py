@@ -42,7 +42,7 @@ class TestDownloadArtifacInteractionWithoutConfig:
             obj=test_context,
         )
 
-        assert "Please specify metadata url" in test_result.output
+        assert "Please specify metadata url" in test_result.stderr
         assert test_result.exit_code == 1
 
     def test_download_command_missing_artifacts_url(
@@ -57,7 +57,7 @@ class TestDownloadArtifacInteractionWithoutConfig:
             obj=test_context,
         )
 
-        assert "Please specify artifacts url" in test_result.output
+        assert "Please specify artifacts url" in test_result.stderr
         assert test_result.exit_code == 1
 
     def test_download_command_using_tofu(
@@ -352,7 +352,7 @@ class TestDownloadArtifacInteractionWithoutConfig:
         )
         assert f"Using trusted root in {metadata_dir}" in test_result.output
         err_msg = f"Failed to download artifact {ARTIFACT_NAME}"
-        assert err_msg in test_result.output
+        assert err_msg in test_result.stderr
         assert fake_build_metadata_dir.calls == [
             pretend.call(METADATA_URL),
         ]
@@ -385,9 +385,10 @@ class TestDownloadArtifacInteractionWithoutConfig:
             catch_exceptions=False,
         )
 
+        assert test_result.exit_code == 1
         assert "Using 'tofu' to Trust-On-First-Use" in test_result.output
-        assert "Failed to download initial root from" in test_result.output
-        assert "`tofu` was not successful" in test_result.output
+        assert "Failed to download initial root from" in test_result.stderr
+        assert "`tofu` was not successful" in test_result.stderr
         assert len(fake_is_file.calls) == 2
         assert pretend.call("foo_dir/root.json") in fake_is_file.calls
 
@@ -422,7 +423,8 @@ class TestDownloadArtifacInteractionWithConfig:
             [ARTIFACT_NAME],
             obj=test_context,
         )
-        assert "Please specify current repository" in test_result.output
+        assert test_result.exit_code == 1
+        assert "Please specify current repository" in test_result.stderr
 
     def test_download_command_no_repos_listed(
         self, client, test_context, monkeypatch
@@ -444,7 +446,7 @@ class TestDownloadArtifacInteractionWithConfig:
         )
         assert test_result.exit_code == 1
         assert (
-            "No reposotiroes listed in the config file" in test_result.output
+            "No reposotiroes listed in the config file" in test_result.stderr
         )
 
     def test_download_command_and_no_root_param(
@@ -505,7 +507,7 @@ class TestDownloadArtifacInteractionWithConfig:
         )
         assert test_result.exit_code == 1
         err_msg = "Repository r1_expected is missing in the configuration file"
-        assert err_msg in test_result.output
+        assert err_msg in test_result.stderr
 
     def test_download_command_no_trusted_root(
         self, client, test_context, monkeypatch
@@ -532,7 +534,7 @@ class TestDownloadArtifacInteractionWithConfig:
             obj=test_context,
         )
         assert test_result.exit_code == 1
-        assert "Trusted root is not cofigured." in test_result.output
+        assert "Trusted root is not cofigured." in test_result.stderr
 
 
 class TestDownloadArtifactOptions:

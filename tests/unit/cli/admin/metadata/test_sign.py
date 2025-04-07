@@ -287,8 +287,10 @@ class TestSignError:
 
         err_prefix = "Either '--api-server' admin option/'SERVER'"
         err_suffix = "or '--in'"
-        assert err_prefix in result.output
-        assert err_suffix in result.output
+
+        assert result.exit_code == 1, result.stderr
+        assert err_prefix in result.stderr
+        assert err_suffix in result.stderr
 
     def test_sign_no_api_server_and_no_dry_run_option(self):
         sign_input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
@@ -298,8 +300,9 @@ class TestSignError:
 
         err_prefix = "Either '--api-server' admin option/'SERVER'"
         err_suffix = "or '--dry-run'"
-        assert err_prefix in result.output
-        assert err_suffix in result.output
+        assert result.exit_code == 1, result.stdout
+        assert err_prefix in result.stderr
+        assert err_suffix in result.stderr
 
     def test_sign_with_previous_root_but_wrong_version(
         self, test_context, patch_getpass, monkeypatch
@@ -327,7 +330,7 @@ class TestSignError:
         )
 
         assert test_result.exit_code == 1, test_result.stdout
-        assert "Previous root v1 needed to sign root v2" in test_result.stdout
+        assert "Previous root v1 needed to sign root v2" in test_result.stderr
         assert sign._get_pending_roles.calls == [
             pretend.call(test_context["settings"])
         ]
@@ -358,7 +361,7 @@ class TestSignError:
         )
 
         assert test_result.exit_code == 1, test_result.stdout
-        assert "Metadata already fully signed." in test_result.stdout
+        assert "Metadata already fully signed." in test_result.stderr
         assert sign._get_pending_roles.calls == [
             pretend.call(test_context["settings"])
         ]
