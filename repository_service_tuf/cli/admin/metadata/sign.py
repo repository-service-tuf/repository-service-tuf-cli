@@ -115,7 +115,7 @@ def sign(
 
     console.print("\nSelect a role to sign:")
     role = _select_role(pending_roles)
-    role_md = Metadata.from_dict(pending_roles[role])
+    role_md: Metadata = Metadata.from_dict(pending_roles[role])
 
     if role_md.signed.type == Root.type:
         version = role_md.signed.version
@@ -157,7 +157,7 @@ def sign(
         targets = Metadata[Targets].from_dict(pending_roles["trusted_targets"])
         # sign Targets metadata
         console.print(Markdown("## metadata to be signed"))
-        _print_targets(targets.signed)
+        _print_targets(role_md)
         keys = []
         if targets.signed.delegations is None:
             raise click.ClickException("No custom delegations")
