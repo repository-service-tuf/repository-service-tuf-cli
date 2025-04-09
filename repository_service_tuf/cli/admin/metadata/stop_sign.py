@@ -48,11 +48,13 @@ def stop_sign(context: click.Context) -> None:
     while True:
         console.print("\nSelect which metadata signing process to stop:")
         role = _select_role(pending_roles)
-        md: Metadata = Metadata.from_dict(copy.deepcopy(pending_roles[role]))
-        if md.signed.type == Root.type:
-            _print_root(md.signed)
-        elif md.signed.type == Targets.type:
-            _print_targets(md.signed)
+        metadata: Metadata = Metadata.from_dict(
+            copy.deepcopy(pending_roles[role])
+        )
+        if metadata.signed.type == Root.type:
+            _print_root(metadata.signed)
+        elif metadata.signed.type == Targets.type:
+            _print_targets(metadata)
 
         confirmation = prompt.Confirm.ask(
             f"\nDo you still want to stop signing process for {role}?"

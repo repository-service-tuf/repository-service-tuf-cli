@@ -3,10 +3,11 @@
 from typing import Any, Dict
 
 from click import Context
+from rich import print_json
 
 from repository_service_tuf.cli import HEADERS_EXAMPLE, _set_settings, click
 from repository_service_tuf.cli.task import task
-from repository_service_tuf.helpers.api_client import task_status
+from repository_service_tuf.helpers.api_client import get_task, task_status
 
 
 @task.command()
@@ -14,6 +15,14 @@ from repository_service_tuf.helpers.api_client import task_status
     "task_id",
     type=str,
     required=True,
+)
+@click.option(
+    "--all",
+    "-a",
+    help="Show all task details.",
+    is_flag=True,
+    required=False,
+    default=False,
 )
 @click.option(
     "--api-server",
@@ -28,7 +37,7 @@ from repository_service_tuf.helpers.api_client import task_status
 )
 @click.pass_context
 def info(
-    context: Context, task_id: str, api_server: str, headers: str
+    context: Context, task_id: str, api_server: str, headers: str, all: bool
 ) -> Dict[str, Any]:
     """
     Retrieve task state.
@@ -46,6 +55,11 @@ def info(
             "Requires '--api-server' or configuring the `.rstuf.yml` file. "
             "Example: --api-server https://api.rstuf.example.com"
         )
+
+    if all:
+        data, _ = get_task(task_id=task_id, settings=settings)
+
+        print_json(data=data)
 
     status = task_status(
         task_id=task_id, settings=settings, title="Task status:"

@@ -1088,17 +1088,17 @@ def _print_root(root: Root):
     console.print(root_table)
 
 
-def _print_targets(targets: Targets):
+def _print_targets(targets: Metadata[Targets]):
     """Pretty print targets metadata."""
 
     targets_table = Table("Version", "Artifacts")
     artifact_table = Table("Path", "Info", show_lines=True)
 
-    for path, info in targets.targets.items():
+    for path, info in targets.signed.targets.items():
         artifact_table.add_row(
             path, JSON.from_data(info.to_dict()), style="bold"
         )
-    targets_table.add_row(str(targets.version), artifact_table)
+    targets_table.add_row(str(targets.signed.version), artifact_table)
     console.print(targets_table)
 
 
