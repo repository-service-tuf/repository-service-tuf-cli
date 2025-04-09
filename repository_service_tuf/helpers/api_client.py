@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: 2022-2023 VMware Inc
 #
 # SPDX-License-Identifier: MIT
-import time
 from enum import Enum
 from typing import Any, Dict, Optional
 
@@ -102,6 +101,31 @@ def bootstrap_status(settings: LazySettings) -> Dict[str, Any]:
     return bootstrap_json
 
 
+def get_task(
+    task_id: str,
+    settings: LazySettings,
+) -> tuple[Dict[str, Any], requests.Response]:
+
+    state_response = request_server(
+        settings.SERVER,
+        f"{URL.TASK.value}{task_id}",
+        Methods.GET,
+        headers=settings.HEADERS,
+    )
+
+    if state_response.status_code != 200:
+        raise click.ClickException(
+            f"Unexpected response {state_response.text}"
+        )
+
+    data = state_response.json().get("data")
+
+    if data is None:
+        raise click.ClickException(f"No data received {state_response.text}")
+
+    return data, state_response
+
+
 def task_status(
     task_id: str,
     settings: LazySettings,
@@ -110,64 +134,45 @@ def task_status(
 ) -> Dict[str, Any]:
     received_states = []
     while True:
-        state_response = request_server(
-            settings.SERVER,
-            f"{URL.TASK.value}{task_id}",
-            Methods.GET,
-            headers=settings.HEADERS,
-        )
 
-        if state_response.status_code != 200:
-            raise click.ClickException(
-                f"Unexpected response {state_response.text}"
-            )
+        data, state_response = get_task(task_id, settings)
 
-        data = state_response.json().get("data")
+        if state := data.get("state"):
+            if state not in received_states:
+                if silent is False:
+                    console.print(f"{title} {state}")
+                received_states.append(state)
+            else:
+                if silent is False:
+                    console.print(".", end="")
 
-        if data:
-            if state := data.get("state"):
-                if state not in received_states:
-                    if silent is False:
-                        console.print(f"{title} {state}")
-                    received_states.append(state)
-                else:
-                    if silent is False:
-                        console.print(".", end="")
-
-                if state == "SUCCESS":
-                    if result := data.get("result"):
-                        if result.get("status") is True:
-                            return data
-                        else:
-                            raise click.ClickException(
-                                "Task status is not successful: "
-                                f"{state_response.text}"
-                            )
+            if state == "SUCCESS":
+                if result := data.get("result"):
+                    if result.get("status") is True:
+                        return data
                     else:
                         raise click.ClickException(
-                            f"No result received in data {state_response.text}"
+                            "Task status is not successful: "
+                            f"{state_response.text}"
                         )
-
-                elif state == "FAILURE":
+                else:
                     raise click.ClickException(
-                        f"Failed: {state_response.text}"
-                    )
-                elif state == "ERRORED":
-                    # If task.state is "ERRORED" it means there is an internal
-                    # RSTUF error and data contains error information.
-                    raise click.ClickException(
-                        f"Errored: {data['result']['error']}"
+                        f"No result received in data {state_response.text}"
                     )
 
-            else:
+            elif state == "FAILURE":
+                raise click.ClickException(f"Failed: {state_response.text}")
+            elif state == "ERRORED":
+                # If task.state is "ERRORED" it means there is an internal
+                # RSTUF error and data contains error information.
                 raise click.ClickException(
-                    f"No state in data received {state_response.text}"
+                    f"Errored: {data['result']['error']}"
                 )
+
         else:
             raise click.ClickException(
-                f"No data received {state_response.text}"
+                f"No state in data received {state_response.text}"
             )
-        time.sleep(2)
 
 
 def publish_artifacts(settings: LazySettings) -> str:

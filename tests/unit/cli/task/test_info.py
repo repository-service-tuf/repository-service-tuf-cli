@@ -19,11 +19,14 @@ class TestTaskInfoInteraction:
         input_steps = [
             "--api-server",
             "http://127.0.0.1",
+            "--all",
             task_id,
         ]
 
         info.task_status = pretend.call_recorder(lambda *a, **kw: "123")
-
+        info.get_task = pretend.call_recorder(
+            lambda *a, **kw: ({"task_id": task_id}, 200)
+        )
         result = client.invoke(info.info, input_steps, obj=test_context)
 
         assert info.task_status.calls == [
@@ -31,6 +34,12 @@ class TestTaskInfoInteraction:
                 task_id=task_id,
                 settings=test_context["settings"],
                 title="Task status:",
+            )
+        ]
+        assert info.get_task.calls == [
+            pretend.call(
+                task_id=task_id,
+                settings=test_context["settings"],
             )
         ]
 
