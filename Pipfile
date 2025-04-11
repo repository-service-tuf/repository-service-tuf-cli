@@ -26,6 +26,7 @@ prompt-toolkit = "*"
 setuptools = "*"
 pykcs11 = "*"
 asn1crypto = "*"
+exceptiongroup = "*"
 
 [dev-packages]
 black = "*"
