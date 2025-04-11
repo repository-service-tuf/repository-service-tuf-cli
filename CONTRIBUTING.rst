@@ -43,7 +43,7 @@ Development
 Requirements
 -------------
 
-- Python >=3.9
+- Python >=3.10
 - Pipenv
 - PostgreSQL
 
@@ -155,14 +155,6 @@ The flag -d will install the development requirements.
 
     $ pipenv install -d <package>
     $ pipenv install <package>
-
-
-Update all project requirements
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code:: shell
-
-    $ make requirements
 
 Tests
 -----
