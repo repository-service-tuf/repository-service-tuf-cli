@@ -10,14 +10,37 @@ import click
 import pretend
 import pytest
 from email_validator import EmailNotValidError
+from PyKCS11 import CKR_USER_NOT_LOGGED_IN, PyKCS11Error  # type: ignore
+from securesystemslib.exceptions import UnverifiedSignatureError
 from securesystemslib.signer import CryptoSigner, SigstoreKey, SSlibKey
 from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.cli.admin import helpers
+from repository_service_tuf.helpers.api_client import URL, Methods
 from tests.conftest import _HELPERS, _PEMS, _PROMPT, _PROMPT_TOOLKIT
 
 
 class TestHelpers:
+    def test__get_secret(self, monkeypatch):
+        monkeypatch.setattr(
+            f"{_HELPERS}.click",
+            pretend.stub(
+                prompt=pretend.call_recorder(lambda *a, **kw: "hunter2"),
+            ),
+        )
+
+        result = helpers._get_secret("secret")
+        assert result == "hunter2"
+        assert helpers.click.prompt.calls == [
+            pretend.call(
+                (
+                    "\nEnter secret to sign (provide touch/bio authentication "
+                    "if needed)"
+                ),
+                hide_input=True,
+            )
+        ]
+
     def test_load_signer_from_file_prompt(self, ed25519_key, monkeypatch):
         fake_click = pretend.stub(
             prompt=pretend.call_recorder(lambda *a, **kw: "hunter2"),
@@ -43,6 +66,14 @@ class TestHelpers:
             with pytest.raises(ValueError):
                 signer = helpers._load_signer_from_file_prompt(ed25519_key)
 
+        # give key without password and good key after
+        inputs = [
+            f"{_PEMS / '0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043'}",  # noqa
+            f"{_PEMS / 'JH.ed25519'}",
+        ]
+        with patch(_PROMPT_TOOLKIT, side_effect=inputs):
+            signer = helpers._load_signer_from_file_prompt(ed25519_key)
+
         # fail with bad password
         fake_click.prompt = pretend.call_recorder(lambda *a, **kw: "hunter1")
         monkeypatch.setattr(f"{_HELPERS}.click", fake_click)
@@ -65,18 +96,61 @@ class TestHelpers:
             with pytest.raises(ValueError):
                 _ = helpers._load_key_from_file_prompt()
 
-    def test_load_key_prompt(self):
+    def test_load_signer_from_hsm_prompt(self, hsm_signer, hsm_cert):
+        with (
+            patch("os.path.exists", return_value=True),
+            patch(
+                f"{_HELPERS}.HSMSigner.import_",
+                return_value=("hsm:2?label=YubiKey+PIV+%2315835999", "pb"),
+            ),
+            patch(f"{_HELPERS}._get_secret", return_value="hunter2"),
+            patch(
+                f"{_HELPERS}.Signer.from_priv_key_uri",
+                return_value=hsm_signer,
+            ),
+        ):
+            result = helpers._load_signer_from_hsm_prompt(hsm_cert)
+
+            assert result == hsm_signer
+
+    def test_load_signer_from_hsm_prompt_no_libykcs11(self):
+        with (patch("os.path.exists", return_value=False),):
+            with pytest.raises(click.ClickException) as err:
+                helpers._load_signer_from_hsm_prompt("fake-key")
+
+                assert "Failed to find libykcs11" in str(err)
+
+    def test_load_key_from_hsm_prompt(self):
+        # success
+        inputs = [f"{_PEMS / 'hsm-9c-ecc.crt'}"]
+        with patch(_PROMPT_TOOLKIT, side_effect=inputs):
+            key = helpers._load_key_from_hsm_prompt()
+
+        assert isinstance(key, SSlibKey)
+
+        # fail with wrong file
+        inputs = [f"{_PEMS / 'JH.ed25519'}"]
+        with patch(_PROMPT_TOOLKIT, side_effect=inputs):
+            with pytest.raises(ValueError):
+                _ = helpers._load_key_from_hsm_prompt()
+
+    @pytest.mark.parametrize(
+        "signer_type, key_load",
+        [
+            (helpers.ROOT_SIGNERS.KEY_PEM, "_load_key_from_file_prompt"),
+            (helpers.ROOT_SIGNERS.HSM, "_load_key_from_hsm_prompt"),
+        ],
+    )
+    def test_load_key_prompt(self, signer_type, key_load):
         fake_root = pretend.stub(keys={"123"})
 
         # return key
         fake_key = pretend.stub(keyid="abc")
         with (
-            patch(
-                f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
-            ),
+            patch(f"{_HELPERS}.{key_load}", return_value=fake_key),
             patch(
                 f"{_HELPERS}._select",
-                side_effect=[helpers.ROOT_SIGNERS.KEY_PEM],
+                side_effect=[signer_type],
             ),
         ):
             key = helpers._load_key_prompt(fake_root)
@@ -355,17 +429,51 @@ class TestHelpers:
 
         _assert_online_key(key2)
 
-    def test_add_signature_prompt(self, ed25519_signer):
+    def test_add_signature_prompt_using_pem(self, ed25519_signer):
         metadata = Metadata(Root())
         # Sign until success (two attempts)
         # 1. load signer raises error
         # 2. load signer returns signer
-        with patch(
-            f"{_HELPERS}._load_signer_from_file_prompt",
-            side_effect=[ValueError(), ed25519_signer],
+        with (
+            patch(
+                f"{_HELPERS}._load_signer_from_file_prompt",
+                side_effect=[
+                    ValueError(),
+                    UnverifiedSignatureError(),
+                    ed25519_signer,
+                ],
+            ),
+            patch(
+                f"{_HELPERS}._select",
+                return_value=helpers.ROOT_SIGNERS.KEY_PEM,
+            ),
         ):
             signature = helpers._add_signature_prompt(
                 metadata, ed25519_signer.public_key
+            )
+        assert signature.keyid in metadata.signatures
+
+    def test_add_signature_prompt_using_hsm(self, hsm_signer):
+        metadata = Metadata(Root())
+        # Sign until success (two attempts)
+        # 1. load signer raises error
+        # 2. load signer returns signer
+        mocked_exception = ValueError()
+        mocked_exception.__context__ = PyKCS11Error(
+            value=CKR_USER_NOT_LOGGED_IN
+        )
+        with (
+            patch(
+                f"{_HELPERS}._load_signer_from_hsm_prompt",
+                side_effect=[mocked_exception, hsm_signer],
+            ),
+            patch(
+                f"{_HELPERS}._select",
+                return_value=helpers.ROOT_SIGNERS.HSM,
+            ),
+        ):
+            signature = helpers._add_signature_prompt(
+                metadata, hsm_signer.public_key
             )
         assert signature.keyid in metadata.signatures
 
@@ -431,6 +539,65 @@ class TestHelpers:
         # NOTE: cli doesn't validate that all online roles have the same key
         root.add_key(ed25519_key, "timestamp")
         assert helpers._get_online_key(root) == ed25519_key
+
+    def test__parse_pending_data(self):
+        fake_md = {"root": Metadata(Root()).to_dict()}
+        result = helpers._parse_pending_data({"data": {"metadata": fake_md}})
+
+        assert result == fake_md
+
+    def test__parse_pending_data_missing_metadata(self):
+        with pytest.raises(click.ClickException) as e:
+            helpers._parse_pending_data({"data": {}})
+
+        assert "No metadata available for signing" in str(e)
+
+    def test__get_pending_roles_request(self, monkeypatch):
+        fake_settings = pretend.stub(SERVER=None)
+        fake_json = pretend.stub()
+        response = pretend.stub(
+            status_code=200, json=pretend.call_recorder(lambda: fake_json)
+        )
+        fake_request_server = pretend.call_recorder(lambda *a, **kw: response)
+        monkeypatch.setattr(helpers, "request_server", fake_request_server)
+
+        parsed_data = pretend.stub()
+        fake__parse_pending_data = pretend.call_recorder(lambda a: parsed_data)
+        monkeypatch.setattr(
+            helpers, "_parse_pending_data", fake__parse_pending_data
+        )
+
+        result = helpers._get_pending_roles(fake_settings)
+
+        assert result == parsed_data
+        assert fake_request_server.calls == [
+            pretend.call(
+                fake_settings.SERVER,
+                URL.METADATA_SIGN.value,
+                Methods.GET,
+            )
+        ]
+        assert response.json.calls == [pretend.call()]
+        assert fake__parse_pending_data.calls == [pretend.call(fake_json)]
+
+    def test__get_pending_roles_request_bad_status_code(self, monkeypatch):
+        fake_settings = pretend.stub(
+            SERVER="http://localhost:80",
+        )
+        response = pretend.stub(status_code=400, text="")
+        fake_request_server = pretend.call_recorder(lambda *a, **kw: response)
+        monkeypatch.setattr(helpers, "request_server", fake_request_server)
+        with pytest.raises(click.ClickException) as e:
+            helpers._get_pending_roles(fake_settings)
+
+        assert "Failed to fetch metadata for signing" in str(e)
+        assert fake_request_server.calls == [
+            pretend.call(
+                fake_settings.SERVER,
+                URL.METADATA_SIGN.value,
+                Methods.GET,
+            )
+        ]
 
     def test_filter_root_verification_results(self):
         data = [
