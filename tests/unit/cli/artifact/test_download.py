@@ -2,6 +2,7 @@
 
 import os
 from hashlib import sha256
+from unittest.mock import mock_open, patch
 
 import pretend
 import pytest
@@ -103,8 +104,6 @@ class TestDownloadArtifacInteractionWithoutConfig:
             catch_exceptions=False,
         )
 
-        assert "Trusted local root not found" in test_result.output
-        assert "Using 'tofu' to Trust-On-First-Use" in test_result.output
         assert "Trust-on-First-Use: Initialized new root" in test_result.output
         assert fake_urlretrieve.calls == [
             pretend.call(
@@ -132,12 +131,16 @@ class TestDownloadArtifacInteractionWithoutConfig:
         self, client, test_context, monkeypatch, mocked_os_makedirs
     ):
 
-        trusted_root_path = "tests/files"
+        trusted_root_path = "tests/files/"
         fake_build_metadata_dir = pretend.call_recorder(
             lambda a: trusted_root_path
         )
         monkeypatch.setattr(
             f"{SRC_PATH}._build_metadata_dir", fake_build_metadata_dir
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}._init_trusted_root",
+            pretend.call_recorder(lambda *a: None),
         )
         fake__perform_tuf_ngclient_download_artifact = pretend.call_recorder(
             lambda *a: None
@@ -161,14 +164,13 @@ class TestDownloadArtifacInteractionWithoutConfig:
                 METADATA_URL,
                 "-a",
                 ARTIFACT_URL,
+                "-r",
+                "root.json",
             ],
             obj=test_context,
             catch_exceptions=False,
         )
         assert fake_build_metadata_dir.calls == [pretend.call(METADATA_URL)]
-        expected_root_path = trusted_root_path
-        msg = f"Using trusted root in {expected_root_path}"
-        assert msg in test_result.output
         assert fake__perform_tuf_ngclient_download_artifact.calls == [
             pretend.call(
                 METADATA_URL,
@@ -214,20 +216,12 @@ class TestDownloadArtifacInteractionWithoutConfig:
         artifact_path = f"example_path/{ARTIFACT_NAME}"
         metadata_dir = "foo_dir"
 
-        def fake_is_file(path: str) -> bool:
-            if path == f"{metadata_dir}/root.json":
-                return True
-            else:
-                return False
-
-        monkeypatch.setattr(
-            f"{SRC_PATH}.os.path.isfile",
-            pretend.call_recorder(lambda a: fake_is_file(a)),
-        )
-
         fake_build_metadata_dir = pretend.call_recorder(lambda a: metadata_dir)
         monkeypatch.setattr(
             f"{SRC_PATH}._build_metadata_dir", fake_build_metadata_dir
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}._init_tofu", pretend.call_recorder(lambda *a: None)
         )
         fake__perform_tuf_ngclient_download_artifact = pretend.call_recorder(
             lambda *a: None
@@ -318,16 +312,8 @@ class TestDownloadArtifacInteractionWithoutConfig:
         monkeypatch.setattr(
             f"{SRC_PATH}._build_metadata_dir", fake_build_metadata_dir
         )
-
-        def fake_is_file(path: str) -> bool:
-            if path == f"{metadata_dir}/root.json":
-                return True
-            else:
-                return False
-
         monkeypatch.setattr(
-            f"{SRC_PATH}.os.path.isfile",
-            pretend.call_recorder(lambda a: fake_is_file(a)),
+            f"{SRC_PATH}._init_tofu", pretend.call_recorder(lambda *a: None)
         )
 
         class FakeUpdater:
@@ -350,47 +336,14 @@ class TestDownloadArtifacInteractionWithoutConfig:
             ],
             obj=test_context,
         )
-        assert f"Using trusted root in {metadata_dir}" in test_result.output
+
+        assert f"Using trusted root in {metadata_dir}" in test_result.stdout
         err_msg = f"Failed to download artifact {ARTIFACT_NAME}"
         assert err_msg in test_result.stderr
         assert fake_build_metadata_dir.calls == [
             pretend.call(METADATA_URL),
         ]
         assert test_result.exit_code == 1
-
-    def test_download_command_with_failing_tofu(
-        self, client, test_context, monkeypatch, mocked_os_makedirs
-    ):
-        fake_build_metadata_dir = pretend.call_recorder(lambda a: "foo_dir")
-        monkeypatch.setattr(
-            f"{SRC_PATH}._build_metadata_dir", fake_build_metadata_dir
-        )
-
-        fake_is_file = pretend.call_recorder(lambda a: False)
-        monkeypatch.setattr(f"{SRC_PATH}.os.path.isfile", fake_is_file)
-        monkeypatch.setattr(
-            f"{SRC_PATH}.request.urlretrieve",
-            pretend.raiser(OSError("Bad file")),
-        )
-        test_result = client.invoke(
-            download.download,
-            [
-                ARTIFACT_NAME,
-                "-m",
-                METADATA_URL,
-                "-a",
-                ARTIFACT_URL,
-            ],
-            obj=test_context,
-            catch_exceptions=False,
-        )
-
-        assert test_result.exit_code == 1
-        assert "Using 'tofu' to Trust-On-First-Use" in test_result.output
-        assert "Failed to download initial root from" in test_result.stderr
-        assert "`tofu` was not successful" in test_result.stderr
-        assert len(fake_is_file.calls) == 2
-        assert pretend.call("foo_dir/root.json") in fake_is_file.calls
 
 
 class TestDownloadArtifacInteractionWithConfig:
@@ -478,7 +431,7 @@ class TestDownloadArtifacInteractionWithConfig:
             [ARTIFACT_NAME],
             obj=test_context,
         )
-        assert "Decoded trusted root some_root" in test_result.output
+        assert "Successfully completed artifact download" in test_result.output
 
     def test_download_command_repo_is_missing(
         self, client, test_context, monkeypatch
@@ -556,3 +509,22 @@ class TestDownloadArtifactOptions:
 
         actual = download._build_metadata_dir(metadata_url)
         assert want == actual
+
+    def test__init_trusted_root(self):
+
+        with (
+            patch(
+                f"{SRC_PATH}._build_metadata_dir",
+                return_value=pretend.call_recorder(lambda a: "foo_dir"),
+            ),
+            patch(
+                f"{SRC_PATH}.os.makedirs",
+                return_value=pretend.call_recorder(lambda a: None),
+            ),
+            patch("builtins.open", new_callable=mock_open, read_data="data"),
+        ):
+            result = download._init_trusted_root(
+                "http://rstuf.local", "tests/files/root.json"
+            )
+
+        assert result is None

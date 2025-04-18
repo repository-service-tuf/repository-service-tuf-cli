@@ -4,9 +4,16 @@
 
 
 import base64
+import io
+import json
+import os
+from urllib.parse import urlparse
 
+import requests
 from click import Context
 from dynaconf.loaders.yaml_loader import write  # type: ignore
+from tuf.api.exceptions import UnsignedMetadataError
+from tuf.api.metadata import Metadata, Root
 
 from repository_service_tuf.cli import click, console
 from repository_service_tuf.cli.artifact import artifact
@@ -30,6 +37,54 @@ def write_config(settings_path, settings_data, merge=False):
     }
     """
     write(settings_path, settings_data, merge)  # pragma: no cover
+
+
+def _check_root(root: str) -> None:  # pragma: no cover
+    try:
+        root_md: Metadata[Root] = Metadata.from_dict(json.loads(root))
+        root_md.verify_delegate(Root.type, root_md)
+    except (UnsignedMetadataError, ValueError) as e:
+        raise click.ClickException(f"Error reading root file {root}: {e}")
+
+
+def _load_root_from_file(root: str) -> bytes:  # pragma: no cover
+    try:
+        with open(root, "rb") as file:
+            content = file.read()
+        encoded_root = base64.b64encode(content)
+    except IOError as e:
+        raise click.ClickException(f"Error reading file: {e}")
+
+    _check_root(content.decode("utf-8"))
+
+    return encoded_root
+
+
+def _load_root_from_url(root: str) -> bytes:  # pragma: no cover
+    # Check if root is a URL
+    parsed_url = urlparse(root)
+
+    # Validate URL scheme
+    if not parsed_url.scheme:
+        raise click.ClickException(
+            "Please use http://" " or https:// for artifact URL"
+        )
+
+    # Fetch the file from the local server
+    response = requests.get(root, timeout=10)
+
+    # Raise an error if the request failed
+    response.raise_for_status()
+
+    # Simulate opening a file using StringIO
+    with io.StringIO(response.text) as file:
+        content = file.read()
+
+    _check_root(content)
+
+    encoded_root = base64.b64encode(bytes(content, "utf-8"))
+
+    return encoded_root
 
 
 @artifact.group()
@@ -176,9 +231,11 @@ def add(
         console.print(f"Repository {name} already configured")
         success_msg = f"Successfully updated repository {name}"
 
-    encoded_root = b""
-    if root:
-        encoded_root = base64.b64encode(bytes(root, "utf-8"))
+    # Check if root is a local file path
+    if os.path.isfile(root):
+        encoded_root = _load_root_from_file(root)
+    else:
+        encoded_root = _load_root_from_url(root)
 
     repo_data = {
         "artifact_base_url": artifacts_url,
@@ -297,4 +354,5 @@ def delete(context: Context, repository: str) -> None:
 
     if context.obj.get("config"):
         write_config(context.obj.get("config"), rstuf_config)
+        repo["trusted_root"] = "From file"
         console.print(f"Succesfully deleted repository {repo}")

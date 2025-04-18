@@ -3,9 +3,14 @@
 from typing import Optional
 
 from click import Context
-from rich import print_json, prompt
+from rich import print_json
 
-from repository_service_tuf.cli import click, console
+from repository_service_tuf.cli import (
+    HEADERS_EXAMPLE,
+    _set_settings,
+    click,
+    console,
+)
 from repository_service_tuf.cli.artifact import artifact
 from repository_service_tuf.helpers.api_client import URL, send_payload
 from repository_service_tuf.helpers.cli import (
@@ -15,32 +20,25 @@ from repository_service_tuf.helpers.cli import (
 
 @artifact.command()
 @click.argument(
-    "filepath",
-    type=click.Path(exists=True),
-    # Currently, this is required. If we support adding artifacts without
-    # giving the filepath then we need to set it to `False` and implement our
-    # own validation to check whether the argument is needed based on the
-    # passed user options.
+    "path",
     required=True,
-)
-@click.option(
-    "-p",
-    "--path",
-    help="A custom path (`TARGETPATH`) for the file, defined in the metadata.",
-    type=str,
-    required=False,
-    default=None,
 )
 @click.option(
     "--api-server",
     help="URL to an RSTUF API.",
     required=False,
 )
+@click.option(
+    "--headers",
+    "-H",
+    help=("Headers to include in the request. " f"Example: {HEADERS_EXAMPLE}"),
+    required=False,
+)
 @click.pass_context
 def delete(
     context: Context,
-    filepath: str,
-    path: Optional[str],
+    path: str,
+    headers: Optional[str],
     api_server: Optional[str],
 ) -> None:
     """
@@ -50,17 +48,18 @@ def delete(
     is carried out.
     """
 
-    settings = context.obj.get("settings")
+    settings = _set_settings(context, api_server, headers)
+
     if api_server:
         settings.SERVER = api_server
 
     if settings.get("SERVER") is None:
-        api_server = prompt.Prompt.ask("\n[cyan]API[/] URL address")
-        settings.SERVER = api_server
+        raise click.ClickException(
+            "Requires '--api-server' "
+            "Example: --api-server https://api.rstuf.example.com"
+        )
 
-    payload = create_artifact_delete_payload_from_filepath(
-        filepath=filepath, path=path
-    )
+    payload = create_artifact_delete_payload_from_filepath(path=path)
 
     task_id = send_payload(
         settings=settings,
