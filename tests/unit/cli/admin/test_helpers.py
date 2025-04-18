@@ -553,7 +553,7 @@ class TestHelpers:
         assert "No metadata available for signing" in str(e)
 
     def test__get_pending_roles_request(self, monkeypatch):
-        fake_settings = pretend.stub(SERVER=None)
+        fake_settings = pretend.stub(SERVER=None, HEADERS=None)
         fake_json = pretend.stub()
         response = pretend.stub(
             status_code=200, json=pretend.call_recorder(lambda: fake_json)
@@ -575,6 +575,7 @@ class TestHelpers:
                 fake_settings.SERVER,
                 URL.METADATA_SIGN.value,
                 Methods.GET,
+                headers=None,
             )
         ]
         assert response.json.calls == [pretend.call()]
@@ -583,6 +584,7 @@ class TestHelpers:
     def test__get_pending_roles_request_bad_status_code(self, monkeypatch):
         fake_settings = pretend.stub(
             SERVER="http://localhost:80",
+            HEADERS=None,
         )
         response = pretend.stub(status_code=400, text="")
         fake_request_server = pretend.call_recorder(lambda *a, **kw: response)
@@ -596,6 +598,7 @@ class TestHelpers:
                 fake_settings.SERVER,
                 URL.METADATA_SIGN.value,
                 Methods.GET,
+                headers=None,
             )
         ]
 
