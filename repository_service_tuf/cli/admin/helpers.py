@@ -1044,7 +1044,10 @@ def _parse_pending_data(pending_roles_resp: Dict[str, Any]) -> Dict[str, Any]:
 def _get_pending_roles(settings: Any) -> Dict[str, Dict[str, Any]]:
     """Get dictionary of pending roles for signing."""
     response = request_server(
-        settings.SERVER, URL.METADATA_SIGN.value, Methods.GET
+        settings.SERVER,
+        URL.METADATA_SIGN.value,
+        Methods.GET,
+        headers=settings.HEADERS,
     )
     if response.status_code != 200:
         raise click.ClickException(
