@@ -76,7 +76,7 @@ def _load_root_from_url(root: str) -> bytes:  # pragma: no cover
     # Raise an error if the request failed
     response.raise_for_status()
 
-    # Simulate opening a file using StringIO
+    # Open a file using StringIO
     with io.StringIO(response.text) as file:
         content = file.read()
 
