@@ -67,7 +67,7 @@ def _load_root_from_url(root: str) -> bytes:  # pragma: no cover
     # Validate URL scheme
     if not parsed_url.scheme:
         raise click.ClickException(
-            "Please use http://" " or https:// for artifact URL"
+            "Please use http:// or https:// for artifact URL"
         )
 
     # Fetch the file from the local server
