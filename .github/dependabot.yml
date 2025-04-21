@@ -1,5 +1,15 @@
 version: 2
 updates:
+  # Monitor python
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "10:00"
+    commit-message:
+      prefix: "build"
+      include: "scope"
+    open-pull-requests-limit: 10
   # Monitor Github Actions
   - package-ecosystem: "github-actions"
     directory: "/"
