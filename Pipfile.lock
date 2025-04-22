@@ -1108,12 +1108,12 @@
         },
         "securesystemslib": {
             "hashes": [
-                "sha256:34fa63e3296a0540b122a13bf51722ecd015be00c1d2ed45b23442e718920e76",
-                "sha256:fa63abcb1cf4dba4f2df964f623baa45bc39029980d7a0a2119d90731942afc6"
+                "sha256:5b53e5989289d97fa42ed7fde1b4bad80985f15dba8c774c043b395a90c908e5",
+                "sha256:8cbb277513444d9828016fe09eaa4a6fe25468e4bf411995c0542c6d2102af83"
             ],
             "index": "pypi",
             "markers": "python_version ~= '3.8'",
-            "version": "==1.2.0"
+            "version": "==1.3.0"
         },
         "setuptools": {
             "hashes": [
@@ -1223,12 +1223,12 @@
         },
         "tuf": {
             "hashes": [
-                "sha256:1865737bf8e05893ae31b4511617da7f02cf070562fa3c931074d29ef5fb46d7",
-                "sha256:6494848d2720ced600e0d7ee23b4986623ddad1148ad8e54ffe308db18b762fe"
+                "sha256:458f663a233d95cc76dde0e1a3d01796516a05ce2781fefafebe037f7729601a",
+                "sha256:9eed0f7888c5fff45dc62164ff243a05d47fb8a3208035eb268974287e0aee8d"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.8'",
-            "version": "==5.1.0"
+            "version": "==6.0.0"
         },
         "typing-extensions": {
             "hashes": [
