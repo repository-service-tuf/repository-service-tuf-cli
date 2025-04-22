@@ -27,7 +27,7 @@ dependencies = [
   "beaupy",
   "click",
   "auto-click-auto",
-  "dynaconf[ini]==3.2.10",
+  "dynaconf[ini]",
   "setuptools",
   "PyNaCl",
   "requests",
