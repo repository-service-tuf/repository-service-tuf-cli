@@ -302,7 +302,9 @@ def _prompt_private_key(name_value: str) -> str:
 def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
     """Prompt for path to private key and password, return Signer."""
     while True:
-        name_value = public_key.unrecognized_fields.get(KEY_NAME_FIELD)
+        name_value = public_key.unrecognized_fields.get(
+            KEY_NAME_FIELD, public_key.keyid[:7]
+        )
         path = _prompt_private_key(name_value)
 
         with open(path, "rb") as f:
@@ -366,7 +368,7 @@ def _load_key_from_file_prompt() -> SSlibKey:
     return key
 
 
-def _load_key_from_hsm_prompt() -> Optional[Key]:
+def _load_key_from_hsm_prompt() -> SSlibKey:
     """Prompt for a public key."""
 
     def file_filter(f):  # pragma: no cover
@@ -393,13 +395,13 @@ def _load_key_from_hsm_prompt() -> Optional[Key]:
 
 
 def _new_keyid(key: Key) -> str:
-    data: bytes = encode_canonical(key.to_dict()).encode()
+    data: bytes = encode_canonical(key.to_dict()).encode()  # type: ignore
     hasher = digest("sha256")
     hasher.update(data)
     return hasher.hexdigest()
 
 
-def _load_key_from_sigstore_prompt() -> Optional[Key]:
+def _load_key_from_sigstore_prompt() -> SigstoreKey:
     console.print(
         "\n:warning: Sigstore is not supported by all TUF Clients.\n",
         justify="left",
@@ -442,6 +444,7 @@ def _load_key_prompt(
             console.print("\nSelect a key type:")
             signer_type = _select(ROOT_SIGNERS.values())
 
+        key: SSlibKey | SigstoreKey
         match signer_type:
             case ROOT_SIGNERS.KEY_PEM:
                 key = _load_key_from_file_prompt()
@@ -693,6 +696,7 @@ def _add_signature_prompt(metadata: Metadata, key: Key) -> Signature:
     """Prompt for signing key and add signature to metadata until success."""
     while True:
         name = key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)
+        signer: Signer | SigstoreSigner | CryptoSigner
         try:
             if key.keytype == "sigstore-oidc":
                 signer = SigstoreSigner.from_priv_key_uri(
@@ -704,9 +708,9 @@ def _add_signature_prompt(metadata: Metadata, key: Key) -> Signature:
                     [ROOT_SIGNERS.HSM.value, ROOT_SIGNERS.KEY_PEM.value]
                 )
                 if signer_type == ROOT_SIGNERS.KEY_PEM.value:
-                    signer = _load_signer_from_file_prompt(key)
+                    signer = _load_signer_from_file_prompt(key)  # type: ignore
                 else:
-                    signer = _load_signer_from_hsm_prompt(key)
+                    signer = _load_signer_from_hsm_prompt(key)  # type: ignore
 
             signature = metadata.sign(signer, append=True)
             signer.public_key.verify_signature(
@@ -1072,10 +1076,16 @@ def _print_root(root: Root):
             "Root", f"[green]{name}[/]", key.scheme, public_value
         )
 
-    key = _get_online_key(root)
-    name = key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)
+    root_key = _get_online_key(root)
+    if root_key is None:
+        console.print("No online key configured")
+        return
+    name = root_key.unrecognized_fields.get(KEY_NAME_FIELD, root_key.keyid)
     key_table.add_row(
-        "Online", f"[green]{name}[/]", key.scheme, key.keyval["public"]
+        "Online",
+        f"[green]{name}[/]",
+        root_key.scheme,
+        root_key.keyval["public"],
     )
 
     root_table = Table("Infos", "Keys", title="Root Metadata")
