@@ -10,6 +10,10 @@ updates:
       prefix: "build"
       include: "scope"
     open-pull-requests-limit: 10
+    groups:
+      github-actions:
+        patterns:
+          - "*"    
   # Monitor Github Actions
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -20,3 +24,7 @@ updates:
       prefix: "build"
       include: "scope"
     open-pull-requests-limit: 10
+    groups:
+      github-actions:
+        patterns:
+          - "*"    
