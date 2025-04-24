@@ -45,7 +45,9 @@ def delete(
     Delete artifacts to the TUF metadata.
 
     A POST /api/v1/artifacts/delete request to the RSTUF API service
-    is carried out.
+    is carried out, where:
+
+    - `PATH` is artifact path to be deleted as stored in the TUF metadata.
     """
 
     settings = _set_settings(context, api_server, headers)
