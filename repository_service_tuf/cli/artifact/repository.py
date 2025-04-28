@@ -163,6 +163,11 @@ def set(context: Context, repository: str) -> None:
 
     rstuf_config = context.obj.get("settings").as_dict()
 
+    if repository not in rstuf_config.get("REPOSITORIES", {}):
+        raise click.ClickException(
+            f"Repository {repository} is missing in your configuration."
+        )
+
     rstuf_config["CURRENT_REPOSITORY"] = repository
     if context.obj.get("config"):
         write_config(context.obj.get("config"), rstuf_config)
