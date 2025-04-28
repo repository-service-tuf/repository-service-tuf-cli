@@ -31,7 +31,7 @@ jobs:
 
     - name: Restore mypy cache
       id: cache-mypy-restore
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684
       with:
         path: |
           .mypy_cache
@@ -43,7 +43,7 @@ jobs:
 
     - name: Save mypy cache
       id: cache-mypy-save
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684
       with:
         path: |
           .mypy_cache
