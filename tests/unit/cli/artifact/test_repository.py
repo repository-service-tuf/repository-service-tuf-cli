@@ -206,6 +206,54 @@ class TestArtifactRepositoryInteraction:
         assert check_settings.get("CURRENT_REPOSITORY") == "r2"
         assert test_result.exit_code == 0
 
+    def test_repository_set_no_repos(self, client, test_context):
+        """Test set command when no repositories are configured"""
+        config = {
+            "SERVER": "http://127.0.0.1",
+        }
+        fake_config = pretend.stub(
+            as_dict = pretend.call_recorder(lambda *a: config),
+        )
+        test_context["settings"] = fake_config
+
+        test_result = client.invoke(
+            repository.set,
+            ["non_existing"],
+            obj=test_context,
+        )
+
+        assert "There are no configured repositories to Set" in test_result.stderr
+        assert test_result.exit_code == 1
+
+    def test_repository_set_non_existing_repo(self, client, test_context):
+        """Test set command with non-existing repository"""
+        config = {
+            "CURRENT_REPOSITORY": "r1",
+            "REPOSITORIES": {
+                "r1": {
+                    "artifact_base_url": "http://localhost:8081",
+                    "hash_prefix": "False",
+                    "metadata_url": "http://localhost:8080", 
+                    "trusted_root": "some_root",
+                }
+            },
+            "SERVER": "http://127.0.0.1",
+        }
+        fake_config = pretend.stub(
+            as_dict = pretend.call_recorder(lambda *a: config),
+        )
+        test_context["settings"] = fake_config
+
+        test_result = client.invoke(
+            repository.set,
+            ["non_existing"],
+            obj=test_context,
+        )
+
+        assert "Repository non_existing not available in config" in test_result.stderr
+        assert "You can create it instead" in test_result.stderr
+        assert test_result.exit_code == 1
+
     def test_repository_add_one_param_only(
         self, client, test_context, monkeypatch
     ):
