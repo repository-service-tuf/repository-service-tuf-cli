@@ -233,7 +233,7 @@ class TestArtifactRepositoryInteraction:
                 "r1": {
                     "artifact_base_url": "http://localhost:8081",
                     "hash_prefix": "False",
-                    "metadata_url": "http://localhost:8080", 
+                    "metadata_url": "http://localhost:8080",
                     "trusted_root": "some_root",
                 }
             },
