@@ -16,5 +16,5 @@ Module contents
 
 .. automodule:: repository_service_tuf.cli
    :members:
-   :undoc-members:
    :show-inheritance:
+   :undoc-members:

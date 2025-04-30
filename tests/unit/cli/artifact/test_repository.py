@@ -1,10 +1,14 @@
 # SPDX-License-Identifier: MIT
 
 
+from unittest.mock import patch
+
 import pretend
+import pytest
 
 from repository_service_tuf.cli.artifact import repository
 
+_PATH = "repository_service_tuf.cli.artifact.repository"
 WRITE_CONFIG_SRC_PATH = (
     "repository_service_tuf.cli.artifact.repository.write_config"
 )
@@ -246,8 +250,39 @@ class TestArtifactRepositoryInteraction:
 
         assert test_result.exit_code == 2
 
+    @pytest.mark.parametrize(
+        "args, is_file",
+        [
+            (
+                [
+                    "-n",
+                    "r3",
+                    "-r",
+                    "example_path_to_root/root.json",
+                    "-a",
+                    "http://localhost:8081",
+                    "-m",
+                    "http://localhost:8080",
+                ],
+                True,
+            ),
+            (
+                [
+                    "-n",
+                    "r3",
+                    "-r",
+                    "http://localhost:8080/1.root.json",
+                    "-a",
+                    "http://localhost:8081",
+                    "-m",
+                    "http://localhost:8080",
+                ],
+                False,
+            ),
+        ],
+    )
     def test_repository_add_all_params(
-        self, client, test_context, monkeypatch
+        self, client, test_context, monkeypatch, args, is_file
     ):
 
         config = {
@@ -278,29 +313,23 @@ class TestArtifactRepositoryInteraction:
         fake_write_config = pretend.call_recorder(lambda *a: None)
         monkeypatch.setattr(WRITE_CONFIG_SRC_PATH, fake_write_config)
 
-        test_result = client.invoke(
-            repository.add,
-            [
-                "-n",
-                "r3",
-                "-r",
-                "example_path_to_root/root.json",
-                "-a",
-                "http://localhost:8081",
-                "-m",
-                "http://localhost:8080",
-            ],
-            obj=test_context,
-        )
+        with (
+            patch("os.path.isfile", return_value=is_file),
+            patch(f"{_PATH}._load_root_from_file", return_value=b"some_root"),
+            patch(f"{_PATH}._load_root_from_url", return_value=b"some_root"),
+        ):
+            test_result = client.invoke(
+                repository.add,
+                args,
+                obj=test_context,
+            )
 
+        assert test_result.exit_code == 0
         assert (
             "Successfully added r3 repository to config" in test_result.output
         )
         check_settings = test_context["settings"].as_dict()
         assert "r3" in check_settings["REPOSITORIES"]
-        assert check_settings["REPOSITORIES"]["r3"]["trusted_root"] == (
-            "ZXhhbXBsZV9wYXRoX3RvX3Jvb3Qvcm9vdC5qc29u"
-        )
         assert check_settings["REPOSITORIES"]["r3"]["metadata_url"] == (
             "http://localhost:8080"
         )
@@ -343,22 +372,27 @@ class TestArtifactRepositoryInteraction:
         fake_write_config = pretend.call_recorder(lambda *a: None)
         monkeypatch.setattr(WRITE_CONFIG_SRC_PATH, fake_write_config)
 
-        test_result = client.invoke(
-            repository.add,
-            [
-                "-n",
-                "r3",
-                "-r",
-                "example_path_to_root/root.json",
-                "-a",
-                "http://localhost:8081",
-                "-m",
-                "http://localhost:8080",
-                "-p",
-            ],
-            obj=test_context,
-        )
+        with (
+            patch("os.path.isfile", return_value=True),
+            patch(f"{_PATH}._load_root_from_file", return_value=b"some_root"),
+        ):
+            test_result = client.invoke(
+                repository.add,
+                [
+                    "-n",
+                    "r3",
+                    "-r",
+                    "example_path_to_root/root.json",
+                    "-a",
+                    "http://localhost:8081",
+                    "-m",
+                    "http://localhost:8080",
+                    "-p",
+                ],
+                obj=test_context,
+            )
 
+        assert test_result.exit_code == 0
         assert (
             "Successfully added r3 repository to config" in test_result.output
         )
@@ -386,21 +420,25 @@ class TestArtifactRepositoryInteraction:
         fake_write_config = pretend.call_recorder(lambda *a: None)
         monkeypatch.setattr(WRITE_CONFIG_SRC_PATH, fake_write_config)
 
-        test_result = client.invoke(
-            repository.add,
-            [
-                "-n",
-                "r3",
-                "-r",
-                "example_path_to_root/root.json",
-                "-a",
-                "http://localhost:8081",
-                "-m",
-                "http://localhost:8080",
-                "-p",
-            ],
-            obj=test_context,
-        )
+        with (
+            patch("os.path.isfile", return_value=True),
+            patch(f"{_PATH}._load_root_from_file", return_value=b"some_root"),
+        ):
+            test_result = client.invoke(
+                repository.add,
+                [
+                    "-n",
+                    "r3",
+                    "-r",
+                    "example_path_to_root/root.json",
+                    "-a",
+                    "http://localhost:8081",
+                    "-m",
+                    "http://localhost:8080",
+                    "-p",
+                ],
+                obj=test_context,
+            )
 
         assert (
             "Successfully added r3 repository to config" in test_result.output
@@ -408,8 +446,8 @@ class TestArtifactRepositoryInteraction:
         check_settings = test_context["settings"].as_dict()
         assert check_settings["REPOSITORIES"]
         assert "r3" in check_settings["REPOSITORIES"]
-        assert check_settings["REPOSITORIES"]["r3"]["trusted_root"] == (
-            "ZXhhbXBsZV9wYXRoX3RvX3Jvb3Qvcm9vdC5qc29u"
+        assert (
+            check_settings["REPOSITORIES"]["r3"]["trusted_root"] == "some_root"
         )
         assert check_settings["REPOSITORIES"]["r3"]["metadata_url"] == (
             "http://localhost:8080"
@@ -451,27 +489,31 @@ class TestArtifactRepositoryInteraction:
         fake_write_config = pretend.call_recorder(lambda *a: None)
         monkeypatch.setattr(WRITE_CONFIG_SRC_PATH, fake_write_config)
 
-        test_result = client.invoke(
-            repository.add,
-            [
-                "-n",
-                "r1",
-                "-r",
-                "example_path_to_root/root.json",
-                "-a",
-                "http://localhost:8081",
-                "-m",
-                "http://example.com",
-            ],
-            obj=test_context,
-        )
-        assert "Repository r1 already configured" in test_result.output
-        assert "Successfully updated repository r1" in test_result.output
+        with (
+            patch("os.path.isfile", return_value=True),
+            patch(f"{_PATH}._load_root_from_file", return_value=b"some_root"),
+        ):
+            test_result = client.invoke(
+                repository.add,
+                [
+                    "-n",
+                    "r1",
+                    "-r",
+                    "example_path_to_root/root.json",
+                    "-a",
+                    "http://localhost:8081",
+                    "-m",
+                    "http://example.com",
+                ],
+                obj=test_context,
+            )
+        assert test_result.exit_code == 0
+        assert "Repository r1 already configured" in test_result.stdout
+        assert "Successfully updated repository r1" in test_result.stdout
         check_settings = test_context["settings"].as_dict()
         assert check_settings["REPOSITORIES"]["r1"]["metadata_url"] == (
             "http://example.com"
         )
-        assert test_result.exit_code == 0
 
     def test_repository_update_no_repos(
         self,
@@ -802,7 +844,6 @@ class TestArtifactRepositoryInteraction:
             in test_result.output.replace("\n", "")
         )
         assert "'trusted_root'" in test_result.output
-        assert "'some_root'" in test_result.output
         check_settings = test_context["settings"].as_dict()
         assert "r1" not in check_settings.get("REPOSITORIES")
         assert test_result.exit_code == 0
