@@ -89,42 +89,17 @@ class TestCLIHelpers:
 
     def test_create_artifact_delete_payload_from_filepath(
         self,
-        temp_file: str,
     ) -> None:
         """
         Test that the artifact payload is created correctly given the
         filepath of the artifact
         """
 
-        path = "/fake/path/"
+        path = "/fake/path/fake-file"
 
-        expected_artifact_payload = {
-            "artifacts": [f"{path}{temp_file.split('/')[-1]}"]
-        }
+        expected_artifact_payload = {"artifacts": [path]}
 
         result = create_artifact_delete_payload_from_filepath(
-            filepath=temp_file,
-            path=path,
-        )
-        assert result == expected_artifact_payload
-
-    def test_create_artifact_add_payload_from_filepath_without_path(
-        self,
-        temp_file: str,
-    ) -> None:
-        """
-        Test that the artifact payload is created correctly given the
-        filepath of the artifact
-        """
-
-        path = None
-
-        expected_artifact_payload = {
-            "artifacts": [f"{temp_file.split('/')[-1]}"]
-        }
-
-        result = create_artifact_delete_payload_from_filepath(
-            filepath=temp_file,
             path=path,
         )
         assert result == expected_artifact_payload

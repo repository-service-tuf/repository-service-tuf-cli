@@ -1,13 +1,13 @@
 [build-system]
 # hatchling pinned for reproducibility: version should be kept up-to-date
-requires = ["hatchling==0.22.0"]
+requires = ["hatchling==1.27.0"]
 build-backend = "hatchling.build"
 
 [project]
 name = "repository-service-tuf"
 description = 'Repository Service for TUF Command Line Interface'
 readme = "README.rst"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = { text = "MIT"}
 keywords = []
 authors = [
@@ -19,6 +19,7 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",  
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
@@ -26,7 +27,7 @@ dependencies = [
   "beaupy",
   "click",
   "auto-click-auto",
-  "dynaconf[ini]==3.1.9",
+  "dynaconf[ini]",
   "setuptools",
   "PyNaCl",
   "requests",
@@ -40,6 +41,8 @@ dependencies = [
   "google-cloud-kms",
   "hvac",
   "azure-keyvault-keys",
+  "pykcs11",
+  "asn1crypto",
 ]
 dynamic = ["version"]
 

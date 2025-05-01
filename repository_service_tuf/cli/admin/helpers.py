@@ -1,9 +1,10 @@
-# SPDX-FileCopyrightText: 2023-2024 Repository Service for TUF Contributors
+# SPDX-FileCopyrightText: 2023-2025 Repository Service for TUF Contributors
 #
 # SPDX-License-Identifier: MIT
 
 import enum
 import os.path
+import platform
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from tempfile import TemporaryDirectory
@@ -21,12 +22,15 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_private_key,
     load_pem_public_key,
 )
+from cryptography.x509 import load_pem_x509_certificate, oid
 from email_validator import validate_email
 from prompt_toolkit.formatted_text.base import AnyFormattedText
+from PyKCS11 import CKR_USER_NOT_LOGGED_IN, PyKCS11Error  # type: ignore
 from rich.json import JSON
 from rich.markdown import Markdown
 from rich.prompt import Confirm, IntPrompt, InvalidResponse, Prompt
 from rich.table import Table
+from securesystemslib.exceptions import UnverifiedSignatureError
 from securesystemslib.formats import encode_canonical
 from securesystemslib.hash import digest
 from securesystemslib.signer import (
@@ -35,8 +39,10 @@ from securesystemslib.signer import (
     AzureSigner,
     CryptoSigner,
     GCPSigner,
+    HSMSigner,
     Key,
     Signature,
+    Signer,
     SigstoreKey,
     SigstoreSigner,
     SSlibKey,
@@ -64,6 +70,11 @@ from tuf.ngclient.updater import Updater
 # https://rich.readthedocs.io/en/stable/console.html#console-api
 # https://rich.readthedocs.io/en/stable/console.html#capturing-output
 from repository_service_tuf.cli import console
+from repository_service_tuf.helpers.api_client import (
+    URL,
+    Methods,
+    request_server,
+)
 
 ONLINE_ROLE_NAMES = {Timestamp.type, Snapshot.type, Targets.type}
 
@@ -82,12 +93,50 @@ DEFAULT_EXPIRY = {
 }
 DEFAULT_BINS_NUMBER = 256
 
+# some known locations where we might find libykcs11.
+# These should all be _system_ locations (not user writable)
+LIBYKCS11_LOCATIONS = {
+    "Linux": [
+        "/usr/lib/x86_64-linux-gnu/libykcs11.so",
+        "/usr/lib64/libykcs11.so",
+        "/usr/local/lib/libykcs11.so",
+    ],
+    "Darwin": [
+        "/opt/homebrew/lib/libykcs11.dylib",
+        "/usr/local/lib/libykcs11.dylib",
+    ],
+}
+
 # SecureSystemsLib doesn't support SigstoreKey by default.
 KEY_FOR_TYPE_AND_SCHEME.update(
     {
         ("sigstore-oidc", "Fulcio"): SigstoreKey,
     }
 )
+
+HSM_INSTRUCTIONS = """
+#### Hardware signing requirements
+
+(Source: https://github.com/theupdateframework/tuf-on-ci/tree/main/docs -- Thanks)
+
+A hardware signing key must contain a _PIV Digital Signature private key_ to be used.
+CLI also needs access to a PKCS#11 module.
+
+1. Generate a PIV signing key on your hardware key if you don't have one yet.
+   For YubiKey owners, follow the [YubiKey setup instructions](https://github.com/theupdateframework/tuf-on-ci/blob/main/docs/YUBIKEY-PIV-SETUP.md).
+
+2. Install a PKCS#11 module. It has been tested with the Yubico ykcs11. Debian users can install it with
+   ```shell
+   $ apt install ykcs11
+   ```
+   macOS users can install with
+   ```shell
+   $ brew install yubico-piv-tool
+   ```
+
+> **_NOTE:_** Windows WSL users may need to attach a USB hardware device using [usbipd-win](https://learn.microsoft.com/en-us/windows/wsl/connect-usb)
+
+"""  # noqa
 
 
 class SIGNERS(str, enum.Enum):
@@ -102,6 +151,7 @@ class SIGNERS(str, enum.Enum):
 
 # Root signers supported by RSTUF
 class ROOT_SIGNERS(SIGNERS):
+    HSM = "HSM"
     KEY_PEM = "Key PEM File"
     SIGSTORE = "Sigstore"
 
@@ -126,8 +176,8 @@ class DELEGATIONS_TYPE(str, enum.Enum):
     CUSTOM_DELEGATIONS = "Custom Delegations (online/offline key)"
 
     @classmethod
-    def values(self) -> List[str]:
-        return [e.value for e in self]
+    def values(cls) -> List[str]:
+        return [e.value for e in cls]
 
 
 @dataclass
@@ -176,6 +226,7 @@ class Metadatas:  # accept bad spelling to disambiguate with Metadata
 class CeremonyPayload:
     settings: "Settings"
     metadata: "Metadatas"
+    timeout: int = 300
 
 
 @dataclass
@@ -213,6 +264,18 @@ class _MoreThan1Prompt(IntPrompt):
         return return_value
 
 
+def _get_secret(secret: str) -> str:
+    msg = (
+        f"\nEnter {secret} to sign (provide touch/bio authentication "
+        "if needed)"
+    )
+
+    # # special case for tests -- prompt() will lockup trying to hide STDIN:
+    # if not sys.stdin.isatty():
+    #     return sys.stdin.readline().rstrip()
+    return click.prompt(msg, hide_input=True)
+
+
 def _prompt_key(
     message: AnyFormattedText,
     file_filter: Callable[[str], bool] = lambda f: True,
@@ -228,31 +291,56 @@ def _prompt_key(
 def _prompt_private_key(name_value: str) -> str:
     """Prompt for a private key."""
 
-    name_str = f"[green]{name_value}[/]"
-    message = (
-        f"\nPlease enter [yellow]path[/] to encrypted private key '{name_str}'"
+    message = prompt_toolkit.HTML(
+        f"\nPlease enter the <b>path</b> to encrypted private key "
+        f"<b>{name_value}</b>: "
     )
-    formatted_text = prompt_toolkit.formatted_text.to_formatted_text(message)
-    return _prompt_key(formatted_text)
+
+    return _prompt_key(message)
 
 
 def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
     """Prompt for path to private key and password, return Signer."""
-    name_value = public_key.unrecognized_fields.get(KEY_NAME_FIELD)
-    path = _prompt_private_key(public_key)
+    while True:
+        name_value = public_key.unrecognized_fields.get(
+            KEY_NAME_FIELD, public_key.keyid[:7]
+        )
+        path = _prompt_private_key(name_value)
 
-    with open(path, "rb") as f:
-        private_pem = f.read()
+        with open(path, "rb") as f:
+            private_pem = f.read()
 
-    # Because of click.prompt we are required to use click.style()
-    name_str = click.style(name_value, fg="green")
-    password_str = click.style("password", fg="yellow")
-    password = click.prompt(
-        f"\nPlease enter {password_str} to encrypted private key '{name_str}'",
-        hide_input=True,
-    )
-    private_key = load_pem_private_key(private_pem, password.encode())
+        # Because of click.prompt we are required to use click.style()
+        name_str = click.style(name_value, fg="green")
+        password_str = click.style("password", fg="yellow")
+        password = click.prompt(
+            f"\nPlease enter {password_str} to encrypted private key '{name_str}'",  # noqa
+            hide_input=True,
+        )
+        try:
+            private_key = load_pem_private_key(private_pem, password.encode())
+            break
+        except TypeError as e:
+            console.print(f"Cannot load key: {e}")
+
     return CryptoSigner(private_key, public_key)
+
+
+def _load_signer_from_hsm_prompt(public_key: SSlibKey):
+    console.print(Markdown(HSM_INSTRUCTIONS))
+    for loc in LIBYKCS11_LOCATIONS.get(platform.system(), []):
+        if os.path.exists(loc):
+            break
+    else:
+        raise click.ClickException("Failed to find libykcs11")
+
+    os.environ["PYKCS11LIB"] = loc
+
+    uri, _ = HSMSigner.import_()
+
+    signer = Signer.from_priv_key_uri(uri, public_key, _get_secret)
+
+    return signer
 
 
 def _prompt_public_key() -> str:
@@ -280,14 +368,40 @@ def _load_key_from_file_prompt() -> SSlibKey:
     return key
 
 
+def _load_key_from_hsm_prompt() -> SSlibKey:
+    """Prompt for a public key."""
+
+    def file_filter(f):  # pragma: no cover
+        return os.path.isdir(f) or os.path.isfile(f)
+
+    message = prompt_toolkit.HTML(
+        "Enter file path to a <b>CERTIFICATE</b> PEM key: "
+    )
+    path = _prompt_key(message, file_filter)
+
+    with open(path, "rb") as f:
+        cert_pem = f.read()
+
+    cert = load_pem_x509_certificate(cert_pem)
+
+    key = SSlibKey.from_crypto(cert.public_key())
+    common_name = cert.subject.get_attributes_for_oid(oid.NameOID.COMMON_NAME)
+
+    key.unrecognized_fields[KEY_NAME_FIELD] = (
+        common_name[0].value if bool(common_name) else None
+    )
+
+    return key
+
+
 def _new_keyid(key: Key) -> str:
-    data: bytes = encode_canonical(key.to_dict()).encode()
+    data: bytes = encode_canonical(key.to_dict()).encode()  # type: ignore
     hasher = digest("sha256")
     hasher.update(data)
     return hasher.hexdigest()
 
 
-def _load_key_from_sigstore_prompt() -> Optional[Key]:
+def _load_key_from_sigstore_prompt() -> SigstoreKey:
     console.print(
         "\n:warning: Sigstore is not supported by all TUF Clients.\n",
         justify="left",
@@ -330,11 +444,14 @@ def _load_key_prompt(
             console.print("\nSelect a key type:")
             signer_type = _select(ROOT_SIGNERS.values())
 
+        key: SSlibKey | SigstoreKey
         match signer_type:
             case ROOT_SIGNERS.KEY_PEM:
                 key = _load_key_from_file_prompt()
             case ROOT_SIGNERS.SIGSTORE:
                 key = _load_key_from_sigstore_prompt()
+            case ROOT_SIGNERS.HSM:
+                key = _load_key_from_hsm_prompt()
 
     except (OSError, ValueError) as e:
         console.print(f"Cannot load key: {e}")
@@ -579,20 +696,47 @@ def _add_signature_prompt(metadata: Metadata, key: Key) -> Signature:
     """Prompt for signing key and add signature to metadata until success."""
     while True:
         name = key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)
+        signer: Signer | SigstoreSigner | CryptoSigner
         try:
             if key.keytype == "sigstore-oidc":
                 signer = SigstoreSigner.from_priv_key_uri(
                     "sigstore:?ambient=false", key
                 )
-            # Using Key PEM file
+            # Using HSM or Key PEM file
             else:
-                signer = _load_signer_from_file_prompt(key)
+                signer_type = _select(
+                    [ROOT_SIGNERS.HSM.value, ROOT_SIGNERS.KEY_PEM.value]
+                )
+                if signer_type == ROOT_SIGNERS.KEY_PEM.value:
+                    signer = _load_signer_from_file_prompt(key)  # type: ignore
+                else:
+                    signer = _load_signer_from_hsm_prompt(key)  # type: ignore
 
             signature = metadata.sign(signer, append=True)
+            signer.public_key.verify_signature(
+                signature, metadata.signed_bytes
+            )
+
             break
+        except UnverifiedSignatureError as e:
+            console.print(
+                f"\nFailed to verify {name} signature "
+                f"(is this the correct key?)\n    {e}"
+            )
 
         except (ValueError, OSError, UnsignedMetadataError) as e:
-            console.print(f"Cannot sign metadata with key '{name}': {e}")
+            # Very light error handling for specific PKCS11 errors
+            msg = str(e)
+            if isinstance(e.__context__, PyKCS11Error):
+                pkcs_err = e.__context__
+                if pkcs_err.value == CKR_USER_NOT_LOGGED_IN:
+                    msg = (
+                        "Required authentication (e.g. touch) did not happpen"
+                    )
+
+            console.print(
+                f"\nCannot sign metadata with key '{name}': {e}\n    {msg}"
+            )
 
     console.print(f"Signed metadata with key '{name}'")
     return signature
@@ -880,6 +1024,43 @@ def _get_online_key(root: Root) -> Optional[Key]:
     return key
 
 
+def _parse_pending_data(pending_roles_resp: Dict[str, Any]) -> Dict[str, Any]:
+    data = pending_roles_resp.get("data", {})
+
+    all_roles: Dict[str, Dict[str, Any]] = data.get("metadata", {})
+    pending_roles = {
+        k: v for k, v in all_roles.items() if not k.startswith("trusted_")
+    }
+    if len(pending_roles) == 0:
+        raise click.ClickException("No metadata available for signing")
+
+    if any(
+        role["signed"]["_type"] not in [Root.type, Targets.type]
+        for role in pending_roles.values()
+    ):
+        raise click.ClickException(
+            "Supporting only root and targets pending role types"
+        )
+
+    return all_roles
+
+
+def _get_pending_roles(settings: Any) -> Dict[str, Dict[str, Any]]:
+    """Get dictionary of pending roles for signing."""
+    response = request_server(
+        settings.SERVER,
+        URL.METADATA_SIGN.value,
+        Methods.GET,
+        headers=settings.HEADERS,
+    )
+    if response.status_code != 200:
+        raise click.ClickException(
+            f"Failed to fetch metadata for signing. Error: {response.text}"
+        )
+
+    return _parse_pending_data(response.json())
+
+
 def _print_root(root: Root):
     """Pretty print root metadata."""
 
@@ -895,10 +1076,16 @@ def _print_root(root: Root):
             "Root", f"[green]{name}[/]", key.scheme, public_value
         )
 
-    key = _get_online_key(root)
-    name = key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)
+    root_key = _get_online_key(root)
+    if root_key is None:
+        console.print("No online key configured")
+        return
+    name = root_key.unrecognized_fields.get(KEY_NAME_FIELD, root_key.keyid)
     key_table.add_row(
-        "Online", f"[green]{name}[/]", key.scheme, key.keyval["public"]
+        "Online",
+        f"[green]{name}[/]",
+        root_key.scheme,
+        root_key.keyval["public"],
     )
 
     root_table = Table("Infos", "Keys", title="Root Metadata")
@@ -914,7 +1101,7 @@ def _print_root(root: Root):
     console.print(root_table)
 
 
-def _print_targets(targets: Metadata):
+def _print_targets(targets: Metadata[Targets]):
     """Pretty print targets metadata."""
 
     targets_table = Table("Version", "Artifacts")

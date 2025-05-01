@@ -4,22 +4,20 @@
 
 import json
 
-import click
 import pretend
-import pytest
 
 from repository_service_tuf.cli.admin.metadata import sign
-from repository_service_tuf.helpers.api_client import URL, Methods
+from repository_service_tuf.helpers.api_client import URL
 from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 
 class TestSign:
     def test_sign_with_previous_root(
-        self, monkeypatch, test_context, patch_getpass, update_privkey_prompt
+        self, monkeypatch, patch_getpass, test_context, update_privkey_prompt
     ):
         inputs = []
         # selections interface
-        select_options = iter(("root", "JimiHendrix's Key"))
+        select_options = iter(("root", "JimiHendrix's Key", "Key PEM File"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
@@ -29,14 +27,10 @@ class TestSign:
         )
 
         with open(f"{_PAYLOADS / 'sign_pending_roles.json'}") as f:
-            fake_response_data = json.load(f)
+            full_data = json.load(f)
 
-        fake_response = pretend.stub(
-            json=pretend.call_recorder(lambda: fake_response_data),
-            status_code=200,
-        )
-        sign.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
+        sign._get_pending_roles = pretend.call_recorder(
+            lambda *a, **kw: full_data["data"]["metadata"]
         )
         sign.send_payload = pretend.call_recorder(lambda **kw: "fake-taskid")
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
@@ -54,10 +48,8 @@ class TestSign:
             result.data["signature"]["keyid"] == expected["signature"]["keyid"]
         )
         assert "Metadata Signed and sent to the API! 🔑" in result.stdout
-        assert sign.request_server.calls == [
-            pretend.call(
-                api_server, "api/v1/metadata/sign/", Methods.GET, headers=None
-            )
+        assert sign._get_pending_roles.calls == [
+            pretend.call(test_context["settings"])
         ]
         assert sign.send_payload.calls == [
             pretend.call(
@@ -91,7 +83,7 @@ class TestSign:
     ):
         inputs = []
         # selections interface
-        select_options = iter(("root", "JimiHendrix's Key"))
+        select_options = iter(("root", "JimiHendrix's Key", "Key PEM File"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
@@ -103,15 +95,8 @@ class TestSign:
         with open(f"{_ROOTS / 'v1.json'}") as f:
             v1_das_root = f.read()
 
-        fake_response_data = {
-            "data": {"metadata": {"root": json.loads(v1_das_root)}}
-        }
-        fake_response = pretend.stub(
-            json=pretend.call_recorder(lambda: fake_response_data),
-            status_code=200,
-        )
-        sign.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
+        sign._get_pending_roles = pretend.call_recorder(
+            lambda *a, **kw: {"root": json.loads(v1_das_root)}
         )
         sign.send_payload = pretend.call_recorder(lambda **kw: "fake-taskid")
         sign.task_status = pretend.call_recorder(lambda *a: "OK")
@@ -128,10 +113,8 @@ class TestSign:
         assert result.data["role"] == "root"
         assert result.data["signature"]["keyid"] == expected["keyid"]
         assert "Metadata Signed and sent to the API! 🔑" in result.stdout
-        assert sign.request_server.calls == [
-            pretend.call(
-                api_server, "api/v1/metadata/sign/", Methods.GET, headers=None
-            )
+        assert sign._get_pending_roles.calls == [
+            pretend.call(test_context["settings"])
         ]
         assert sign.send_payload.calls == [
             pretend.call(
@@ -169,7 +152,7 @@ class TestSign:
         """
         inputs = []
         # selections interface
-        select_options = iter(("root", "JimiHendrix's Key"))
+        select_options = iter(("root", "JimiHendrix's Key", "Key PEM File"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
@@ -206,7 +189,7 @@ class TestSign:
     ):
         inputs = []
         # selections interface
-        select_options = iter(("root", "JimiHendrix's Key"))
+        select_options = iter(("root", "JimiHendrix's Key", "Key PEM File"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
@@ -268,7 +251,7 @@ class TestSign:
         Test that '--dry-run' is with higher priority than 'settings.SERVER'.
         """
         # selections interface
-        select_options = iter(("root", "JimiHendrix's Key"))
+        select_options = iter(("root", "JimiHendrix's Key", "Key PEM File"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
@@ -304,8 +287,10 @@ class TestSignError:
 
         err_prefix = "Either '--api-server' admin option/'SERVER'"
         err_suffix = "or '--in'"
-        assert err_prefix in result.output
-        assert err_suffix in result.output
+
+        assert result.exit_code == 1, result.stderr
+        assert err_prefix in result.stderr
+        assert err_suffix in result.stderr
 
     def test_sign_no_api_server_and_no_dry_run_option(self):
         sign_input_path = f"{_PAYLOADS / 'sign_pending_roles.json'}"
@@ -315,8 +300,9 @@ class TestSignError:
 
         err_prefix = "Either '--api-server' admin option/'SERVER'"
         err_suffix = "or '--dry-run'"
-        assert err_prefix in result.output
-        assert err_suffix in result.output
+        assert result.exit_code == 1, result.stdout
+        assert err_prefix in result.stderr
+        assert err_suffix in result.stderr
 
     def test_sign_with_previous_root_but_wrong_version(
         self, test_context, patch_getpass, monkeypatch
@@ -327,24 +313,13 @@ class TestSignError:
         with open(f"{_ROOTS / 'v2.json'}") as f:
             v2_das_root = f.read()
 
-        fake_response_data = {
-            "data": {
-                "metadata": {
-                    "root": json.loads(v2_das_root),
-                }
-            }
-        }
-        fake_response = pretend.stub(
-            json=pretend.call_recorder(lambda: fake_response_data),
-            status_code=200,
-        )
-        sign.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
+        sign._get_pending_roles = pretend.call_recorder(
+            lambda *a, **kw: {"root": json.loads(v2_das_root)}
         )
         api_server = "http://127.0.0.1"
         test_context["settings"].SERVER = api_server
         # selections interface
-        select_options = iter(("root", "JimiHendrix's Key"))
+        select_options = iter(("root", "JimiHendrix's Key", "Key PEM File"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
@@ -355,11 +330,9 @@ class TestSignError:
         )
 
         assert test_result.exit_code == 1, test_result.stdout
-        assert "Previous root v1 needed to sign root v2" in test_result.output
-        assert sign.request_server.calls == [
-            pretend.call(
-                api_server, "api/v1/metadata/sign/", Methods.GET, headers=None
-            )
+        assert "Previous root v1 needed to sign root v2" in test_result.stderr
+        assert sign._get_pending_roles.calls == [
+            pretend.call(test_context["settings"])
         ]
 
     def test_sign_fully_signed_metadata(
@@ -371,24 +344,13 @@ class TestSignError:
         with open("tests/files/payload/ceremony.json", "r") as f:
             ceremony_payload = json.loads(f.read())
 
-        fake_response_data = {
-            "data": {
-                "metadata": {
-                    "root": ceremony_payload["metadata"]["root"],
-                }
-            }
-        }
-        fake_response = pretend.stub(
-            json=pretend.call_recorder(lambda: fake_response_data),
-            status_code=200,
-        )
-        sign.request_server = pretend.call_recorder(
-            lambda *a, **kw: fake_response
+        sign._get_pending_roles = pretend.call_recorder(
+            lambda *a, **kw: {"root": ceremony_payload["metadata"]["root"]}
         )
         api_server = "http://127.0.0.1"
         test_context["settings"].SERVER = api_server
         # selections interface
-        select_options = iter(("root", "JimiHendrix's Key"))
+        select_options = iter(("root", "JimiHendrix's Key", "Key PEM File"))
         monkeypatch.setattr(
             f"{_HELPERS}._select",
             lambda *a: next(select_options),
@@ -399,70 +361,7 @@ class TestSignError:
         )
 
         assert test_result.exit_code == 1, test_result.stdout
-        assert "Metadata already fully signed." in test_result.output
-        assert sign.request_server.calls == [
-            pretend.call(
-                api_server, "api/v1/metadata/sign/", Methods.GET, headers=None
-            )
-        ]
-
-
-class TestHelpers:
-    def test__parse_pending_data(self):
-        fake_md = ["md1", "md2"]
-        result = sign._parse_pending_data({"data": {"metadata": fake_md}})
-
-        assert result == fake_md
-
-    def test__parse_pending_data_missing_metadata(self):
-        with pytest.raises(click.ClickException) as e:
-            sign._parse_pending_data({"data": {}})
-
-        assert "No metadata available for signing" in str(e)
-
-    def test__get_pending_roles_request(self, monkeypatch):
-        fake_settings = pretend.stub(SERVER=None, HEADERS=None)
-        fake_json = pretend.stub()
-        response = pretend.stub(
-            status_code=200, json=pretend.call_recorder(lambda: fake_json)
-        )
-        sign.request_server = pretend.call_recorder(lambda *a, **kw: response)
-
-        parsed_data = pretend.stub()
-        fake__parse_pending_data = pretend.call_recorder(lambda a: parsed_data)
-        monkeypatch.setattr(
-            sign, "_parse_pending_data", fake__parse_pending_data
-        )
-
-        result = sign._get_pending_roles(fake_settings)
-
-        assert result == parsed_data
-        assert sign.request_server.calls == [
-            pretend.call(
-                fake_settings.SERVER,
-                sign.URL.METADATA_SIGN.value,
-                sign.Methods.GET,
-                headers=None,
-            )
-        ]
-        assert response.json.calls == [pretend.call()]
-        assert fake__parse_pending_data.calls == [pretend.call(fake_json)]
-
-    def test__get_pending_roles_request_bad_status_code(self):
-        fake_settings = pretend.stub(
-            SERVER="http://localhost:80", HEADERS=None
-        )
-        response = pretend.stub(status_code=400, text="")
-        sign.request_server = pretend.call_recorder(lambda *a, **kw: response)
-        with pytest.raises(click.ClickException) as e:
-            sign._get_pending_roles(fake_settings)
-
-        assert "Failed to fetch metadata for signing" in str(e)
-        assert sign.request_server.calls == [
-            pretend.call(
-                fake_settings.SERVER,
-                sign.URL.METADATA_SIGN.value,
-                sign.Methods.GET,
-                headers=None,
-            )
+        assert "Metadata already fully signed." in test_result.stderr
+        assert sign._get_pending_roles.calls == [
+            pretend.call(test_context["settings"])
         ]

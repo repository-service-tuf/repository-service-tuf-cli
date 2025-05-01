@@ -24,6 +24,9 @@ hvac = "*"
 azure-keyvault-keys = "*"
 prompt-toolkit = "*"
 setuptools = "*"
+pykcs11 = "*"
+asn1crypto = "*"
+exceptiongroup = "*"
 
 [dev-packages]
 black = "*"
@@ -46,11 +49,11 @@ sphinxcontrib-qthelp = "*"
 sphinxcontrib-serializinghtml = "*"
 sphinxcontrib-plantuml = "*"
 sphinx-rtd-theme = "*"
-hatchling = "==0.22.0"
+hatchling = "==1.27.0"
 build = "*"
 pre-commit = "*"
 bandit = "*"
 types-requests = "*"
 
 [requires]
-python_version = "3.12"
+python_version = "3.13"
