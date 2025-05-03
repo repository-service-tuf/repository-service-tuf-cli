@@ -15,6 +15,10 @@ build:
     python: "3.13"
   apt_packages:
     - plantuml
+  jobs:
+    pre_create_environment:
+      - pip install pipenv
+      - pipenv requirements --dev > requirements.txt 
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
@@ -23,12 +27,4 @@ sphinx:
 # Optionally declare the Python requirements required to build your docs
 python:
   install:
-    - method: pip
-      path: .
-      extra_requirements:
-        - docs
-    - method: pip
-      path: .
-      extra_requirements:
-        - pipenv
-  system_packages: true
+    - requirements: requirements.txt
