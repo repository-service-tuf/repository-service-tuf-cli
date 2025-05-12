@@ -2,6 +2,7 @@
 # SPDX-FileCopyrightText: 2022-2023 VMware Inc
 #
 # SPDX-License-Identifier: MIT
+import csv
 import json
 import os
 from datetime import datetime, timezone
@@ -41,12 +42,13 @@ def _parse_csv_data(
     csv_file: str,
 ) -> List[Dict[str, Any]]:
     rstuf_db_data: List[Dict[str, Any]] = []
-    with open(csv_file, "r") as f:
-        for line in f:
-            path = line.split(";")[0]
-            length = int(line.split(";")[1])
-            hash_algorithm = line.split(";")[2]
-            hash_digest = line.split(";")[3]
+    with open(csv_file) as f:
+        csv_reader = csv.reader(f, delimiter=";")
+        for line in csv_reader:
+            path = line[0]
+            length = int(line[1])
+            hash_algorithm = line[2]
+            hash_digest = line[3]
             rstuf_db_data.append(
                 {
                     "path": path,
