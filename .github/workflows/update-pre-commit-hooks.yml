@@ -4,6 +4,9 @@ on:
   schedule:
     # Run at 8:00 AM every day
     - cron: "0 8 * * *"
+permissions:
+  contents: write        # Required for committing changes to .pre-commit-config.yaml
+  pull-requests: write   # Required for creating a pull request
 jobs:
   update-pre-commit-hooks:
     runs-on: ubuntu-latest

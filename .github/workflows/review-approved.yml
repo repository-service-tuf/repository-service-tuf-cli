@@ -3,7 +3,9 @@ name: FT pre-merge
 on:
   pull_request_review:
     types: [submitted]
-
+permissions:
+  contents: read     # For calling functional-tests.yml
+  statuses: write    # For setting commit statuses
 jobs:
   functional-tests-local:
     name: Deploy Local Services

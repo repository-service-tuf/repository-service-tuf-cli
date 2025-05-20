@@ -7,6 +7,10 @@ on:
     branches:
       - "main"
 
+permissions:
+  contents: read  # Required for checking out code and reading coverage files
+  cache: write  # Required for saving cache
+
 jobs:
   build:
     runs-on: ubuntu-latest
