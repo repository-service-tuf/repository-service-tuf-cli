@@ -12,17 +12,17 @@ repository:
   accepts-automated-change-request: true
   core-team:
     - name: Kairo de Araujo
-      email: kdearaujo@vmware.com
+      email: kairo.araujo@eclipse-foundation.org
       social: https://github.com/kairoaraujo
       primary: true
     - name: Konstantinos Papadopoulos
       email: konpap1996@yahoo.com
       social: https://github.com/KAUTH
     - name: Martin Vrachev
-      email: mvrachev@vmware.com
+      email: martin.vrachev@gmail.com
       social: https://github.com/MVrachev
     - name: Radoslav Dimitrov
-      email: dimitrovr@vmware.com
+      email: radoslav@stacklok.com
       social: https://github.com/rdimitrov
   license:
     url: https://github.com/repository-service-tuf/repository-service-tuf-cli/blob/main/LICENSE
