@@ -118,7 +118,7 @@ def new(
             settings,
             URL.DELEGATIONS.value,
             {"delegations": delegations.to_dict()},
-            "New Metadata accepted.",
+            "Metadata delegation add accepted.",
             "New Metadata finished.",
         )
         task_status(task_id, settings, "New Metadata status:")
