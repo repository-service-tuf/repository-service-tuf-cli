@@ -7,6 +7,10 @@ on:
     branches:
       - "main"
 
+permissions:
+  contents: read  # Required for checking out code and reading coverage files
+  cache: write  # Required for saving cache
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -50,7 +54,7 @@ jobs:
         key: ${{ runner.os }}-py${{ matrix.python-versions }}-mypy-${{ hashFiles('**/.mypy_cache') }}
 
     - name: Codecov
-      uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d
+      uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24
       with:
         files: coverage.xml
         fail_ci_if_error: false
