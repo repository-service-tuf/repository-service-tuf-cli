@@ -47,6 +47,10 @@ on:
         type: string
         required: False
 
+permissions:
+  contents: read     # For checking out repositories
+  statuses: write    # For setting commit statuses
+
 jobs:
   functional-das:
     name: "DAS"
