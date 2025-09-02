@@ -542,15 +542,22 @@ def _key_name_prompt(
     return name
 
 
-def _expiry_prompt(role: str) -> Tuple[int, datetime]:
+def _expiry_prompt(role: str, num_bins=None) -> Tuple[int, datetime]:
     """Prompt for days until expiry for role, returns days and expiry date.
 
     Use per-role defaults from ExpirationSettings.
     """
-    days = _PositiveIntPrompt.ask(
-        f"Please enter days until expiry for '{role}' role",
-        default=DEFAULT_EXPIRY.get(role, 1),
-    )
+    if not num_bins:
+        days = _PositiveIntPrompt.ask(
+            f"Please enter days until expiry for '{role}' role",
+            default=DEFAULT_EXPIRY.get(role, 1),
+        )
+    else:
+        days = _PositiveIntPrompt.ask(
+            f"Please enter days until expiry for '{role}'"
+            " role and its nested roles",
+            default=DEFAULT_EXPIRY.get(role, 1),
+        )
     today = datetime.now(timezone.utc).replace(microsecond=0)
     date = today + timedelta(days=days)
     console.print(f"New expiry date is: {date:{EXPIRY_FORMAT}}")
@@ -922,7 +929,8 @@ def _configure_delegations() -> Delegations:
                     ):
                         continue
 
-                expire_days, _ = _expiry_prompt(name)
+                num_nested_bins = _prompt_nested_bins(name)
+                expire_days, _ = _expiry_prompt(name, num_nested_bins)
                 # ##########################################################
                 # Load the Public Keys used to sign the metadata
                 delegated_role = DelegatedRole(
@@ -933,11 +941,27 @@ def _configure_delegations() -> Delegations:
                     paths=[],
                     unrecognized_fields={"x-rstuf-expire-policy": expire_days},
                 )
+
+                if num_nested_bins:
+                    delegated_role.unrecognized_fields["x-rstuf-num-bins"] = (
+                        num_nested_bins
+                    )
+
                 _configure_delegations_paths(delegated_role)
-                console.print("Select signing:")
-                signing_method = _select(
-                    ["Online Key (use the existing)", "Add Keys"]
+                console.print(
+                    Markdown(
+                        "### Select signing:\n"
+                        "> **Info:** We currently support only"
+                        " **online key** for both"
+                        " custom roles and its nested roles "
+                        "if opting for nested hash bins."
+                        " We don't support offline keys for this feature yet\n"
+                    )
                 )
+                if num_nested_bins:
+                    signing_method = _select(["Online Key (use the existing)"])
+                else:
+                    signing_method = _select(["Online Key (use the existing)"])
                 if signing_method == "Add Keys":
                     delegated_role.threshold = _threshold_prompt(
                         delegated_role.name
@@ -980,7 +1004,13 @@ def _configure_delegations_prompt(settings: _Settings) -> None:
                 "signing.\n"
                 "- **Custom Delegations**:\n"
                 "Allows the creation of delegated roles for specified paths,\n"
-                " utilizing both offline and online keys."
+                " utilizing both offline and online keys.\n\n"
+                "> Note: Custom delegations now support"
+                " nested hash-bin delegations. "
+                "Nested bins are created under a custom delegation"
+                " role but they are always signed with the global online key"
+                " (the same online key used for top-level bins)"
+                " same as their parent custom role."
             )
         )
         console.print()
@@ -1125,6 +1155,7 @@ def _print_delegation(delegations: Delegations):
         "Role Name",
         "Infos",
         "Keys",
+        "Nested Bins",
         title="Delegation Metadata",
         show_lines=True,
     )
@@ -1142,6 +1173,12 @@ def _print_delegation(delegations: Delegations):
 
         if delegation.paths is None:
             delegation.paths = []
+
+        num_bins = delegation.unrecognized_fields.get("x-rstuf-num-bins")
+        nested_bins_str = (
+            f"Number of bins: {num_bins}" if num_bins is not None else "None"
+        )
+
         delegations_table.add_row(
             delegation.name,
             (
@@ -1150,6 +1187,7 @@ def _print_delegation(delegations: Delegations):
                 f"Paths: {', '.join(delegation.paths)}"
             ),
             key_table or "Online Key",
+            nested_bins_str,
         )
 
     console.print(delegations_table)
@@ -1262,3 +1300,23 @@ def _get_latest_md(metadata_url: str, role_name: str) -> Metadata:
 
     except (OSError, RepositoryError, DownloadError):
         raise click.ClickException(f"Problem fetching latest {role_name}")
+
+
+def _prompt_nested_bins(delegation_name: str) -> Optional[int]:
+    """Ask whether to create nested hash-bin delegations
+    and return bins count."""
+    prompt = (
+        f"Do you want hash‑bin delegations under this "
+        f"'{delegation_name}' delegation?"
+    )
+    if not Confirm.ask(prompt, default=False):
+        return None
+
+    bins_number = IntPrompt.ask(
+        "Number of bins",
+        default=DEFAULT_BINS_NUMBER,
+        choices=[str(2**i) for i in range(1, 13)],
+        show_default=True,
+        show_choices=True,
+    )
+    return bins_number
