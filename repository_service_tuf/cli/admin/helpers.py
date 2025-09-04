@@ -961,7 +961,7 @@ def _configure_delegations() -> Delegations:
                 if num_nested_bins:
                     signing_method = _select(["Online Key (use the existing)"])
                 else:
-                    signing_method = _select(["Online Key (use the existing)"])
+                    signing_method = _select(["Online Key (use the existing)", "Add Keys"])
                 if signing_method == "Add Keys":
                     delegated_role.threshold = _threshold_prompt(
                         delegated_role.name
