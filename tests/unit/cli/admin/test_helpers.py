@@ -86,9 +86,10 @@ class TestHelpers:
         # success
         inputs = [f"{_PEMS / 'JH.pub'}"]
         with patch(_PROMPT_TOOLKIT, side_effect=inputs):
-            key = helpers._load_key_from_file_prompt()
+            key, path = helpers._load_key_from_file_prompt()
 
         assert isinstance(key, SSlibKey)
+        assert path == f"{_PEMS / 'JH.pub'}"
 
         # fail with wrong file
         inputs = [f"{_PEMS / 'JH.ed25519'}"]
@@ -146,8 +147,13 @@ class TestHelpers:
 
         # return key
         fake_key = pretend.stub(keyid="abc")
+        key_rv = (
+            (fake_key, "/path/to/key.pub")
+            if key_load == "_load_key_from_file_prompt"
+            else fake_key
+        )
         with (
-            patch(f"{_HELPERS}.{key_load}", return_value=fake_key),
+            patch(f"{_HELPERS}.{key_load}", return_value=key_rv),
             patch(
                 f"{_HELPERS}._select",
                 side_effect=[signer_type],
@@ -160,7 +166,8 @@ class TestHelpers:
         # return None - key in use
         fake_key = pretend.stub(keyid="123")
         with patch(
-            f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
+            f"{_HELPERS}._load_key_from_file_prompt",
+            return_value=(fake_key, "/path/to/key.pub"),
         ):
             key = helpers._load_key_prompt(fake_root)
 
@@ -182,7 +189,7 @@ class TestHelpers:
                 helpers.ONLINE_SIGNERS.KEY_PEM,  # signer_type
                 [],  # No prompt input needed for KEY_PEM
                 f"{_HELPERS}._load_key_from_file_prompt",  # Mocked signer
-                "fn:abc",  # Expected URI
+                "fn:online",  # Expected URI — stem of the .pub filename
                 pretend.stub(keyid="abc"),  # Expected key object
             ),
             # Test for AWS KMS
@@ -231,7 +238,7 @@ class TestHelpers:
 
         # Mocking the necessary methods based on the signer type
         if signer_type == helpers.ONLINE_SIGNERS.KEY_PEM:
-            return_value = expected_key
+            return_value = (expected_key, "/path/to/online.pub")
         else:
             return_value = (expected_uri, expected_key)
         with patch(signer_mock, return_value=return_value):
@@ -256,7 +263,8 @@ class TestHelpers:
         fake_key = pretend.stub(keyid="abc")
 
         with patch(
-            f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
+            f"{_HELPERS}._load_key_from_file_prompt",
+            return_value=(fake_key, "/path/to/online.pub"),
         ):
             uri, key = helpers._load_online_key_prompt(
                 fake_root, helpers.ONLINE_SIGNERS.KEY_PEM
@@ -264,6 +272,21 @@ class TestHelpers:
 
         assert key is None
         assert uri is None
+
+    def test_load_online_key_prompt_key_pem_empty_filename(self):
+        fake_root = pretend.stub(keys={})
+        fake_key = pretend.stub(keyid="abc")
+
+        with patch(
+            f"{_HELPERS}._load_key_from_file_prompt",
+            return_value=(fake_key, "/path/to/"),
+        ):
+            uri, key = helpers._load_online_key_prompt(
+                fake_root, helpers.ONLINE_SIGNERS.KEY_PEM
+            )
+
+        assert uri is None
+        assert key is None
 
     @pytest.mark.parametrize(
         "signer_type, exception",
