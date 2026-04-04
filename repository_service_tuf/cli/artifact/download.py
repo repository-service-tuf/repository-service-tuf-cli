@@ -169,7 +169,6 @@ def _download_artifact(
         "given, it will use Trust-On-First-Use."
     ),
     type=str,
-    required=None,
     default=None,
 )
 @click.option(
@@ -177,7 +176,6 @@ def _download_artifact(
     "--metadata-url",
     help="TUF Metadata repository URL.",
     type=str,
-    required=None,
     default=None,
 )
 @click.option(
@@ -185,7 +183,6 @@ def _download_artifact(
     "--artifacts-url",
     help="An artifacts base URL to fetch from.",
     type=str,
-    required=None,
     default=None,
 )
 @click.option(
@@ -193,14 +190,12 @@ def _download_artifact(
     "--hash-prefix",
     help="A flag to prefix an artifact with a hash.",
     is_flag=True,
-    required=None,
 )
 @click.option(
     "-P",
     "--directory-prefix",
     help="A prefix for the download dir.",
     type=str,
-    required=None,
     default=None,
 )
 @click.argument("artifact_name")
