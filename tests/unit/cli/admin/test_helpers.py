@@ -13,7 +13,7 @@ from email_validator import EmailNotValidError
 from PyKCS11 import CKR_USER_NOT_LOGGED_IN, PyKCS11Error  # type: ignore
 from securesystemslib.exceptions import UnverifiedSignatureError
 from securesystemslib.signer import CryptoSigner, SigstoreKey, SSlibKey
-from tuf.api.metadata import Metadata, Root
+from tuf.api.metadata import DelegatedRole, Delegations, Metadata, Root
 
 from repository_service_tuf.cli.admin import helpers
 from repository_service_tuf.helpers.api_client import URL, Methods
@@ -789,3 +789,172 @@ class TestHelpers:
         with patch(_PROMPT, side_effect=inputs):
             with pytest.raises(EmailNotValidError):
                 helpers._load_key_from_sigstore_prompt()
+
+    def test__configure_delegations_paths_add_then_continue(self):
+        delegated_role = DelegatedRole(
+            name="testrole", threshold=1, keyids=[], terminating=True, paths=[]
+        )
+        with (
+            patch(f"{_HELPERS}._path_prompt", return_value="project-a/*"),
+            patch(f"{_HELPERS}._select", side_effect=["continue"]),
+        ):
+            result = helpers._configure_delegations_paths(delegated_role)
+
+        assert result.paths == ["project-a/*"]
+
+    def test__configure_delegations_paths_empty_forces_add(self):
+        delegated_role = DelegatedRole(
+            name="testrole", threshold=1, keyids=[], terminating=True, paths=[]
+        )
+        with (
+            patch(
+                f"{_HELPERS}._path_prompt",
+                side_effect=["first/*", "second/*"],
+            ),
+            patch(
+                f"{_HELPERS}._select", side_effect=["add new path", "continue"]
+            ),
+        ):
+            result = helpers._configure_delegations_paths(delegated_role)
+
+        assert "first/*" in result.paths
+        assert "second/*" in result.paths
+
+    def test__configure_delegations_paths_remove(self):
+        delegated_role = DelegatedRole(
+            name="testrole",
+            threshold=1,
+            keyids=[],
+            terminating=True,
+            paths=["old/*"],
+        )
+        with (
+            patch(f"{_HELPERS}._path_prompt", return_value="new/*"),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=[
+                    "remove path",
+                    "old/*",
+                    "add new path",
+                    "continue",
+                ],
+            ),
+        ):
+            result = helpers._configure_delegations_paths(delegated_role)
+
+        assert "old/*" not in result.paths
+        assert "new/*" in result.paths
+
+    def test__configure_delegations_keys_add_key(self, ed25519_key):
+        delegated_role = DelegatedRole(
+            name="testrole", threshold=1, keyids=[], terminating=True, paths=[]
+        )
+        delegations = Delegations(keys={}, roles={})
+        with (
+            patch(f"{_HELPERS}._load_key_prompt", return_value=ed25519_key),
+            patch(f"{_HELPERS}._key_name_prompt", return_value="mykey"),
+            patch(f"{_HELPERS}._select", side_effect=["continue"]),
+        ):
+            helpers._configure_delegations_keys(delegated_role, delegations)
+
+        assert ed25519_key.keyid in delegated_role.keyids
+        assert ed25519_key.keyid in delegations.keys
+
+    def test__configure_delegations_keys_load_returns_none_retries(
+        self, ed25519_key
+    ):
+        delegated_role = DelegatedRole(
+            name="testrole", threshold=1, keyids=[], terminating=True, paths=[]
+        )
+        delegations = Delegations(keys={}, roles={})
+        with (
+            patch(
+                f"{_HELPERS}._load_key_prompt",
+                side_effect=[None, ed25519_key],
+            ),
+            patch(f"{_HELPERS}._key_name_prompt", return_value="mykey"),
+            patch(f"{_HELPERS}._select", side_effect=["continue"]),
+        ):
+            helpers._configure_delegations_keys(delegated_role, delegations)
+
+        assert ed25519_key.keyid in delegated_role.keyids
+
+    def test__configure_delegations_add_delegation(self, ed25519_key):
+        with (
+            patch(
+                f"{_HELPERS}._delegated_target_role_name_prompt",
+                return_value="myrole",
+            ),
+            patch(f"{_HELPERS}._expiry_prompt", return_value=(30, None)),
+            patch(
+                f"{_HELPERS}._configure_delegations_paths",
+                side_effect=lambda dr: dr,
+            ),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=["Online Key (use the existing)", "continue"],
+            ),
+        ):
+            result = helpers._configure_delegations()
+
+        assert "myrole" in result.roles
+
+    def test__configure_delegations_add_two_remove_one(self):
+        # Add role1 (forced), add role2, remove role1, continue
+        with (
+            patch(
+                f"{_HELPERS}._delegated_target_role_name_prompt",
+                side_effect=["role1", "role2"],
+            ),
+            patch(
+                f"{_HELPERS}._expiry_prompt",
+                side_effect=[(30, None), (30, None)],
+            ),
+            patch(
+                f"{_HELPERS}._configure_delegations_paths",
+                side_effect=lambda dr: dr,
+            ),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=[
+                    "Online Key (use the existing)",  # signing for role1
+                    "add new delegation",  # main loop
+                    "Online Key (use the existing)",  # signing for role2
+                    "remove delegation",  # main loop
+                    "role1",  # which role to remove
+                    "continue",  # main loop
+                ],
+            ),
+        ):
+            result = helpers._configure_delegations()
+
+        assert "role1" not in result.roles
+        assert "role2" in result.roles
+
+    def test__configure_delegations_duplicate_name_overwrite(
+        self, ed25519_key
+    ):
+        with (
+            patch(
+                f"{_HELPERS}._delegated_target_role_name_prompt",
+                return_value="myrole",
+            ),
+            patch(f"{_HELPERS}._expiry_prompt", return_value=(30, None)),
+            patch(
+                f"{_HELPERS}._configure_delegations_paths",
+                side_effect=lambda dr: dr,
+            ),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=[
+                    "Online Key (use the existing)",
+                    "add new delegation",
+                    "Online Key (use the existing)",
+                    "continue",
+                ],
+            ),
+            patch(f"{_HELPERS}.Confirm.ask", return_value=True),
+        ):
+            result = helpers._configure_delegations()
+
+        assert "myrole" in result.roles
