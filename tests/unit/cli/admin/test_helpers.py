@@ -961,3 +961,100 @@ class TestHelpers:
             result = helpers._configure_delegations()
 
         assert "myrole" in result.roles
+
+    def test_configure_delegations_keys_remove(self, ed25519_key, monkeypatch):
+        # Setup
+        key1 = copy.copy(ed25519_key)
+        key1.keyid = "key1"
+        key1.unrecognized_fields = {helpers.KEY_NAME_FIELD: "key1-name"}
+
+        key2 = copy.copy(ed25519_key)
+        key2.keyid = "key2"
+        key2.unrecognized_fields = {helpers.KEY_NAME_FIELD: "key2-name"}
+
+        delegations = Delegations(
+            keys={"key1": key1, "key2": key2},
+            roles={}
+        )
+
+        role = DelegatedRole(
+            name="test-role",
+            threshold=1,
+            keyids=["key1", "key2"],
+            terminating=True,
+            paths=["*"]
+        )
+
+        # Mock console
+        monkeypatch.setattr(
+            helpers, "console", pretend.stub(print=lambda *a, **kw: None)
+        )
+
+        # Action sequence: "remove", choose key1, then "continue" to exit.
+        with (
+            patch(
+                f"{_HELPERS}._select", side_effect=["remove", "continue"]
+            ),
+            patch(
+                f"{_HELPERS}._select_key", return_value=key1
+            ),
+        ):
+            helpers._configure_delegations_keys(role, delegations)
+
+        assert "key1" not in role.keyids
+        assert "key2" in role.keyids
+        # key1 should be removed from delegations.keys because it's not
+        # used elsewhere
+        assert "key1" not in delegations.keys
+        assert "key2" in delegations.keys
+
+    def test_configure_delegations_keys_remove_used_elsewhere(
+        self, ed25519_key, monkeypatch
+    ):
+        # Setup
+        key1 = copy.copy(ed25519_key)
+        key1.keyid = "key1"
+        key1.unrecognized_fields = {helpers.KEY_NAME_FIELD: "key1-name"}
+
+        # key1 is used by "other-role"
+        other_role = DelegatedRole(
+            name="other-role",
+            threshold=1,
+            keyids=["key1"],
+            terminating=True,
+            paths=["other"]
+        )
+
+        delegations = Delegations(
+            keys={"key1": key1},
+            roles={"other-role": other_role}
+        )
+
+        role = DelegatedRole(
+            name="test-role",
+            threshold=1,
+            keyids=["key1"],
+            terminating=True,
+            paths=["*"]
+        )
+
+        monkeypatch.setattr(
+            helpers, "console", pretend.stub(print=lambda *a, **kw: None)
+        )
+
+        with (
+            patch(
+                f"{_HELPERS}._select", side_effect=["remove", "continue"]
+            ),
+            patch(
+                f"{_HELPERS}._select_key", return_value=key1
+            ),
+        ):
+            helpers._configure_delegations_keys(role, delegations)
+
+        assert "key1" not in role.keyids
+        # key1 should STILL be in delegations.keys because it's used by
+        # other-role
+        assert "key1" in delegations.keys
+
+
