@@ -1016,12 +1016,30 @@ def _get_root_keys(root: Root) -> Dict[str, Key]:
 
 
 def _get_online_key(root: Root) -> Optional[Key]:
-    # TODO: assert all online roles have the same and only one keyid, or none
-    key = None
-    if root.roles[Timestamp.type].keyids:
-        key = root.get_key(root.roles[Timestamp.type].keyids[0])
+    keyid_sets = {
+        role_name: frozenset(root.roles[role_name].keyids)
+        for role_name in sorted(ONLINE_ROLE_NAMES)
+    }
+    unique = set(keyid_sets.values())
+    if len(unique) > 1:
+        raise ValueError(
+            "Online roles have mismatched keyids: "
+            + ", ".join(
+                f"{r}={sorted(k)}" for r, k in keyid_sets.items()
+            )
+        )
 
-    return key
+    keyids = keyid_sets[Timestamp.type]
+    if len(keyids) > 1:
+        raise ValueError(
+            "Online roles must have at most one keyid, got "
+            f"{sorted(keyids)}"
+        )
+
+    if not keyids:
+        return None
+
+    return root.get_key(next(iter(keyids)))
 
 
 def _parse_pending_data(pending_roles_resp: Dict[str, Any]) -> Dict[str, Any]:
