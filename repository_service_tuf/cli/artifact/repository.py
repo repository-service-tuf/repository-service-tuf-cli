@@ -207,7 +207,6 @@ def set(context: Context, repository: str) -> None:
     "--hash-prefix",
     help="Whether to add a hash prefix to artifact names.",
     is_flag=True,
-    required=None,
 )
 @click.pass_context
 def add(
@@ -260,7 +259,6 @@ def add(
     "--root",
     help="The metadata URL to the initial trusted root or a local file.",
     type=str,
-    required=None,
     default=None,
 )
 @click.option(
@@ -268,7 +266,6 @@ def add(
     "--metadata-url",
     help="TUF Metadata repository URL.",
     type=str,
-    required=None,
     default=None,
 )
 @click.option(
@@ -276,7 +273,6 @@ def add(
     "--artifacts-url",
     help="The artifacts base URL to fetch from.",
     type=str,
-    required=None,
     default=None,
 )
 @click.option(
@@ -284,7 +280,6 @@ def add(
     "--hash-prefix",
     help="Whether to add a hash prefix to artifact names.",
     is_flag=True,
-    required=None,
 )
 @click.pass_context
 @click.argument("repository")

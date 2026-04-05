@@ -1,0 +1,37 @@
+header:
+  schema-version: 2.1.0
+  last-updated: "2025-06-05" # Update after review
+  last-reviewed: "2025-06-05" # Update after review
+  url: https://github.com/repository-service-tuf/repository-service-tuf
+  project-si-source: https://github.com/repository-service-tuf/repository-service-tuf/blob/main/SECURITY_INSIGHTS.yml
+
+repository:
+  url: https://github.com/repository-service-tuf/repository-service-tuf-cli
+  status: active
+  accepts-change-request: true
+  accepts-automated-change-request: true
+  core-team:
+    - name: Kairo de Araujo
+      email: kairo.araujo@eclipse-foundation.org
+      social: https://github.com/kairoaraujo
+      primary: true
+    - name: Konstantinos Papadopoulos
+      email: konpap1996@yahoo.com
+      social: https://github.com/KAUTH
+    - name: Martin Vrachev
+      email: martin.vrachev@gmail.com
+      social: https://github.com/MVrachev
+    - name: Radoslav Dimitrov
+      email: radoslav@stacklok.com
+      social: https://github.com/rdimitrov
+  license:
+    url: https://github.com/repository-service-tuf/repository-service-tuf-cli/blob/main/LICENSE
+    expression: MIT
+  security:
+    assessments:
+      third-party:
+        - evidence: https://repository-service-tuf.readthedocs.io/en/stable/blog/posts/rstuf-security-audit-for-1.0.0.html
+          date: "2025-02-14"
+          comment: |
+            Security assessment conducted by X41 D-Sec GmbH. The assessment focused on the design, implementation, and deployment of RSTUF services and tools. 
+            The X41 team identified a set of findings ranging from low to high severity — importantly, no critical vulnerabilities were discovered.

@@ -8,6 +8,7 @@
 Provides alternative ceremony, metadata update, and sign admin cli commands.
 
 """
+
 from typing import Optional
 
 from repository_service_tuf.cli import (
