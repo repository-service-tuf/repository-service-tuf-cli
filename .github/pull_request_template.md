@@ -21,6 +21,10 @@ Fixes #(issue)
 - [ ] Tests have been added for the bug fix or new feature
 - [ ] Docs have been added for the bug fix or new feature
 
+## Use of AI
+* [ ] AI was used to generate or assist with generating this PR.
+  *Please specify how AI was used and what manual verification steps were taken to validate the changes*
+
 
 # Code of Conduct
 By submitting this PR, you agree to follow our [Code of Conduct](CODE_OF_CONDUCT.rst).
