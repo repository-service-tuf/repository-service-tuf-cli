@@ -1018,19 +1018,22 @@ def _get_root_keys(root: Root) -> Dict[str, Key]:
 def _get_online_key(root: Root) -> Optional[Key]:
     keyid_sets = {
         role_name: frozenset(root.roles[role_name].keyids)
-        for role_name in ONLINE_ROLE_NAMES
+        for role_name in sorted(ONLINE_ROLE_NAMES)
     }
     unique = set(keyid_sets.values())
     if len(unique) > 1:
         raise ValueError(
             "Online roles have mismatched keyids: "
-            + ", ".join(f"{r}={list(k)}" for r, k in keyid_sets.items())
+            + ", ".join(
+                f"{r}={sorted(k)}" for r, k in keyid_sets.items()
+            )
         )
 
     keyids = keyid_sets[Timestamp.type]
     if len(keyids) > 1:
         raise ValueError(
-            f"Online roles must have at most one keyid, got {list(keyids)}"
+            "Online roles must have at most one keyid, got "
+            f"{sorted(keyids)}"
         )
 
     if not keyids:
