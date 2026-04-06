@@ -972,17 +972,14 @@ class TestHelpers:
         key2.keyid = "key2"
         key2.unrecognized_fields = {helpers.KEY_NAME_FIELD: "key2-name"}
 
-        delegations = Delegations(
-            keys={"key1": key1, "key2": key2},
-            roles={}
-        )
+        delegations = Delegations(keys={"key1": key1, "key2": key2}, roles={})
 
         role = DelegatedRole(
             name="test-role",
             threshold=1,
             keyids=["key1", "key2"],
             terminating=True,
-            paths=["*"]
+            paths=["*"],
         )
 
         # Mock console
@@ -992,12 +989,8 @@ class TestHelpers:
 
         # Action sequence: "remove", choose key1, then "continue" to exit.
         with (
-            patch(
-                f"{_HELPERS}._select", side_effect=["remove", "continue"]
-            ),
-            patch(
-                f"{_HELPERS}._select_key", return_value=key1
-            ),
+            patch(f"{_HELPERS}._select", side_effect=["remove", "continue"]),
+            patch(f"{_HELPERS}._select_key", return_value=key1),
         ):
             helpers._configure_delegations_keys(role, delegations)
 
@@ -1022,12 +1015,11 @@ class TestHelpers:
             threshold=1,
             keyids=["key1"],
             terminating=True,
-            paths=["other"]
+            paths=["other"],
         )
 
         delegations = Delegations(
-            keys={"key1": key1},
-            roles={"other-role": other_role}
+            keys={"key1": key1}, roles={"other-role": other_role}
         )
 
         role = DelegatedRole(
@@ -1035,7 +1027,7 @@ class TestHelpers:
             threshold=1,
             keyids=["key1"],
             terminating=True,
-            paths=["*"]
+            paths=["*"],
         )
 
         monkeypatch.setattr(
@@ -1043,12 +1035,8 @@ class TestHelpers:
         )
 
         with (
-            patch(
-                f"{_HELPERS}._select", side_effect=["remove", "continue"]
-            ),
-            patch(
-                f"{_HELPERS}._select_key", return_value=key1
-            ),
+            patch(f"{_HELPERS}._select", side_effect=["remove", "continue"]),
+            patch(f"{_HELPERS}._select_key", return_value=key1),
         ):
             helpers._configure_delegations_keys(role, delegations)
 
@@ -1056,5 +1044,3 @@ class TestHelpers:
         # key1 should STILL be in delegations.keys because it's used by
         # other-role
         assert "key1" in delegations.keys
-
-
