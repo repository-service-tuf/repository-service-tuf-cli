@@ -887,12 +887,33 @@ def _configure_delegations_keys(
                 console.print(f"Added key '{name}'")
 
             case "remove":
-                # TODO:
-                # 1. List the key (by key name) for the role
-                # 2. Remove the KeyID from delegated role
-                # 3. Remove from delegation roles keys IF not
-                #    used by another role
-                raise NotImplementedError("TODO")
+                role_keys = [
+                    delegations.keys[keyid]
+                    for keyid in delegated_role.keyids
+                    if keyid in delegations.keys
+                ]
+                if not role_keys:
+                    console.print("No keys to remove for this role.")
+                    continue
+
+                console.print("\nSelect a key to remove:")
+                key_to_remove = _select_key(role_keys)
+                keyid_to_remove = key_to_remove.keyid
+                name = key_to_remove.unrecognized_fields.get(
+                    KEY_NAME_FIELD, keyid_to_remove
+                )
+
+                delegated_role.keyids.remove(keyid_to_remove)
+                console.print(f"Removed key '{name}' from role.")
+
+                in_use_keyids: List[str] = list(delegated_role.keyids)
+                if delegations.roles:
+                    for role in delegations.roles.values():
+                        in_use_keyids += role.keyids
+
+                if keyid_to_remove not in in_use_keyids:
+                    delegations.keys.pop(keyid_to_remove)
+                    console.print(f"Removed key '{name}' from global keys.")
 
 
 def _configure_delegations() -> Delegations:
