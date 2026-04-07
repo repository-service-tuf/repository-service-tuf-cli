@@ -906,12 +906,10 @@ def _configure_delegations_keys(
                 delegated_role.keyids.remove(keyid_to_remove)
                 console.print(f"Removed key '{name}' from role.")
 
-                in_use_keyids: List[str] = []
+                in_use_keyids: List[str] = list(delegated_role.keyids)
                 if delegations.roles:
                     for role in delegations.roles.values():
                         in_use_keyids += role.keyids
-
-                in_use_keyids += delegated_role.keyids
 
                 if keyid_to_remove not in in_use_keyids:
                     delegations.keys.pop(keyid_to_remove)
