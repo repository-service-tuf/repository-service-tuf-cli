@@ -1044,3 +1044,31 @@ class TestHelpers:
         # key1 should STILL be in delegations.keys because it's used by
         # other-role
         assert "key1" in delegations.keys
+
+    def test_configure_delegations_keys_remove_no_keys(
+        self, ed25519_key, monkeypatch
+    ):
+        # role has a keyID, but it is not in delegations.keys
+        # and delegations.keys is NOT empty (so we can choose "remove")
+        role = DelegatedRole(
+            name="test-role",
+            threshold=1,
+            keyids=["missing-key"],
+            terminating=True,
+            paths=["*"],
+        )
+        dummy_key = copy.copy(ed25519_key)
+        dummy_key.keyid = "other-key"
+        delegations = Delegations(keys={"other-key": dummy_key}, roles={})
+
+        monkeypatch.setattr(
+            helpers, "console", pretend.stub(print=lambda *a, **kw: None)
+        )
+
+        with (
+            patch(f"{_HELPERS}._select", side_effect=["remove", "continue"]),
+        ):
+            helpers._configure_delegations_keys(role, delegations)
+
+        # Body of "if not role_keys" should have executed (lines 896-897)
+        assert "missing-key" in role.keyids
