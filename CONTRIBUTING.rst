@@ -44,11 +44,8 @@ Requirements
 -------------
 
 - Python >=3.10
-- Pipenv
+- uv
 - PostgreSQL
-
-.. note::
-    Make sure python versions of pip and pipenv match, as otherwise installing the requirements from the Pipfile may fail.
 
 Getting the source code
 -----------------------
@@ -77,27 +74,18 @@ you stay up-to-date with our repository:
 Preparing the environment
 -------------------------
 
-After installing Python, install the pipenv tool:
+After installing Python, install the uv tool:
 
 .. code:: shell
 
-    $ pip install pipenv
+    $ pip install uv
 
 
-Create a virtual environment for this project:
-
-.. code:: shell
-
-    $ pipenv shell
-
-
-Install the requirements from the Pipfile.
-
-The flag -d will install the development requirements:
+Create a virtual environment and install all dependencies (including dev):
 
 .. code:: shell
 
-    $ pipenv install -d
+    $ uv sync --dev
 
 
 .. note::
@@ -153,8 +141,8 @@ The flag -d will install the development requirements.
 
 .. code:: shell
 
-    $ pipenv install -d <package>
-    $ pipenv install <package>
+    $ uv add --dev <package>
+    $ uv add <package>
 
 Tests
 -----
