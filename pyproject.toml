@@ -43,6 +43,7 @@ dependencies = [
   "azure-keyvault-keys",
   "pykcs11",
   "asn1crypto",
+  "exceptiongroup",
 ]
 dynamic = ["version"]
 
@@ -65,3 +66,33 @@ sqlalchemy = ["sqlalchemy>=2.0.1"]  # required by import-artifacts sub-command
 
 [project.scripts]
 rstuf = "repository_service_tuf.cli:rstuf"
+
+[dependency-groups]
+dev = [
+  "black",
+  "isort",
+  "flake8",
+  "tox",
+  "pytest",
+  "pytest-cov",
+  "pytest-xdist",
+  "coverage",
+  "mypy",
+  "pretend",
+  "sphinx",
+  "sphinxcontrib-applehelp",
+  "sphinxcontrib-devhelp",
+  "sphinxcontrib-htmlhelp",
+  "sphinxcontrib-jsmath",
+  "sphinxcontrib-qthelp",
+  "sphinxcontrib-serializinghtml",
+  "sphinxcontrib-plantuml",
+  "sphinx-rtd-theme",
+  "build",
+  "pre-commit",
+  "bandit",
+  "types-requests",
+]
+
+[tool.uv]
+default-groups = ["dev"]
