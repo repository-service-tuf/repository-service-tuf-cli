@@ -105,6 +105,10 @@ LIBYKCS11_LOCATIONS = {
         "/opt/homebrew/lib/libykcs11.dylib",
         "/usr/local/lib/libykcs11.dylib",
     ],
+    "Windows": [
+        "C:\\Program Files\\Yubico\\Yubico PIV Tool\\bin\\libykcs11.dll",
+        "C:\\Program Files (x86)\\Yubico\\Yubico PIV Tool\\bin\\libykcs11.dll",
+    ],
 }
 
 # SecureSystemsLib doesn't support SigstoreKey by default.
@@ -452,6 +456,8 @@ def _load_key_prompt(
                 key = _load_key_from_sigstore_prompt()
             case ROOT_SIGNERS.HSM:
                 key = _load_key_from_hsm_prompt()
+            case _:
+                return None
 
     except (OSError, ValueError) as e:
         console.print(f"Cannot load key: {e}")

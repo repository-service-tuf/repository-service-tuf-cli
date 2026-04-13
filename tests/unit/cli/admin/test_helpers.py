@@ -159,10 +159,14 @@ class TestHelpers:
 
         # return None - key in use
         fake_key = pretend.stub(keyid="123")
-        with patch(
-            f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
+        with (
+            patch(f"{_HELPERS}.{key_load}", return_value=fake_key),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=[signer_type],
+            ),
         ):
-            key = helpers._load_key_prompt(fake_root)
+            key = helpers._load_key_prompt(fake_root.keys, duplicate=False)
 
         assert key is None
 
@@ -754,6 +758,10 @@ class TestHelpers:
                 self.name = fake_dir_name
 
         monkeypatch.setattr(f"{_HELPERS}.TemporaryDirectory", FakeTempDir)
+        monkeypatch.setattr(
+            f"{_HELPERS}.requests.get",
+            pretend.raiser(OSError("Connection refused")),
+        )
         fake_url = "http://localhost:8080"
 
         with pytest.raises(click.ClickException) as e:
@@ -762,7 +770,8 @@ class TestHelpers:
         # The error message can be either "Cannot fetch initial root" or
         # "Problem fetching latest root" depending on the exception path
         error_msg = str(e.value)
-        assert "fetch" in error_msg.lower() and "root" in error_msg.lower()
+        assert "fetch" in error_msg.lower()
+        assert "root" in error_msg.lower()
 
     def test_load_key_from_sigstore_prompt(self):
         fake_issuer = "Google"
