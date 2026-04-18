@@ -310,17 +310,22 @@ def _load_signer_from_file_prompt(public_key: SSlibKey) -> CryptoSigner:
         with open(path, "rb") as f:
             private_pem = f.read()
 
-        # Because of click.prompt we are required to use click.style()
-        name_str = click.style(name_value, fg="green")
-        password_str = click.style("password", fg="yellow")
-        password = click.prompt(
-            f"\nPlease enter {password_str} to encrypted private key '{name_str}'",  # noqa
-            hide_input=True,
-        )
+        if b"ENCRYPTED" in private_pem:
+            name_str = click.style(name_value, fg="green")
+            password_str = click.style("password", fg="yellow")
+
+            password = click.prompt(
+                f"\nPlease enter {password_str} to encrypted private key '{name_str}'",
+                hide_input=True,
+            )
+            password_bytes = password.encode()
+        else:
+            password_bytes = None
+
         try:
-            private_key = load_pem_private_key(private_pem, password.encode())
+            private_key = load_pem_private_key(private_pem, password_bytes)
             break
-        except TypeError as e:
+        except (ValueError, TypeError) as e:
             console.print(f"Cannot load key: {e}")
 
     return CryptoSigner(private_key, public_key)
