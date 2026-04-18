@@ -74,7 +74,7 @@ class TestImportArtifactsFunctions:
             read=pretend.call_recorder(lambda: fake_data),
         )
         monkeypatch.setitem(
-            import_artifacts.__builtins__, "open", lambda *a: fake_file_obj
+            import_artifacts.__builtins__, "open", lambda *a, **kw: fake_file_obj
         )
 
         fake_time = datetime.datetime(
@@ -118,6 +118,62 @@ class TestImportArtifactsFunctions:
             pretend.call("path/file1"),
             pretend.call("path/file2"),
         ]
+
+    def test__parse_csv_data_invalid_format(self, monkeypatch):
+        fake_data = ["path/file1;123;blake2b-256"]  # missing 4th col
+        fake_file_obj = pretend.stub(
+            __enter__=pretend.call_recorder(lambda: fake_data),
+            __exit__=pretend.call_recorder(lambda *a: None),
+        )
+        monkeypatch.setitem(
+            import_artifacts.__builtins__, "open", lambda *a, **kw: fake_file_obj
+        )
+
+        with pytest.raises(import_artifacts.click.ClickException) as err:
+            import_artifacts._parse_csv_data(
+                None, None, None, "fake_file"
+            )
+        assert "Invalid CSV format" in str(err)
+        assert "expected 4 columns" in str(err)
+
+    def test__parse_csv_data_invalid_length(self, monkeypatch):
+        fake_data = ["path/file1;not-an-int;blake2b-256;hash1"]
+        fake_file_obj = pretend.stub(
+            __enter__=pretend.call_recorder(lambda: fake_data),
+            __exit__=pretend.call_recorder(lambda *a: None),
+        )
+        monkeypatch.setitem(
+            import_artifacts.__builtins__, "open", lambda *a, **kw: fake_file_obj
+        )
+
+        with pytest.raises(import_artifacts.click.ClickException) as err:
+            import_artifacts._parse_csv_data(
+                None, None, None, "fake_file"
+            )
+        assert "Invalid length" in str(err)
+        assert "'not-an-int' is not an integer" in str(err)
+
+    def test__parse_csv_data_missing_role(self, monkeypatch):
+        fake_data = ["path/file1;123;blake2b-256;hash1"]
+        db = pretend.stub(
+            execute=pretend.raiser(Exception("DB Error"))
+        )
+        succinct_roles = pretend.stub(
+            get_role_for_target=pretend.call_recorder(lambda *a: "bins-e")
+        )
+        fake_file_obj = pretend.stub(
+            __enter__=pretend.call_recorder(lambda: fake_data),
+            __exit__=pretend.call_recorder(lambda *a: None),
+        )
+        monkeypatch.setitem(
+            import_artifacts.__builtins__, "open", lambda *a, **kw: fake_file_obj
+        )
+
+        with pytest.raises(import_artifacts.click.ClickException) as err:
+            import_artifacts._parse_csv_data(
+                db, pretend.stub(c=pretend.stub(rolename="")), succinct_roles, "fake_file"
+            )
+        assert "Failed to find target role" in str(err)
 
     def test__import_csv_to_rstuf(self):
         fake_rstuf_files = pretend.stub(
