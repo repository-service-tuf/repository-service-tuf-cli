@@ -42,13 +42,44 @@ def _parse_csv_data(
     csv_file: str,
 ) -> List[Dict[str, Any]]:
     rstuf_db_data: List[Dict[str, Any]] = []
-    with open(csv_file) as f:
+    with open(csv_file, mode="r", encoding="utf-8") as f:
         csv_reader = csv.reader(f, delimiter=";")
-        for line in csv_reader:
+        for i, line in enumerate(csv_reader, start=1):
+            if not line:
+                continue
+
+            if len(line) < 4:
+                raise click.ClickException(
+                    f"Invalid CSV format in {csv_file} at line {i}: "
+                    "expected 4 columns (path; length; hash_algorithm; hash_digest)"
+                )
+
             path = line[0]
-            length = int(line[1])
+            try:
+                length = int(line[1])
+            except ValueError:
+                raise click.ClickException(
+                    f"Invalid length in {csv_file} at line {i}: "
+                    f"'{line[1]}' is not an integer"
+                )
+
             hash_algorithm = line[2]
             hash_digest = line[3]
+
+            try:
+                role_name = succinct_roles.get_role_for_target(path)
+                target_role_id = db.execute(
+                    rstuf_target_roles.select().where(
+                        rstuf_target_roles.c.rolename == role_name
+                    )
+                ).one()[0]
+            except Exception:
+                raise click.ClickException(
+                    f"Failed to find target role for '{path}' in {csv_file} "
+                    f"at line {i}. Ensure the repository is bootstrapped "
+                    "with appropriate delegated roles."
+                )
+
             rstuf_db_data.append(
                 {
                     "path": path,
@@ -58,12 +89,7 @@ def _parse_csv_data(
                     },
                     "published": False,
                     "action": "ADD",
-                    "targets_role": db.execute(
-                        rstuf_target_roles.select().where(
-                            rstuf_target_roles.c.rolename
-                            == succinct_roles.get_role_for_target(path)
-                        )
-                    ).one()[0],
+                    "targets_role": target_role_id,
                     "last_update": datetime.now(timezone.utc),
                 }
             )
