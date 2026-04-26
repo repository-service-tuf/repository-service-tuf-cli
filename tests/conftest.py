@@ -82,6 +82,7 @@ def ceremony_inputs() -> Tuple[List[str], List[str], List[str], List[str]]:
     ]
     input_step3 = [  # Configure Online Key
         "Online Key",  # Please enter a key name
+        "",  # Do you want to add unrecognized fields? (N)
     ]
     input_step4: List[str] = []  # Sign Metadata
 
@@ -174,6 +175,7 @@ def update_inputs():
         "JoeCocker's Key",  # Please enter a key name
         "y",  # Do you want to change the online key? [y/n] (y)
         "New Online Key",  # Please enter a key name
+        "",  # Do you want to change unrecognized fields? (N)
     ]
 
 

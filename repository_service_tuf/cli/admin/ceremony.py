@@ -34,6 +34,7 @@ from repository_service_tuf.cli.admin.helpers import (
     _print_root,
     _settings_prompt,
     _threshold_prompt,
+    _unrecognized_fields_prompt,
 )
 from repository_service_tuf.helpers.api_client import (
     URL,
@@ -131,6 +132,11 @@ def ceremony(
     # Configure Online Key
     console.print(Markdown("## Online Key"))
     _configure_online_key_prompt(root)
+
+    ###########################################################################
+    # Configure Unrecognized Fields
+    console.print(Markdown("## Unrecognized Fields"))
+    _unrecognized_fields_prompt(root)
 
     ###########################################################################
     # Review Metadata
