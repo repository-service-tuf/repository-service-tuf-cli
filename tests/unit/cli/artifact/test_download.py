@@ -3,7 +3,7 @@
 import os
 from hashlib import sha256
 from unittest.mock import mock_open, patch
-from urllib.error import HTTPError, URLError
+from urllib.error import HTTPError
 
 import pretend
 import pytest
@@ -145,8 +145,13 @@ class TestDownloadArtifacInteractionWithoutConfig:
             pretend.call_recorder(lambda *a: None),
         )
         monkeypatch.setattr(
-            f"{SRC_PATH}._load_root_from_url",
-            pretend.call_recorder(lambda root: "fake-root-content"),
+            f"{SRC_PATH}._load_trusted_root",
+            pretend.call_recorder(lambda root: b"fake-root-content"),
+        )
+        # validation is done in _check_root; skip it for this unit test
+        monkeypatch.setattr(
+            f"{SRC_PATH}._check_root",
+            pretend.call_recorder(lambda *a: None),
         )
         fake__perform_tuf_ngclient_download_artifact = pretend.call_recorder(
             lambda *a: None
@@ -566,6 +571,4 @@ class TestDownloadArtifactOptions:
         with pytest.raises(download.click.ClickException) as excinfo:
             download._load_root_from_url("not-a-valid-url")
 
-        assert "Please provide a valid trusted root URL" in str(
-            excinfo.value
-        )
+        assert "Please provide a valid trusted root URL" in str(excinfo.value)

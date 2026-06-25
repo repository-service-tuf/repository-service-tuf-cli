@@ -13,7 +13,11 @@ from urllib import error, request
 from urllib.parse import urlparse
 
 from click import Context
-from tuf.api.exceptions import DownloadError, RepositoryError, UnsignedMetadataError
+from tuf.api.exceptions import (
+    DownloadError,
+    RepositoryError,
+    UnsignedMetadataError,
+)
 from tuf.api.metadata import Metadata, Root
 from tuf.ngclient import Updater, UpdaterConfig
 
@@ -73,7 +77,9 @@ def _load_trusted_root(root: str) -> bytes:
     parsed_root = urlparse(root)
     if parsed_root.scheme and parsed_root.netloc:
         return _load_root_from_url(root)
-    root_data = root.encode("utf-8")   # config path: already JSON text after decode
+    root_data = root.encode(
+        "utf-8"
+    )  # config path: already JSON text after decode
     _check_root(root_data)
     return root_data
 
