@@ -69,20 +69,20 @@
         },
         "boto3": {
             "hashes": [
-                "sha256:42942dde254673abcbc9e6e60017c88341a4f49d99d24e1f2e290fb38138c26f",
-                "sha256:587d7ee92a12e440ad12b0e7f11f3358f0c4d65b19f64726efc94aaf194aff28"
+                "sha256:cf7e75963229b337d1b0e37c46de6f3c2c2290d186157729c8e7afb12909bfc0",
+                "sha256:f409f931e836f2f24e168e8f93901010cb8055c7f2ddcfcfbd72b25f8c4e306c"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.10'",
-            "version": "==1.43.36"
+            "version": "==1.43.37"
         },
         "botocore": {
             "hashes": [
-                "sha256:3c65fdc39ed01d8dfde1e961b34038aed03c459f8ddf80717a12ac006475e49d",
-                "sha256:4cae47d1b2d426316b85a0087d9e69e048f13bc003b5177d74639fe9dfd28205"
+                "sha256:46a7982815579cfe8c7851036b1f51237e35e7937456341df55bc5c36a316145",
+                "sha256:8b7e8408aa7eca7dca9ae9824fb7677daf64d40ed675366ed7b9248470d08757"
             ],
             "markers": "python_version >= '3.10'",
-            "version": "==1.43.36"
+            "version": "==1.43.37"
         },
         "certifi": {
             "hashes": [
@@ -394,11 +394,11 @@
                 "yaml"
             ],
             "hashes": [
-                "sha256:8c7cfd5964b964d8b92b4d17e9b634d1cb8b9ea2a503280c116bcc241c2d3ca2",
-                "sha256:923b8a497eda5457d88ec2f30389a564f7f5faaeb83399b027f0a6c50cf4516f"
+                "sha256:3b50232b774142702c3d4623633bcd76bb9951abf8567b7f1340d73a30a80899",
+                "sha256:4bb8ac4222af0bb4315e3da40022c283ed140bafb80c36282a7973404a67cd8a"
             ],
-            "markers": "python_version < '3.14' and python_version >= '3.9'",
-            "version": "==3.3.0"
+            "markers": "python_version >= '3.10' and python_version < '3.15'",
+            "version": "==3.3.2"
         },
         "email-validator": {
             "hashes": [
