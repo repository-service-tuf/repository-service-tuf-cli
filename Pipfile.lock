@@ -69,20 +69,20 @@
         },
         "boto3": {
             "hashes": [
-                "sha256:cf7e75963229b337d1b0e37c46de6f3c2c2290d186157729c8e7afb12909bfc0",
-                "sha256:f409f931e836f2f24e168e8f93901010cb8055c7f2ddcfcfbd72b25f8c4e306c"
+                "sha256:ca5701ddf1215ba25b9d973d18505bb4def3a75d3daa9b263c6d8c713b601cb3",
+                "sha256:f4eef8bf98559342466a9a1a063b7efcf3e337e98a819479bc2f7a603b8b8ba7"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.10'",
-            "version": "==1.43.37"
+            "version": "==1.43.39"
         },
         "botocore": {
             "hashes": [
-                "sha256:46a7982815579cfe8c7851036b1f51237e35e7937456341df55bc5c36a316145",
-                "sha256:8b7e8408aa7eca7dca9ae9824fb7677daf64d40ed675366ed7b9248470d08757"
+                "sha256:7cd5fab9d33f487777e2c508573bca6ae230779230263d47a617f4af960d3003",
+                "sha256:a95b90ea13aca409d79cc90d87c75df7db1a104a4c8e93707b62a3593bfdd17d"
             ],
             "markers": "python_version >= '3.10'",
-            "version": "==1.43.37"
+            "version": "==1.43.39"
         },
         "certifi": {
             "hashes": [
