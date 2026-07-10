@@ -536,9 +536,25 @@ class TestHelpers:
         root = Root()
         assert not helpers._get_online_key(root)
 
-        # NOTE: cli doesn't validate that all online roles have the same key
-        root.add_key(ed25519_key, "timestamp")
+        for role_name in helpers.ONLINE_ROLE_NAMES:
+            root.add_key(ed25519_key, role_name)
         assert helpers._get_online_key(root) == ed25519_key
+
+    def test_get_online_key_mismatched_keyids(self, ed25519_key):
+        root = Root()
+        root.add_key(ed25519_key, "timestamp")
+        with pytest.raises(ValueError, match="mismatched keyids"):
+            helpers._get_online_key(root)
+
+    def test_get_online_key_multiple_keyids(self, ed25519_key):
+        root = Root()
+        ed25519_key2 = copy.deepcopy(ed25519_key)
+        ed25519_key2.keyid = "fake_keyid2"
+        for role_name in helpers.ONLINE_ROLE_NAMES:
+            root.add_key(ed25519_key, role_name)
+            root.add_key(ed25519_key2, role_name)
+        with pytest.raises(ValueError, match="at most one keyid"):
+            helpers._get_online_key(root)
 
     def test__parse_pending_data(self):
         fake_md = {"root": Metadata(Root()).to_dict()}
