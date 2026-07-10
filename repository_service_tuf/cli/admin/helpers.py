@@ -354,8 +354,8 @@ def _prompt_public_key() -> str:
     return _prompt_key(message, file_filter)
 
 
-def _load_key_from_file_prompt() -> SSlibKey:
-    """Prompt for path to public key, return Key."""
+def _load_key_from_file_prompt() -> Tuple[SSlibKey, str]:
+    """Prompt for path to public key, return Key and path."""
 
     path = _prompt_public_key()
 
@@ -365,7 +365,7 @@ def _load_key_from_file_prompt() -> SSlibKey:
     crypto = load_pem_public_key(public_pem)
     key = SSlibKey.from_crypto(crypto)
 
-    return key
+    return key, path
 
 
 def _load_key_from_hsm_prompt() -> SSlibKey:
@@ -447,7 +447,7 @@ def _load_key_prompt(
         key: SSlibKey | SigstoreKey
         match signer_type:
             case ROOT_SIGNERS.KEY_PEM:
-                key = _load_key_from_file_prompt()
+                key, _ = _load_key_from_file_prompt()
             case ROOT_SIGNERS.SIGSTORE:
                 key = _load_key_from_sigstore_prompt()
             case ROOT_SIGNERS.HSM:
@@ -473,8 +473,13 @@ def _load_online_key_prompt(
     try:
         match signer_type:
             case ONLINE_SIGNERS.KEY_PEM:
-                key = _load_key_from_file_prompt()
-                uri = f"fn:{key.keyid}"
+                key, path = _load_key_from_file_prompt()
+                key_name = os.path.splitext(os.path.basename(path))[0]
+                if not key_name:
+                    raise ValueError(
+                        f"Cannot derive key name from path: {path}"
+                    )
+                uri = f"fn:{key_name}"
 
             case ONLINE_SIGNERS.AWSKMS:
                 uri, key = AWSSigner.import_(Prompt.ask("AWS KMS KeyID"))
