@@ -30,6 +30,7 @@ from repository_service_tuf.cli.admin.helpers import (
     _get_latest_md,
     _print_root,
     _threshold_prompt,
+    _unrecognized_fields_prompt,
 )
 from repository_service_tuf.cli.admin.metadata import metadata
 from repository_service_tuf.helpers.api_client import (
@@ -155,6 +156,11 @@ def update(
     # Configure Online Key
     console.print(Markdown("## Online Key"))
     _configure_online_key_prompt(root)
+
+    ###########################################################################
+    # Configure Unrecognized Fields
+    console.print(Markdown("## Unrecognized Fields"))
+    _unrecognized_fields_prompt(root)
 
     ###########################################################################
     # Bump version
