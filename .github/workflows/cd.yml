@@ -31,7 +31,7 @@ jobs:
           ref: ${{ github.event.workflow_run.head_branch }}
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: '3.x'
 
@@ -46,7 +46,7 @@ jobs:
 
       - id: gh-release
         name: Publish GitHub release candidate
-        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228
         with:
           name: ${{ github.ref_name }}-rc
           tag_name: ${{ github.ref }}
@@ -82,7 +82,7 @@ jobs:
           name: pypi
         # Only attempt PyPI upload in upstream repository
         if: github.repository == 'repository-service-tuf/repository-service-tuf-cli'
-        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b
+        uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247
 
       - name: Finalize GitHub release
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3

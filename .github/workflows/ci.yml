@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
-      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: ${{ matrix.python-versions }}
 
@@ -35,7 +35,7 @@ jobs:
 
       - name: Restore mypy cache
         id: cache-mypy-restore
-        uses: actions/cache/restore@2c8a9bd7457de244a408f35966fab2fb45fda9c8
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: |
             .mypy_cache
@@ -47,7 +47,7 @@ jobs:
 
       - name: Save mypy cache
         id: cache-mypy-save
-        uses: actions/cache/save@2c8a9bd7457de244a408f35966fab2fb45fda9c8
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
         with:
           path: |
             .mypy_cache
