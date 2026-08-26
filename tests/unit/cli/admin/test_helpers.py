@@ -240,11 +240,11 @@ class TestHelpers:
                     f"{_HELPERS}.Prompt.ask", side_effect=prompt_values
                 ):
                     uri, key = helpers._load_online_key_prompt(
-                        fake_root, signer_type.value
+                        fake_root.keys, signer_type.value
                     )
             else:
                 uri, key = helpers._load_online_key_prompt(
-                    fake_root, signer_type.value
+                    fake_root.keys, signer_type.value
                 )
 
         assert uri == expected_uri
@@ -259,7 +259,7 @@ class TestHelpers:
             f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
         ):
             uri, key = helpers._load_online_key_prompt(
-                fake_root, helpers.ONLINE_SIGNERS.KEY_PEM
+                fake_root.keys, helpers.ONLINE_SIGNERS.KEY_PEM
             )
 
         assert key is None
@@ -281,7 +281,7 @@ class TestHelpers:
             f"{_HELPERS}._load_key_from_file_prompt", side_effect=exception
         ):
             uri, key = helpers._load_online_key_prompt(
-                fake_root, getattr(helpers.ONLINE_SIGNERS, signer_type)
+                fake_root.keys, getattr(helpers.ONLINE_SIGNERS, signer_type)
             )
 
         assert key is None
@@ -911,6 +911,8 @@ class TestHelpers:
                 f"{_HELPERS}._select",
                 side_effect=["Online Key (use the existing)", "continue"],
             ),
+            # decline nested hash bins
+            patch(f"{_HELPERS}.Confirm.ask", return_value=False),
         ):
             result = helpers._configure_delegations()
 
@@ -942,6 +944,8 @@ class TestHelpers:
                     "continue",  # main loop
                 ],
             ),
+            # decline nested hash bins for both roles
+            patch(f"{_HELPERS}.Confirm.ask", return_value=False),
         ):
             result = helpers._configure_delegations()
 
@@ -970,8 +974,384 @@ class TestHelpers:
                     "continue",
                 ],
             ),
-            patch(f"{_HELPERS}.Confirm.ask", return_value=True),
+            patch(
+                f"{_HELPERS}.Confirm.ask",
+                # no nested bins, overwrite the duplicate, no nested bins
+                side_effect=[False, True, False],
+            ),
         ):
             result = helpers._configure_delegations()
 
         assert "myrole" in result.roles
+
+    def test__configure_delegations_keys_remove_key(self, ed25519_key):
+        # Removing a key drops it from the role and, when no other role
+        # references it, from delegations.keys.
+        other_key = copy.deepcopy(ed25519_key)
+        other_key.keyid = "other_keyid"
+        delegated_role = DelegatedRole(
+            name="testrole",
+            threshold=1,
+            keyids=[ed25519_key.keyid, other_key.keyid],
+            terminating=True,
+            paths=[],
+        )
+        delegations = Delegations(
+            keys={ed25519_key.keyid: ed25519_key, other_key.keyid: other_key},
+            roles={"testrole": delegated_role},
+        )
+        with (
+            patch(f"{_HELPERS}._select", side_effect=["remove", "continue"]),
+            patch(f"{_HELPERS}._select_key", return_value=ed25519_key),
+        ):
+            helpers._configure_delegations_keys(delegated_role, delegations)
+
+        assert delegated_role.keyids == [other_key.keyid]
+        assert ed25519_key.keyid not in delegations.keys
+        assert other_key.keyid in delegations.keys
+
+    def test__configure_delegations_keys_remove_key_shared(self, ed25519_key):
+        # A key still used by another role stays in delegations.keys.
+        other_key = copy.deepcopy(ed25519_key)
+        other_key.keyid = "other_keyid"
+        delegated_role = DelegatedRole(
+            name="testrole",
+            threshold=1,
+            keyids=[ed25519_key.keyid, other_key.keyid],
+            terminating=True,
+            paths=[],
+        )
+        shared_user = DelegatedRole(
+            name="otherrole",
+            threshold=1,
+            keyids=[ed25519_key.keyid],
+            terminating=True,
+            paths=[],
+        )
+        delegations = Delegations(
+            keys={ed25519_key.keyid: ed25519_key, other_key.keyid: other_key},
+            roles={"testrole": delegated_role, "otherrole": shared_user},
+        )
+        with (
+            patch(f"{_HELPERS}._select", side_effect=["remove", "continue"]),
+            patch(f"{_HELPERS}._select_key", return_value=ed25519_key),
+        ):
+            helpers._configure_delegations_keys(delegated_role, delegations)
+
+        assert delegated_role.keyids == [other_key.keyid]
+        assert ed25519_key.keyid in delegations.keys
+
+    def test__configure_delegations_keys_add_duplicate_then_remove(
+        self, ed25519_key
+    ):
+        # Regression: loading the same key twice must not append its keyid
+        # twice, otherwise a single removal would leave the role referencing a
+        # keyid whose key object has been deleted (a dangling reference in the
+        # emitted metadata).
+        other_key = copy.deepcopy(ed25519_key)
+        other_key.keyid = "other_keyid"
+        delegated_role = DelegatedRole(
+            name="testrole", threshold=1, keyids=[], terminating=True, paths=[]
+        )
+        delegations = Delegations(keys={}, roles={"testrole": delegated_role})
+        with (
+            # forced add of A (empty), add A again (duplicate), add B,
+            # then remove A, then continue.
+            patch(
+                f"{_HELPERS}._load_key_prompt",
+                side_effect=[ed25519_key, ed25519_key, other_key],
+            ),
+            patch(f"{_HELPERS}._key_name_prompt", side_effect=["a", "a", "b"]),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=["add", "add", "remove", "continue"],
+            ),
+            patch(f"{_HELPERS}._select_key", return_value=ed25519_key),
+        ):
+            helpers._configure_delegations_keys(delegated_role, delegations)
+
+        # A was loaded twice but recorded once; removing it leaves only B and
+        # no keyid referencing a deleted key object.
+        assert delegated_role.keyids == [other_key.keyid]
+        assert ed25519_key.keyid not in delegations.keys
+        assert all(kid in delegations.keys for kid in delegated_role.keyids)
+
+    def test__add_role_online_key_prompt(self, ed25519_key):
+        # The role online key lands in delegations.keys with its signer URI
+        # and is referenced by `x-rstuf-role-online-key`. It must NOT join the
+        # role's own keyids: a delegation cannot sign itself, this key only
+        # signs the hash bins nested below the role.
+        delegated_role = DelegatedRole(
+            name="packages",
+            threshold=1,
+            keyids=[],
+            terminating=False,
+            paths=["packages/*"],
+        )
+        delegations = Delegations(keys={}, roles={"packages": delegated_role})
+        with (
+            patch(
+                f"{_HELPERS}._select",
+                return_value=helpers.ONLINE_SIGNERS.KEY_PEM,
+            ),
+            patch(
+                f"{_HELPERS}._load_online_key_prompt",
+                return_value=(f"fn:{ed25519_key.keyid}", ed25519_key),
+            ),
+            patch(f"{_HELPERS}._key_name_prompt", return_value="role-key"),
+        ):
+            helpers._add_role_online_key_prompt(delegated_role, delegations)
+
+        assert delegated_role.keyids == []
+        assert delegated_role.unrecognized_fields[
+            helpers.ROLE_ONLINE_KEY_FIELD
+        ] == (ed25519_key.keyid)
+        stored = delegations.keys[ed25519_key.keyid]
+        assert stored.unrecognized_fields[helpers.KEY_URI_FIELD] == (
+            f"fn:{ed25519_key.keyid}"
+        )
+        assert stored.unrecognized_fields[helpers.KEY_NAME_FIELD] == "role-key"
+
+    def test__configure_nested_bins_declined(self):
+        delegated_role = DelegatedRole(
+            name="packages",
+            threshold=1,
+            keyids=[],
+            terminating=True,
+            paths=["packages/*"],
+        )
+        delegations = Delegations(keys={}, roles={"packages": delegated_role})
+        with patch(f"{_HELPERS}.Confirm.ask", return_value=False):
+            helpers._configure_nested_bins(delegated_role, delegations)
+
+        assert helpers.NESTED_BINS_FIELD not in (
+            delegated_role.unrecognized_fields
+        )
+        assert delegated_role.terminating is True
+
+    def test__configure_nested_bins_without_role_online_key(self):
+        delegated_role = DelegatedRole(
+            name="packages",
+            threshold=2,
+            keyids=[],
+            terminating=True,
+            paths=["packages/*"],
+        )
+        delegations = Delegations(keys={}, roles={"packages": delegated_role})
+        with (
+            # yes to nested bins, no to a role-specific online key
+            patch(f"{_HELPERS}.Confirm.ask", side_effect=[True, False]),
+            patch(f"{_HELPERS}.IntPrompt.ask", return_value=16),
+        ):
+            helpers._configure_nested_bins(delegated_role, delegations)
+
+        fields = delegated_role.unrecognized_fields
+        assert fields[helpers.NESTED_BINS_FIELD] == 16
+        assert helpers.ROLE_ONLINE_KEY_FIELD not in fields
+        # The delegator must be non-terminating so lookups fall through to the
+        # bins, and the Worker signs it with the single repository online key.
+        assert delegated_role.terminating is False
+        assert delegated_role.threshold == 1
+
+    def test__configure_nested_bins_with_role_online_key(self, ed25519_key):
+        delegated_role = DelegatedRole(
+            name="packages",
+            threshold=1,
+            keyids=[],
+            terminating=True,
+            paths=["packages/*"],
+        )
+        delegations = Delegations(keys={}, roles={"packages": delegated_role})
+        with (
+            # yes to nested bins, yes to a role-specific online key
+            patch(f"{_HELPERS}.Confirm.ask", side_effect=[True, True]),
+            patch(f"{_HELPERS}.IntPrompt.ask", return_value=8),
+            patch(
+                f"{_HELPERS}._select",
+                return_value=helpers.ONLINE_SIGNERS.KEY_PEM,
+            ),
+            patch(
+                f"{_HELPERS}._load_online_key_prompt",
+                return_value=(f"fn:{ed25519_key.keyid}", ed25519_key),
+            ),
+            patch(f"{_HELPERS}._key_name_prompt", return_value="bins-key"),
+        ):
+            helpers._configure_nested_bins(delegated_role, delegations)
+
+        fields = delegated_role.unrecognized_fields
+        assert fields[helpers.NESTED_BINS_FIELD] == 8
+        assert fields[helpers.ROLE_ONLINE_KEY_FIELD] == ed25519_key.keyid
+        assert delegated_role.keyids == []
+        assert ed25519_key.keyid in delegations.keys
+
+    def test__configure_delegations_nested_bins_offered_on_online_key_only(
+        self, ed25519_key
+    ):
+        # Offline-signed roles are skipped: the Worker cannot sign their bins.
+        with (
+            patch(
+                f"{_HELPERS}._delegated_target_role_name_prompt",
+                return_value="packages",
+            ),
+            patch(f"{_HELPERS}._expiry_prompt", return_value=(30, None)),
+            patch(
+                f"{_HELPERS}._configure_delegations_paths",
+                side_effect=lambda dr: dr,
+            ),
+            patch(f"{_HELPERS}._threshold_prompt", return_value=1),
+            patch(f"{_HELPERS}._configure_delegations_keys"),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=["Add Keys", "continue"],
+            ),
+            patch(f"{_HELPERS}._configure_nested_bins") as nested_bins,
+        ):
+            result = helpers._configure_delegations()
+
+        assert "packages" in result.roles
+        assert nested_bins.call_count == 0
+
+    def test__configure_delegations_remove_role_drops_role_online_key(
+        self, ed25519_key
+    ):
+        # Removing a delegation must also drop its role online key, which is
+        # not referenced from the role's keyids.
+        role_key = copy.deepcopy(ed25519_key)
+
+        def _add_role_key(delegated_role, delegations):
+            delegations.keys[role_key.keyid] = role_key
+            delegated_role.unrecognized_fields[
+                helpers.ROLE_ONLINE_KEY_FIELD
+            ] = role_key.keyid
+
+        with (
+            patch(
+                f"{_HELPERS}._delegated_target_role_name_prompt",
+                side_effect=["packages", "other"],
+            ),
+            patch(f"{_HELPERS}._expiry_prompt", return_value=(30, None)),
+            patch(
+                f"{_HELPERS}._configure_delegations_paths",
+                side_effect=lambda dr: dr,
+            ),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=[
+                    "Online Key (use the existing)",  # signing for packages
+                    "add new delegation",  # main loop
+                    "Online Key (use the existing)",  # signing for other
+                    "remove delegation",  # main loop
+                    "packages",  # which role to remove
+                    "continue",  # main loop
+                ],
+            ),
+            # packages: nested bins + role online key; other: no nested bins
+            patch(
+                f"{_HELPERS}.Confirm.ask", side_effect=[True, True, False]
+            ),
+            patch(f"{_HELPERS}.IntPrompt.ask", return_value=4),
+            patch(
+                f"{_HELPERS}._add_role_online_key_prompt",
+                side_effect=_add_role_key,
+            ),
+        ):
+            result = helpers._configure_delegations()
+
+        assert "packages" not in result.roles
+        assert "other" in result.roles
+        assert role_key.keyid not in result.keys
+
+    def test__print_delegation_nested_bins_row(self, ed25519_key):
+        role_key = copy.deepcopy(ed25519_key)
+        role_key.unrecognized_fields[helpers.KEY_NAME_FIELD] = "bins-key"
+        role_key.unrecognized_fields[helpers.KEY_URI_FIELD] = "fn:abc"
+        delegated_role = DelegatedRole(
+            name="packages",
+            threshold=1,
+            keyids=[],
+            terminating=False,
+            paths=["packages/*"],
+            unrecognized_fields={
+                "x-rstuf-expire-policy": 30,
+                helpers.NESTED_BINS_FIELD: 16,
+                helpers.ROLE_ONLINE_KEY_FIELD: role_key.keyid,
+            },
+        )
+        delegations = Delegations(
+            keys={role_key.keyid: role_key},
+            roles={"packages": delegated_role},
+        )
+        online_key = copy.deepcopy(ed25519_key)
+        online_key.keyid = "online-keyid"
+        online_key.unrecognized_fields[helpers.KEY_NAME_FIELD] = "online"
+
+        with helpers.console.capture() as capture:
+            helpers._print_delegation(delegations, online_key)
+        out = capture.get()
+
+        # The delegator's row lists both keys: the repository online key that
+        # signs the role, and the role key that signs its bins.
+        assert "online" in out
+        assert out.count("(role") >= 2, "role key must appear in both rows"
+        # ... and the bins get their own row.
+        assert "Hash bins for: packages" in out
+        assert "Number of bins: 16" in out
+        assert "Bit length: 4" in out
+        assert "bins-key" in out
+        assert "(role" in out
+        assert "inherit these online keys" not in out
+
+    def test__print_delegation_without_nested_bins(self, ed25519_key):
+        delegated_role = DelegatedRole(
+            name="packages",
+            threshold=1,
+            keyids=[],
+            terminating=True,
+            paths=["packages/*"],
+            unrecognized_fields={"x-rstuf-expire-policy": 30},
+        )
+        delegations = Delegations(
+            keys={}, roles={"packages": delegated_role}
+        )
+        with helpers.console.capture() as capture:
+            helpers._print_delegation(delegations)
+        out = capture.get()
+
+        assert "Online Key" in out
+        assert "Hash bins for" not in out
+
+    def test__print_delegation_without_a_role_key_keeps_the_plain_label(
+        self, ed25519_key
+    ):
+        """A delegator with no role key still reads as before."""
+        delegated_role = DelegatedRole(
+            name="packages",
+            threshold=1,
+            keyids=[],
+            terminating=False,
+            paths=["packages/*"],
+            unrecognized_fields={
+                "x-rstuf-expire-policy": 30,
+                helpers.NESTED_BINS_FIELD: 16,
+            },
+        )
+        delegations = Delegations(keys={}, roles={"packages": delegated_role})
+        with helpers.console.capture() as capture:
+            helpers._print_delegation(delegations)
+        out = capture.get()
+
+        assert "Hash bins for: packages" in out
+        assert "(role" not in out
+
+    def test__print_bins(self, ed25519_key):
+        online_key = copy.deepcopy(ed25519_key)
+        online_key.unrecognized_fields[helpers.KEY_NAME_FIELD] = "online"
+        with helpers.console.capture() as capture:
+            helpers._print_bins(1, 256, online_key)
+        out = capture.get()
+
+        assert "Hashbin Metadata" in out
+        assert "Hash bins for: targets" in out
+        assert "Number of bins: 256" in out
+        assert "Bit length: 8" in out
+        assert "online" in out
