@@ -1286,11 +1286,14 @@ def _get_latest_md(metadata_url: str, role_name: str) -> Metadata:
                 f"Cannot fetch initial root {initial_root_url}"
             )
 
-        with open(f"{temp_dir.name}/root.json", "w") as f:
-            f.write(response.text)
+        root_data = response.content
+        with open(f"{temp_dir.name}/root.json", "wb") as f:
+            f.write(root_data)
 
         updater = Updater(
-            metadata_dir=temp_dir.name, metadata_base_url=metadata_url
+            metadata_dir=temp_dir.name,
+            metadata_base_url=metadata_url,
+            bootstrap=root_data,
         )
         updater.refresh()
         md_bytes = updater._load_local_metadata(role_name)

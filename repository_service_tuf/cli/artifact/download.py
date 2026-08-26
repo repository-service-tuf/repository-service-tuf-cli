@@ -4,15 +4,21 @@
 
 
 import base64
+import json
 import os
 from hashlib import sha256
 from pathlib import Path
 from typing import Optional
-from urllib import request
+from urllib import error, request
 from urllib.parse import urlparse
 
 from click import Context
-from tuf.api.exceptions import DownloadError, RepositoryError
+from tuf.api.exceptions import (
+    DownloadError,
+    RepositoryError,
+    UnsignedMetadataError,
+)
+from tuf.api.metadata import Metadata, Root
 from tuf.ngclient import Updater, UpdaterConfig
 
 from repository_service_tuf.cli import click, console
@@ -24,19 +30,75 @@ def _decode_trusted_root(root) -> str:
     return base64.b64decode(root_encoded).decode("utf-8")
 
 
+def _check_root(root: bytes) -> None:
+    try:
+        root_json = json.loads(root.decode("utf-8"))
+        root_md: Metadata[Root] = Metadata.from_dict(root_json)
+        root_md.verify_delegate(Root.type, root_md)
+    except (UnsignedMetadataError, ValueError, json.JSONDecodeError) as e:
+        raise click.ClickException(
+            f"Invalid trusted root metadata: {e}"
+        ) from e
+
+
+def _load_root_from_file(root: str) -> bytes:
+    with open(root, "rb") as f:
+        root_data = f.read()
+
+    _check_root(root_data)
+    return root_data
+
+
+def _load_root_from_url(root: str) -> bytes:
+    parsed_root = urlparse(root)
+    if not (parsed_root.scheme and parsed_root.netloc):
+        raise click.ClickException(
+            "Please provide a valid trusted root URL with a scheme and host."
+        )
+    try:
+        with request.urlopen(root) as response:  # nosec
+            root_data = response.read()
+    except error.HTTPError as e:
+        raise click.ClickException(
+            f"Failed to download trusted root from {root}: {e.code} {e.reason}"
+        ) from e
+    except error.URLError as e:
+        raise click.ClickException(
+            f"Failed to download trusted root from {root}: {e.reason}"
+        ) from e
+
+    _check_root(root_data)
+    return root_data
+
+
+def _load_trusted_root(root: str) -> bytes:
+    if os.path.isfile(root):
+        return _load_root_from_file(root)
+    parsed_root = urlparse(root)
+    if parsed_root.scheme and parsed_root.netloc:
+        return _load_root_from_url(root)
+    root_data = root.encode(
+        "utf-8"
+    )  # config path: already JSON text after decode
+    _check_root(root_data)
+    return root_data
+
+
 def _build_metadata_dir(metadata_url: str) -> str:
     """build a unique and reproducible directory name for the repository url"""
     name = sha256(metadata_url.encode()).hexdigest()[:8]
     return f"{Path.home()}/.local/share/rstuf/{name}"
 
 
-def _init_trusted_root(metadata_url: str, root: str) -> None:
+def _init_trusted_root(metadata_url: str, root: bytes | str) -> None:
     """Initialize trusted metadata and create a directory for downloads"""
     metadata_dir = _build_metadata_dir(metadata_url)
 
     os.makedirs(metadata_dir, exist_ok=True)
 
-    with open(f"{metadata_dir}/root.json", "w") as f:
+    with open(f"{metadata_dir}/root.json", "wb") as f:
+        if isinstance(root, str):
+            root = root.encode("utf-8")
         f.write(root)
 
     console.print(f"Initialized new root in {metadata_dir}")
@@ -78,6 +140,7 @@ def _perform_tuf_ngclient_download_artifact(
     artifact_name: str,
     download_dir: str,
     config: UpdaterConfig,
+    bootstrap: Optional[bytes],
 ) -> None:
     try:
         updater = Updater(
@@ -86,6 +149,7 @@ def _perform_tuf_ngclient_download_artifact(
             target_base_url=artifacts_url,
             target_dir=download_dir,
             config=config,
+            bootstrap=bootstrap,
         )
         updater.refresh()
 
@@ -129,11 +193,13 @@ def _download_artifact(
     if artifacts_url is None:
         raise click.ClickException("Please specify artifacts url")
 
+    bootstrap = None
     if root is None:
         _init_tofu(metadata_url)
-
     else:
-        _init_trusted_root(metadata_url, root)
+        root_data = _load_trusted_root(root)
+        _init_trusted_root(metadata_url, root_data)
+        bootstrap = root_data
 
     console.print(f"Using trusted root in {metadata_dir}")
 
@@ -157,6 +223,7 @@ def _download_artifact(
         artifact_name,
         download_dir,
         config,
+        bootstrap,
     )
 
 
@@ -169,7 +236,6 @@ def _download_artifact(
         "given, it will use Trust-On-First-Use."
     ),
     type=str,
-    required=None,
     default=None,
 )
 @click.option(
@@ -177,7 +243,6 @@ def _download_artifact(
     "--metadata-url",
     help="TUF Metadata repository URL.",
     type=str,
-    required=None,
     default=None,
 )
 @click.option(
@@ -185,7 +250,6 @@ def _download_artifact(
     "--artifacts-url",
     help="An artifacts base URL to fetch from.",
     type=str,
-    required=None,
     default=None,
 )
 @click.option(
@@ -193,14 +257,12 @@ def _download_artifact(
     "--hash-prefix",
     help="A flag to prefix an artifact with a hash.",
     is_flag=True,
-    required=None,
 )
 @click.option(
     "-P",
     "--directory-prefix",
     help="A prefix for the download dir.",
     type=str,
-    required=None,
     default=None,
 )
 @click.argument("artifact_name")
