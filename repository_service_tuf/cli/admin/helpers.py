@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
+import copy
 import enum
 import os.path
 import platform
@@ -87,6 +88,18 @@ NESTED_BINS_FIELD = "x-rstuf-num-bins"
 # key itself is carried in `delegations.keys` and is deliberately not
 # listed in the role's own `keyids`: a delegation cannot sign itself.
 ROLE_ONLINE_KEY_FIELD = "x-rstuf-role-online-key"
+
+# Actions offered while editing an existing delegation.
+UPDATE_CONTINUE = "continue"
+UPDATE_PATHS = "edit paths"
+UPDATE_THRESHOLD = "edit threshold"
+UPDATE_EXPIRY = "edit expiration"
+UPDATE_KEYS = "manage signing keys"
+
+UPDATE_KEYS_CONTINUE = "continue"
+UPDATE_KEYS_USE_ONLINE = "use the repository online key"
+UPDATE_KEYS_ADD_OFFLINE = "add an offline key"
+UPDATE_KEYS_REMOVE = "remove a key"
 
 # Use locale's appropriate date representation to display the expiry date.
 EXPIRY_FORMAT = "%x"
@@ -549,14 +562,19 @@ def _key_name_prompt(
     return name
 
 
-def _expiry_prompt(role: str) -> Tuple[int, datetime]:
+def _expiry_prompt(
+    role: str, default: Optional[int] = None
+) -> Tuple[int, datetime]:
     """Prompt for days until expiry for role, returns days and expiry date.
 
-    Use per-role defaults from ExpirationSettings.
+    Use per-role defaults from ExpirationSettings, unless the caller passes
+    a `default` -- an update offers the role's current policy instead.
     """
+    if default is None:
+        default = DEFAULT_EXPIRY.get(role, 1)
     days = _PositiveIntPrompt.ask(
         f"Please enter days until expiry for '{role}' role",
-        default=DEFAULT_EXPIRY.get(role, 1),
+        default=default,
     )
     today = datetime.now(timezone.utc).replace(microsecond=0)
     date = today + timedelta(days=days)
@@ -1085,6 +1103,254 @@ def _configure_delegations() -> Delegations:
                         delegations.keys.pop(keyid, None)
 
                 console.print(f"Delegation '{role_name}' removed.")
+
+    return delegations
+
+
+def _delegation_key_label(keyid: str, delegations: Delegations) -> str:
+    """Label one of a delegated role's keyids, naming which class it is."""
+    key = delegations.keys.get(keyid)
+    if key is None:
+        return f"{keyid} (unknown key)"
+
+    name = key.unrecognized_fields.get(KEY_NAME_FIELD, keyid)
+    return f"{name} ({keyid})"
+
+
+def _delegation_update_problems(
+    delegated_role: DelegatedRole, delegations: Delegations
+) -> List[str]:
+    """Report why an update would be rejected; empty means it is sendable.
+
+    These are the rules the API and the Worker apply. Checking them here
+    keeps the operator in the editor instead of sending a request that is
+    bound to fail.
+    """
+    problems = []
+
+    if not delegated_role.paths:
+        problems.append("The role needs at least one path.")
+
+    # An empty keyid list means the repository online key, which the Worker
+    # fills in, and only at threshold 1.
+    if delegated_role.keyids:
+        if delegated_role.threshold > len(delegated_role.keyids):
+            problems.append(
+                f"Threshold {delegated_role.threshold} exceeds the "
+                f"{len(delegated_role.keyids)} key(s) the role trusts."
+            )
+    elif delegated_role.threshold != 1:
+        problems.append("The repository online key requires threshold 1.")
+
+    if NESTED_BINS_FIELD in delegated_role.unrecognized_fields:
+        # The Worker generates and signs the nested bins, so it has to be
+        # able to sign their delegator too.
+        if delegated_role.keyids:
+            problems.append(
+                "The role has nested hash bins, so it must be signed by the "
+                "repository online key, not by offline keys."
+            )
+        if delegated_role.threshold != 1:
+            problems.append("Nested hash bins require threshold 1.")
+
+    return problems
+
+
+def _configure_delegation_keys_update(
+    delegated_role: DelegatedRole, delegations: Delegations
+) -> None:
+    """Change the keys an existing delegated role trusts.
+
+    A delegation is signed either by the repository online key -- an empty
+    keyid list, which the Worker expands -- or by offline keys.
+    """
+    has_nested_bins = NESTED_BINS_FIELD in delegated_role.unrecognized_fields
+    while True:
+        console.print(f"\nSigning keys for '{delegated_role.name}':")
+        if delegated_role.keyids:
+            for keyid in delegated_role.keyids:
+                console.print(
+                    f"- {_delegation_key_label(keyid, delegations)}"
+                )
+        else:
+            console.print(
+                f"'{delegated_role.name}' signs with the repository "
+                "online key."
+            )
+
+        problems = _delegation_update_problems(delegated_role, delegations)
+        for problem in problems:
+            console.print(problem, style="bold red")
+
+        # The outer editor gates the exit on the same problems, so leaving
+        # this menu is always allowed: a threshold left too high after a
+        # removal is fixed there, not here.
+        options = [UPDATE_KEYS_CONTINUE]
+        if delegated_role.keyids:
+            options.append(UPDATE_KEYS_USE_ONLINE)
+            options.append(UPDATE_KEYS_REMOVE)
+        if not has_nested_bins:
+            options.append(UPDATE_KEYS_ADD_OFFLINE)
+
+        console.print()
+        action = _select(options)
+
+        if action == UPDATE_KEYS_CONTINUE:
+            break
+
+        elif action == UPDATE_KEYS_USE_ONLINE:
+            delegated_role.keyids.clear()
+            role_online_keyid = delegated_role.unrecognized_fields.get(
+                ROLE_ONLINE_KEY_FIELD
+            )
+            # Keep the nested bins' own key; only the role's signing keys
+            # are being replaced here.
+            delegations.keys = {
+                keyid: key
+                for keyid, key in delegations.keys.items()
+                if keyid == role_online_keyid
+            }
+            delegated_role.threshold = 1
+            console.print(
+                f"'{delegated_role.name}' now signs with the repository "
+                "online key, at threshold 1."
+            )
+
+        elif action == UPDATE_KEYS_ADD_OFFLINE:
+            new_key = _load_key_prompt(delegations.keys, duplicate=True)
+            if not new_key:
+                continue
+
+            name = _key_name_prompt(
+                delegations.keys,
+                new_key.unrecognized_fields.get(KEY_NAME_FIELD),
+                duplicate=True,
+            )
+            new_key.unrecognized_fields[KEY_NAME_FIELD] = name
+            delegations.keys[new_key.keyid] = new_key
+            if new_key.keyid not in delegated_role.keyids:
+                delegated_role.keyids.append(new_key.keyid)
+            console.print(f"Added key '{name}'")
+
+        elif action == UPDATE_KEYS_REMOVE:
+            by_label = {
+                _delegation_key_label(keyid, delegations): keyid
+                for keyid in delegated_role.keyids
+            }
+            console.print("\nSelect a key to remove:")
+            label = _select(list(by_label))
+            keyid = by_label[label]
+            delegated_role.keyids = [
+                assigned
+                for assigned in delegated_role.keyids
+                if assigned != keyid
+            ]
+            # The payload carries a single role, so no other role here can
+            # still reference the key object.
+            delegations.keys.pop(keyid, None)
+            console.print(f"Removed key '{label}'")
+
+
+def _configure_delegation_update(current: Delegations) -> Delegations:
+    """Edit one existing custom delegation and return the update payload.
+
+    The payload carries only the edited role. Its `keys` hold the public keys
+    that role references: the API resolves a role's keyids against the keys
+    supplied in the payload and does not consult the currently trusted
+    delegation metadata, so they have to be re-sent.
+    """
+    if not current.roles:
+        raise click.ClickException("Metadata has no delegated roles.")
+
+    console.print("\nSelect the delegated role to update:")
+    role_name = _select(sorted(current.roles))
+    trusted_role = current.roles[role_name]
+    if trusted_role.path_hash_prefixes is not None:
+        # python-tuf allows a delegated role only one of `paths` and
+        # `path_hash_prefixes`, and the paths editor works on `paths`.
+        # Custom delegations always use paths; hash prefixes come from bins,
+        # which the Worker manages on its own.
+        raise click.ClickException(
+            f"Role '{role_name}' delegates by path hash prefix. Only "
+            "path-based delegations can be updated."
+        )
+
+    delegated_role = copy.deepcopy(trusted_role)
+    delegated_role.unrecognized_fields.setdefault(
+        "x-rstuf-expire-policy", DEFAULT_EXPIRY.get(role_name, 1)
+    )
+
+    # The role online key is not one of the role's keyids -- it signs the
+    # role's nested hash bins -- but the API requires the payload to declare
+    # it, so carry it over too.
+    carried = set(delegated_role.keyids)
+    role_online_keyid = delegated_role.unrecognized_fields.get(
+        ROLE_ONLINE_KEY_FIELD
+    )
+    if role_online_keyid:
+        if role_online_keyid not in (current.keys or {}):
+            # Fail here rather than send a payload naming a key it cannot
+            # declare, which the API rejects with an error that does not say
+            # what to do about it.
+            raise click.ClickException(
+                f"Role '{role_name}' names online key "
+                f"'{role_online_keyid}' for its nested hash bins, but the "
+                "trusted metadata does not declare that key. The delegation "
+                "was created by an older Worker; re-create it to record the "
+                "key before updating the role."
+            )
+        carried.add(role_online_keyid)
+
+    delegations = Delegations(
+        keys={
+            keyid: copy.deepcopy(key)
+            for keyid, key in (current.keys or {}).items()
+            if keyid in carried
+        },
+        roles={role_name: delegated_role},
+    )
+
+    while True:
+        _print_delegation(delegations)
+        problems = _delegation_update_problems(delegated_role, delegations)
+        for problem in problems:
+            console.print(problem, style="bold red")
+
+        options = [
+            UPDATE_PATHS,
+            UPDATE_THRESHOLD,
+            UPDATE_EXPIRY,
+            UPDATE_KEYS,
+        ]
+        if not problems:
+            options.insert(0, UPDATE_CONTINUE)
+
+        console.print()
+        action = _select(options)
+
+        if action == UPDATE_CONTINUE:
+            break
+
+        elif action == UPDATE_PATHS:
+            _configure_delegations_paths(delegated_role)
+
+        elif action == UPDATE_THRESHOLD:
+            delegated_role.threshold = _PositiveIntPrompt.ask(
+                f"Please enter '{role_name}' threshold",
+                default=delegated_role.threshold,
+            )
+
+        elif action == UPDATE_EXPIRY:
+            days, _ = _expiry_prompt(
+                role_name,
+                default=delegated_role.unrecognized_fields[
+                    "x-rstuf-expire-policy"
+                ],
+            )
+            delegated_role.unrecognized_fields["x-rstuf-expire-policy"] = days
+
+        elif action == UPDATE_KEYS:
+            _configure_delegation_keys_update(delegated_role, delegations)
 
     return delegations
 

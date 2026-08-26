@@ -30,6 +30,7 @@ class URL(Enum):
 class Methods(Enum):
     GET = "get"
     POST = "post"
+    PUT = "put"
     DELETE = "delete"
 
 
@@ -53,6 +54,15 @@ def request_server(
 
         elif method == Methods.POST:
             response = requests.post(
+                f"{server}/{url}",
+                json=payload,
+                data=data,
+                headers=headers,
+                timeout=300,
+            )
+
+        elif method == Methods.PUT:
+            response = requests.put(
                 f"{server}/{url}",
                 json=payload,
                 data=data,
@@ -199,6 +209,7 @@ def send_payload(
     expected_msg: str,
     command_name: str,
     expected_status_code: Optional[int] = 202,
+    method: Methods = Methods.POST,
 ) -> str:
     """
     Send 'payload' to a given 'settings.SERVER'.
@@ -210,13 +221,15 @@ def send_payload(
         expected_msg: expected message to receive as a response to the request
         command_name: name of the command sending the payload, used for logging
         expected_status_code: [Optional] expected status code. Default: 202
+        method: [Optional] HTTP method used to send the payload.
+            Default: POST
     Returns:
         Task id of the job sending the payload.
     """
     response = request_server(
         settings.SERVER,
         url,
-        Methods.POST,
+        method,
         payload,
         headers=settings.HEADERS,
     )
