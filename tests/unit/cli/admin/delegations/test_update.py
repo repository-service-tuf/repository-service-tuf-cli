@@ -450,6 +450,48 @@ class TestDelegationUpdateProblems:
 
         assert _delegation_update_problems(role, delegations) == []
 
+    def test_nested_bins_with_the_materialised_online_key_are_fine(
+        self, repository_key, role_online_key
+    ):
+        """A role created with no keyids comes back with them filled in.
+
+        The Worker expands an empty keyid list to the repository online key
+        before publishing, so trusted metadata never shows the empty list the
+        ceremony sent. That role is still online-signed and must stay
+        editable.
+        """
+        role = delegated_role(
+            "fastapi",
+            [repository_key.keyid],
+            num_bins=16,
+            role_online_keyid=role_online_key.keyid,
+        )
+        delegations = Delegations(
+            keys={
+                repository_key.keyid: repository_key,
+                role_online_key.keyid: role_online_key,
+            },
+            roles={"fastapi": role},
+        )
+
+        assert _delegation_update_problems(role, delegations) == []
+
+    def test_nested_bins_reject_a_key_with_no_uri(
+        self, repository_key, offline_keys
+    ):
+        """A key the signer store cannot resolve is still refused."""
+        offline_keyid = next(iter(offline_keys))
+        role = delegated_role(
+            "fastapi", [repository_key.keyid, offline_keyid], num_bins=16
+        )
+        delegations = Delegations(
+            keys={repository_key.keyid: repository_key, **offline_keys},
+            roles={"fastapi": role},
+        )
+
+        problems = _delegation_update_problems(role, delegations)
+        assert any("not by offline keys" in problem for problem in problems)
+
 
 class TestDelegationKeyLabel:
     def test_named_key(self, targets_md, offline_keys):

@@ -1144,8 +1144,23 @@ def _delegation_update_problems(
 
     if NESTED_BINS_FIELD in delegated_role.unrecognized_fields:
         # The Worker generates and signs the nested bins, so it has to be
-        # able to sign their delegator too.
-        if delegated_role.keyids:
+        # able to sign their delegator too. An online key is one the signer
+        # store can build a signer for, which is exactly the keys carrying a
+        # URI: test for that rather than for an empty keyid list. A role
+        # created with no keyids comes back from trusted metadata with the
+        # repository online key materialised into them, and that role is
+        # still online-signed.
+        offline_keyids = [
+            keyid
+            for keyid in delegated_role.keyids
+            if KEY_URI_FIELD
+            not in getattr(
+                (delegations.keys or {}).get(keyid),
+                "unrecognized_fields",
+                {},
+            )
+        ]
+        if offline_keyids:
             problems.append(
                 "The role has nested hash bins, so it must be signed by the "
                 "repository online key, not by offline keys."
