@@ -60,6 +60,30 @@ class TestAPIClient:
             )
         ]
 
+    def test_request_server_put(self):
+        fake_response = pretend.stub(
+            status_code=200,
+            json=pretend.call_recorder(lambda: {"key": "value"}),
+        )
+        api_client.requests = pretend.stub(
+            put=pretend.call_recorder(lambda *a, **kw: fake_response)
+        )
+
+        result = api_client.request_server(
+            "http://server", "url", api_client.Methods.PUT, {"k": "v"}
+        )
+
+        assert result == fake_response
+        assert api_client.requests.put.calls == [
+            pretend.call(
+                "http://server/url",
+                json={"k": "v"},
+                data=None,
+                headers=None,
+                timeout=300,
+            )
+        ]
+
     def test_request_server_delete(self):
         fake_response = pretend.stub(
             status_code=200,
@@ -565,6 +589,40 @@ class TestAPIClient:
                 test_context["settings"].SERVER,
                 api_client.URL.BOOTSTRAP.value,
                 api_client.Methods.POST,
+                {"payload": "data"},
+                headers=None,
+            )
+        ]
+
+    def test_send_payload_put_method(self, test_context):
+        test_context["settings"].SERVER = "http://fake-rstuf"
+
+        api_client.request_server = pretend.call_recorder(
+            lambda *a, **kw: pretend.stub(
+                status_code=202,
+                json=pretend.call_recorder(
+                    lambda: {
+                        "data": {"task_id": "task_id_123"},
+                        "message": "Metadata delegation update accepted.",
+                    }
+                ),
+            )
+        )
+        result = api_client.send_payload(
+            settings=test_context["settings"],
+            url=api_client.URL.DELEGATIONS.value,
+            payload={"payload": "data"},
+            expected_msg="Metadata delegation update accepted.",
+            command_name="Update Metadata finished.",
+            method=api_client.Methods.PUT,
+        )
+        assert result == "task_id_123"
+
+        assert api_client.request_server.calls == [
+            pretend.call(
+                test_context["settings"].SERVER,
+                api_client.URL.DELEGATIONS.value,
+                api_client.Methods.PUT,
                 {"payload": "data"},
                 headers=None,
             )
