@@ -11,7 +11,7 @@ updates:
       include: "scope"
     open-pull-requests-limit: 10
     groups:
-      pipenv:
+      uv:
         patterns:
           - "*"    
   # Monitor Github Actions
