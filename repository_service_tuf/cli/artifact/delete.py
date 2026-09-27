@@ -33,12 +33,13 @@ from repository_service_tuf.helpers.cli import (
     "-H",
     help=("Headers to include in the request. " f"Example: {HEADERS_EXAMPLE}"),
     required=False,
+    multiple=True,
 )
 @click.pass_context
 def delete(
     context: Context,
     path: str,
-    headers: Optional[str],
+    headers: tuple,
     api_server: Optional[str],
 ) -> None:
     """

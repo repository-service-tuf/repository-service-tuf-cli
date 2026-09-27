@@ -30,10 +30,11 @@ from repository_service_tuf.cli import (
     "-H",
     help=("Headers to include in the request. " f"Example: {HEADERS_EXAMPLE}"),
     required=False,
+    multiple=True,
 )
 @click.pass_context
 def admin(
-    context: click.Context, api_server: Optional[str], headers: Optional[str]
+    context: click.Context, api_server: Optional[str], headers: tuple
 ):
     """Administrative Commands"""
     # Because of tests it has to be in a separate function.

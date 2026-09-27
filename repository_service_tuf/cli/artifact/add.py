@@ -46,6 +46,7 @@ from repository_service_tuf.helpers.cli import (
     "-H",
     help=("Headers to include in the request. " f"Example: {HEADERS_EXAMPLE}"),
     required=False,
+    multiple=True,
 )
 @click.pass_context
 def add(
@@ -53,7 +54,7 @@ def add(
     filepath: str,
     path: Optional[str],
     api_server: Optional[str],
-    headers: Optional[str],
+    headers: tuple,
 ) -> None:
     """
     Add artifacts to the TUF metadata.

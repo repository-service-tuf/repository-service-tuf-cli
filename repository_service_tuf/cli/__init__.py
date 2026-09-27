@@ -19,12 +19,12 @@ from repository_service_tuf import Dynaconf
 from repository_service_tuf.__version__ import version
 
 HEADERS_EXAMPLE = (
-    "'Authorization: Bearer <token>, Content-Type: application/json'"
+    "'-H Authorization: Bearer <token> -H Content-Type: application/json'"
 )
 
 
 def _set_settings(
-    context: click.Context, api_server: Optional[str], headers: Optional[str]
+    context: click.Context, api_server: Optional[str], headers: tuple
 ):
     """Set context.obj['settings'] attributes."""
     settings = context.obj["settings"]
@@ -35,7 +35,7 @@ def _set_settings(
             settings.HEADERS = dict(
                 (key.strip(), value.strip())
                 for key, value in (
-                    header.split(":", 1) for header in headers.split(",")
+                    header.split(":", 1) for header in headers
                 )
             )
         except ValueError:

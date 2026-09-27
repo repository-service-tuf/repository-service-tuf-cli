@@ -34,10 +34,11 @@ from repository_service_tuf.helpers.api_client import get_task, task_status
     "-H",
     help=("Headers to include in the request. " f"Example: {HEADERS_EXAMPLE}"),
     required=False,
+    multiple=True,
 )
 @click.pass_context
 def info(
-    context: Context, task_id: str, api_server: str, headers: str, all: bool
+    context: Context, task_id: str, api_server: str, headers: tuple, all: bool
 ) -> Dict[str, Any]:
     """
     Retrieve task state.

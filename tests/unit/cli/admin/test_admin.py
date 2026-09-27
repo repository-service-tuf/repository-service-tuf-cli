@@ -26,7 +26,7 @@ class TestAdmin:
         _set_settings(
             context,
             api_server,
-            headers="apikey: 1234, Content-Type: application/json",
+            headers=("apikey: 1234", "Content-Type: application/json"),
         )
 
         assert context.obj["settings"].SERVER == api_server
@@ -44,7 +44,7 @@ class TestAdmin:
             _set_settings(
                 context,
                 api_server,
-                headers="apikey1234, Content-Type: application/json",
+                headers=("apikey1234", "Content-Type: application/json"),
             )
 
         assert context.obj["settings"].SERVER == api_server
