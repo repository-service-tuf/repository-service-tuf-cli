@@ -692,6 +692,43 @@ def _configure_online_key_prompt(root: Root) -> None:
     console.print(f"Expected private key file name is: '{new_key.keyid}'")
 
 
+def _unrecognized_fields_prompt(root: Root) -> None:
+    """Prompt dialog to set or update unrecognized fields."""
+    import re
+    if root.unrecognized_fields:
+        console.print("\nCurrent unrecognized fields:")
+        for k, v in root.unrecognized_fields.items():
+            if k.startswith("x-"):
+                console.print(f"  {k}: {v}")
+        if not Confirm.ask("Do you want to change unrecognized fields?", default=False):
+            return
+        if Confirm.ask("Do you want to clear existing unrecognized fields?", default=False):
+            # Only remove fields matching the format to avoid removing internal ones if any
+            to_remove = [k for k in root.unrecognized_fields if k.startswith("x-") and "-" in k[2:]]
+            for k in to_remove:
+                del root.unrecognized_fields[k]
+
+    if not Confirm.ask("Do you want to add unrecognized fields?", default=False):
+        return
+
+    while True:
+        name = Prompt.ask("Field name (format: x-<vendor>-<name>)")
+        if not name:
+            break
+
+        if not re.match(r"^x-[a-zA-Z0-9_]+-[a-zA-Z0-9_-]+$", name):
+            console.print("Invalid format. Every extra field must follow format: x-<vendor>-<name>", style="bold red")
+            continue
+
+        value = Prompt.ask(f"Field value for '{name}'")
+        if getattr(root, "unrecognized_fields", None) is None:
+            root.unrecognized_fields = {}
+        root.unrecognized_fields[name] = value
+
+        if not Confirm.ask("Do you want to add another unrecognized field?", default=False):
+            break
+
+
 def _add_signature_prompt(metadata: Metadata, key: Key) -> Signature:
     """Prompt for signing key and add signature to metadata until success."""
     while True:
