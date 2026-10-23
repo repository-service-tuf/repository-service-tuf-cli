@@ -92,6 +92,9 @@ DEFAULT_EXPIRY = {
     "bins": 1,
 }
 DEFAULT_BINS_NUMBER = 256
+# Powers of two from 2 to 4096, matching the nested hash-bin feature file.
+NESTED_BINS_CHOICES = [str(2**i) for i in range(1, 13)]
+NESTED_BINS_CHOICES_PROMPT = "/".join(NESTED_BINS_CHOICES)
 
 # some known locations where we might find libykcs11.
 # These should all be _system_ locations (not user writable)
@@ -542,22 +545,15 @@ def _key_name_prompt(
     return name
 
 
-def _expiry_prompt(role: str, num_bins=None) -> Tuple[int, datetime]:
+def _expiry_prompt(role: str) -> Tuple[int, datetime]:
     """Prompt for days until expiry for role, returns days and expiry date.
 
     Use per-role defaults from ExpirationSettings.
     """
-    if not num_bins:
-        days = _PositiveIntPrompt.ask(
-            f"Please enter days until expiry for '{role}' role",
-            default=DEFAULT_EXPIRY.get(role, 1),
-        )
-    else:
-        days = _PositiveIntPrompt.ask(
-            f"Please enter days until expiry for '{role}'"
-            " role and its nested roles",
-            default=DEFAULT_EXPIRY.get(role, 1),
-        )
+    days = _PositiveIntPrompt.ask(
+        f"Please enter days until expiry for '{role}' role",
+        default=DEFAULT_EXPIRY.get(role, 1),
+    )
     today = datetime.now(timezone.utc).replace(microsecond=0)
     date = today + timedelta(days=days)
     console.print(f"New expiry date is: {date:{EXPIRY_FORMAT}}")
@@ -929,8 +925,7 @@ def _configure_delegations() -> Delegations:
                     ):
                         continue
 
-                num_nested_bins = _prompt_nested_bins(name)
-                expire_days, _ = _expiry_prompt(name, num_nested_bins)
+                expire_days, _ = _expiry_prompt(name)
                 # ##########################################################
                 # Load the Public Keys used to sign the metadata
                 delegated_role = DelegatedRole(
@@ -941,11 +936,6 @@ def _configure_delegations() -> Delegations:
                     paths=[],
                     unrecognized_fields={"x-rstuf-expire-policy": expire_days},
                 )
-
-                if num_nested_bins:
-                    delegated_role.unrecognized_fields["x-rstuf-num-bins"] = (
-                        num_nested_bins
-                    )
 
                 _configure_delegations_paths(delegated_role)
                 console.print(
@@ -958,15 +948,31 @@ def _configure_delegations() -> Delegations:
                         " We don't support offline keys for this feature yet\n"
                     )
                 )
-                if num_nested_bins:
-                    signing_method = _select(["Online Key (use the existing)"])
-                else:
-                    signing_method = _select(["Online Key (use the existing)", "Add Keys"])
+                # Blank line between the Info note and the signing choice.
+                console.print()
+                signing_method = _select(
+                    ["Online Key (use the existing)", "Add Keys"]
+                )
                 if signing_method == "Add Keys":
                     delegated_role.threshold = _threshold_prompt(
                         delegated_role.name
                     )
                     _configure_delegations_keys(delegated_role, delegations)
+
+                console.print(f"Delegated target role '{name}' configured")
+                num_nested_bins = _prompt_nested_bins(name)
+                if num_nested_bins:
+                    if delegated_role.keyids:
+                        console.print(
+                            "Nested hash-bin delegations currently require"
+                            " the global online key. Nested bins were not"
+                            " added for this role.",
+                            style="bold red",
+                        )
+                    else:
+                        delegated_role.unrecognized_fields[
+                            "x-rstuf-num-bins"
+                        ] = num_nested_bins
 
                 delegations.roles[delegated_role.name] = delegated_role
 
@@ -1008,7 +1014,7 @@ def _configure_delegations_prompt(settings: _Settings) -> None:
                 "> Note: Custom delegations now support"
                 " nested hash-bin delegations. "
                 "Nested bins are created under a custom delegation"
-                " role but they are always signed with the global online key"
+                " role, but they are always signed with the global online key"
                 " (the same online key used for top-level bins)"
                 " same as their parent custom role."
             )
@@ -1175,9 +1181,13 @@ def _print_delegation(delegations: Delegations):
             delegation.paths = []
 
         num_bins = delegation.unrecognized_fields.get("x-rstuf-num-bins")
-        nested_bins_str = (
-            f"Number of bins: {num_bins}" if num_bins is not None else "None"
-        )
+        if num_bins is not None:
+            nested_bins_str = (
+                f"Number of bins: {num_bins}\n"
+                f"Bit length: {num_bins.bit_length() - 1}"
+            )
+        else:
+            nested_bins_str = "None"
 
         delegations_table.add_row(
             delegation.name,
@@ -1304,19 +1314,23 @@ def _get_latest_md(metadata_url: str, role_name: str) -> Metadata:
 
 def _prompt_nested_bins(delegation_name: str) -> Optional[int]:
     """Ask whether to create nested hash-bin delegations
-    and return bins count."""
+    and return bins count.
+
+    Prompt wording follows the nested hash-bin feature file used by
+    functional tests.
+    """
     prompt = (
-        f"Do you want hash‑bin delegations under this "
-        f"'{delegation_name}' delegation?"
+        "Do you want further hash‑bin delegations under this "
+        f"{delegation_name} delegation (y/n)?"
     )
     if not Confirm.ask(prompt, default=False):
         return None
 
     bins_number = IntPrompt.ask(
-        "Number of bins",
+        f"Number of bins ({NESTED_BINS_CHOICES_PROMPT}):",
         default=DEFAULT_BINS_NUMBER,
-        choices=[str(2**i) for i in range(1, 13)],
+        choices=NESTED_BINS_CHOICES,
         show_default=True,
-        show_choices=True,
+        show_choices=False,
     )
     return bins_number
