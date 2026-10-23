@@ -17,8 +17,8 @@ build:
     - plantuml
   jobs:
     pre_create_environment:
-      - pip install pipenv
-      - pipenv requirements --dev > requirements.txt 
+      - pip install uv
+      - uv export --dev --no-hashes -o requirements.txt
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:

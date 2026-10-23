@@ -248,7 +248,9 @@ class TestArtifactRepositoryInteraction:
             obj=test_context,
         )
 
-        assert test_result.exit_code == 2
+        # Click exits with code 1 for validation errors
+        assert test_result.exit_code == 1
+        assert "Please use http:// or https://" in test_result.output
 
     @pytest.mark.parametrize(
         "args, is_file",

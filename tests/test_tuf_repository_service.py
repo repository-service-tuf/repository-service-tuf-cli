@@ -9,7 +9,12 @@ from repository_service_tuf.cli import rstuf
 class TestRSTUFCLI:
     def test_tuf_repository_service(self, client):
         test_result = client.invoke(rstuf)
-        assert test_result.exit_code == 0
+        # Click groups exit with code 2 when invoked without subcommand
+        assert test_result.exit_code == 2
+        assert (
+            "Repository Service for TUF Command Line Interface"
+            in test_result.output
+        )
 
     def test_version_parameter(self, client):
         """Tests the CLI --version parameter existence and output format."""

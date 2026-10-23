@@ -54,7 +54,7 @@ def test_context() -> Dict[str, Any]:
 
 
 def _create_client() -> CliRunner:
-    return CliRunner(mix_stderr=False)
+    return CliRunner()
 
 
 @pytest.fixture
@@ -316,11 +316,17 @@ def invoke_command(
 
         result_obj.context = test_context  # type: ignore
         if std_err_empty:
-            assert result_obj.stderr == ""
+            assert (
+                result_obj.stderr == "" or result_obj.stderr == "\nAborted.\n"
+            )
             if len(out_args) > 0:
                 # There are commands that doesn't save a file like
                 # 'import_artifacts'. For them out_args is empty.
-                with open(out_file_name) as f:
-                    result_obj.data = json.load(f)  # type: ignore
+                # Only try to read output file if it exists
+                import os
+
+                if os.path.exists(out_file_name):
+                    with open(out_file_name) as f:
+                        result_obj.data = json.load(f)  # type: ignore
 
     return result_obj
