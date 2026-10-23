@@ -482,6 +482,146 @@ class TestCeremony:
         assert "Saved result to " not in result.stdout
         assert "Bootstrap completed." not in result.stdout
 
+    def test_ceremony_bins_review_shows_hash_bin_rows(
+        self,
+        monkeypatch,
+        ceremony_inputs,
+        key_selection,
+        client,
+        test_context,
+        patch_getpass,
+        patch_utcnow,
+        ceremony_pubkey_prompt,
+        ceremony_privkey_prompt,
+    ):
+        """The Review step describes the hash bins, not just the root."""
+        monkeypatch.setattr(f"{_HELPERS}._select", key_selection)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", ceremony_pubkey_prompt
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", ceremony_privkey_prompt
+        )
+
+        input_step1, input_step2, input_step3, input_step4 = ceremony_inputs
+        result = invoke_command(
+            ceremony.ceremony,
+            input_step1 + input_step2 + input_step3 + input_step4,
+            args=["--dry-run"],
+        )
+
+        assert "Hash bins for: targets" in result.stdout
+        assert "Number of bins: 4" in result.stdout
+        assert "Bit length: 2" in result.stdout
+        # The bins are signed by the repository online key.
+        assert "Online Key" in result.stdout
+
+    def test_ceremony_custom_delegation_with_nested_bins_role_key(
+        self,
+        monkeypatch,
+        client,
+        test_context,
+        patch_getpass,
+        patch_utcnow,
+    ):
+        """A custom delegation may nest hash bins signed by its own key.
+
+        The role online key signs the bins below 'fastapi'; 'fastapi' itself
+        stays on the repository online key, so the key is not added to the
+        role's keyids.
+        """
+        selection_options = iter(
+            (
+                "Custom Delegations (online and offline keys)",
+                "continue",  # 'fastapi' paths
+                # 'fastapi' is signed by the repository online key
+                "Online Key (use the existing)",
+                # role online key type for the nested bins
+                "Key PEM File",
+                "continue",  # delegations loop
+                # root keys
+                "Key PEM File",  # key type for the first root key
+                "add",
+                "Key PEM File",  # key type for the second root key
+                "continue",
+                "Key PEM File",  # online key type
+                # signing
+                "JimiHendrix's Key",
+                "Key PEM File",
+                "JanisJoplin's Key",
+                "Key PEM File",
+                "continue",
+            )
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._select",
+            pretend.call_recorder(lambda *a: next(selection_options)),
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key",
+            key_prompter(
+                [
+                    # role online key for the nested bins
+                    f"{_PEMS / 'cb20fa1061dde8e6267e0bef0981766aaadae168e917030f7f26edc7a0bab9c2.pub'}",  # noqa
+                    f"{_PEMS / 'JH.pub'}",  # root key 1
+                    f"{_PEMS / 'JJ.pub'}",  # root key 2
+                    f"{_PEMS / '0d9d3d4bad91c455bc03921daa95774576b86625ac45570d0cac025b08e65043.pub'}",  # noqa
+                ]
+            ),
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key",
+            key_prompter(
+                [
+                    f"{_PEMS / 'JH.ed25519'}",
+                    f"{_PEMS / 'JJ.ecdsa'}",
+                ]
+            ),
+        )
+
+        inputs = [
+            "",  # timestamp expiry
+            "",  # snapshot expiry
+            "",  # targets expiry
+            "fastapi",  # delegated role name
+            "",  # 'fastapi' expiry
+            "fastapi/*",  # path
+            "y",  # create nested hash bins under 'fastapi'?
+            "16",  # number of nested delegated hash bins
+            "y",  # add a role-specific online key?
+            "fastapi-key",  # role online key name
+            "",  # root expiry
+            "2",  # root threshold
+            "JimiHendrix's Key",
+            "JanisJoplin's Key",
+            "Online Key",
+        ]
+        result = invoke_command(ceremony.ceremony, inputs, args=["--dry-run"])
+
+        delegations = result.data["settings"]["roles"]["delegations"]
+        roles = {role["name"]: role for role in delegations["roles"]}
+        fastapi = roles["fastapi"]
+
+        # The bins are configured on the role ...
+        assert fastapi["x-rstuf-num-bins"] == 16
+        assert fastapi["terminating"] is False
+        assert fastapi["threshold"] == 1
+        # ... and the role online key is referenced, but never signs the role
+        # itself: a delegation cannot sign itself.
+        role_keyid = fastapi["x-rstuf-role-online-key"]
+        assert role_keyid not in fastapi["keyids"]
+        assert fastapi["keyids"] == []
+        assert role_keyid in delegations["keys"]
+        assert (
+            "x-rstuf-online-key-uri"
+            in delegations["keys"][role_keyid]
+        )
+
+        # The Review step shows the bins as their own row.
+        assert "Hash bins for: fastapi" in result.stdout
+        assert "Number of bins: 16" in result.stdout
+        assert "Bit length: 4" in result.stdout
+
 
 class TestCeremonyError:
     def test_ceremony_no_api_server_and_no_dry_run_option(self):

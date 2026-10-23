@@ -7,6 +7,7 @@ import os.path
 import platform
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from math import log
 from tempfile import TemporaryDirectory
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -80,6 +81,12 @@ ONLINE_ROLE_NAMES = {Timestamp.type, Snapshot.type, Targets.type}
 
 KEY_URI_FIELD = "x-rstuf-online-key-uri"
 KEY_NAME_FIELD = "x-rstuf-key-name"
+# Number of hash bins nested below a custom delegated role.
+NESTED_BINS_FIELD = "x-rstuf-num-bins"
+# Keyid of the online key that signs a role's nested hash bins. The
+# key itself is carried in `delegations.keys` and is deliberately not
+# listed in the role's own `keyids`: a delegation cannot sign itself.
+ROLE_ONLINE_KEY_FIELD = "x-rstuf-role-online-key"
 
 # Use locale's appropriate date representation to display the expiry date.
 EXPIRY_FORMAT = "%x"
@@ -467,7 +474,7 @@ def _load_key_prompt(
 
 
 def _load_online_key_prompt(
-    root: Root, signer_type: str
+    existing_keys: Dict[str, Key], signer_type: str
 ) -> Tuple[Optional[str], Optional[Key]]:
     """Prompt and return Key, or None on error or if key is already loaded."""
     try:
@@ -500,7 +507,7 @@ def _load_online_key_prompt(
         return None, None
 
     # Disallow re-adding a key even if it is for a different role.
-    if key.keyid in root.keys:
+    if key.keyid in existing_keys:
         console.print("\nKey already in use.", style="bold red")
         return None, None
 
@@ -674,7 +681,9 @@ def _configure_online_key_prompt(root: Root) -> None:
     console.print("\nSelect Online Key type:")
     while True:
         online_key_signer = _select(ONLINE_SIGNERS.values())
-        uri, new_key = _load_online_key_prompt(root, online_key_signer)
+        uri, new_key = _load_online_key_prompt(
+            root.keys, online_key_signer
+        )
 
         if new_key:
             break
@@ -883,16 +892,113 @@ def _configure_delegations_keys(
                 )
                 new_key.unrecognized_fields[KEY_NAME_FIELD] = name
                 delegations.keys[new_key.keyid] = new_key
-                delegated_role.keyids.append(new_key.keyid)
+                # A key already assigned to this role must not be appended
+                # again: a duplicate keyid would survive a later single
+                # removal and leave the role referencing a keyid whose key
+                # object has been deleted.
+                if new_key.keyid not in delegated_role.keyids:
+                    delegated_role.keyids.append(new_key.keyid)
                 console.print(f"Added key '{name}'")
 
             case "remove":
-                # TODO:
-                # 1. List the key (by key name) for the role
-                # 2. Remove the KeyID from delegated role
-                # 3. Remove from delegation roles keys IF not
-                #    used by another role
-                raise NotImplementedError("TODO")
+                role_keys = [
+                    delegations.keys[keyid]
+                    for keyid in delegated_role.keyids
+                    if keyid in delegations.keys
+                ]
+                if not role_keys:
+                    console.print("No keys to remove", style="bold red")
+                    continue
+
+                console.print("\nSelect a key to remove:")
+                key = _select_key(role_keys)
+                name = key.unrecognized_fields.get(KEY_NAME_FIELD, key.keyid)
+                # Drop every occurrence so a defensive duplicate can't leave a
+                # keyid referencing a now-deleted key object.
+                delegated_role.keyids = [
+                    kid for kid in delegated_role.keyids if kid != key.keyid
+                ]
+                # Keep the key object while another role still references it.
+                still_used = any(
+                    key.keyid in role.keyids
+                    for role in (delegations.roles or {}).values()
+                    if role.name != delegated_role.name
+                )
+                if not still_used:
+                    del delegations.keys[key.keyid]
+                console.print(f"Removed key '{name}'")
+
+
+def _add_role_online_key_prompt(
+    delegated_role: DelegatedRole, delegations: Delegations
+) -> None:
+    """Add an online key that signs the role's nested hash bins.
+
+    The key is declared on the delegating metadata (`delegations.keys`) and
+    referenced from the role by `x-rstuf-role-online-key`. It is *not* added
+    to the role's own `keyids`: a delegated role cannot sign itself, so this
+    key only ever signs the hash bins nested below it. The Worker resolves it
+    through the same signer backends as the repository online key, so the
+    private half must be provisioned there out-of-band.
+    """
+    console.print("\nSelect Online Key type:")
+    while True:
+        online_key_signer = _select(ONLINE_SIGNERS.values())
+        uri, new_key = _load_online_key_prompt(
+            delegations.keys, online_key_signer
+        )
+        if new_key:
+            break
+
+    name = _key_name_prompt(
+        delegations.keys,
+        new_key.unrecognized_fields.get(KEY_NAME_FIELD, new_key.keyid),
+        duplicate=True,
+    )
+    new_key.unrecognized_fields[KEY_NAME_FIELD] = name
+    new_key.unrecognized_fields[KEY_URI_FIELD] = uri
+
+    delegations.keys[new_key.keyid] = new_key
+    delegated_role.unrecognized_fields[ROLE_ONLINE_KEY_FIELD] = new_key.keyid
+
+    console.print(
+        f"Added role online key '{name}' for the hash bins under "
+        f"'{delegated_role.name}'"
+    )
+    if uri and uri.startswith("fn:"):
+        console.print(f"Expected private key file name is: '{new_key.keyid}'")
+
+
+def _configure_nested_bins(
+    delegated_role: DelegatedRole, delegations: Delegations
+) -> None:
+    """Optionally nest hash bin delegations below a custom delegated role.
+
+    Only offered for roles signed by the repository online key: the Worker
+    generates and signs the bins, so it must be able to sign their delegator.
+    """
+    if not Confirm.ask(
+        f"Create nested hash bins under '{delegated_role.name}'?",
+        default=False,
+    ):
+        return
+
+    bins_number = IntPrompt.ask(
+        "Please enter number of nested delegated hash bins",
+        default=DEFAULT_BINS_NUMBER,
+        choices=[str(2**i) for i in range(1, 15)],
+        show_default=True,
+        show_choices=True,
+    )
+    delegated_role.threshold = 1
+    delegated_role.terminating = False
+    delegated_role.unrecognized_fields[NESTED_BINS_FIELD] = bins_number
+
+    if Confirm.ask(
+        "Add a role-specific online key to sign these hash bins?",
+        default=False,
+    ):
+        _add_role_online_key_prompt(delegated_role, delegations)
 
 
 def _configure_delegations() -> Delegations:
@@ -943,6 +1049,8 @@ def _configure_delegations() -> Delegations:
                         delegated_role.name
                     )
                     _configure_delegations_keys(delegated_role, delegations)
+                else:
+                    _configure_nested_bins(delegated_role, delegations)
 
                 delegations.roles[delegated_role.name] = delegated_role
 
@@ -959,10 +1067,22 @@ def _configure_delegations() -> Delegations:
 
                 for role in delegations.roles.values():
                     in_use_keyids += role.keyids
+                    other_online_keyid = role.unrecognized_fields.get(
+                        ROLE_ONLINE_KEY_FIELD
+                    )
+                    if other_online_keyid:
+                        in_use_keyids.append(other_online_keyid)
 
-                for keyid in removed_role.keyids:
+                removed_keyids = list(removed_role.keyids)
+                role_online_keyid = removed_role.unrecognized_fields.get(
+                    ROLE_ONLINE_KEY_FIELD
+                )
+                if role_online_keyid:
+                    removed_keyids.append(role_online_keyid)
+
+                for keyid in removed_keyids:
                     if keyid not in in_use_keyids:
-                        delegations.keys.pop(keyid)
+                        delegations.keys.pop(keyid, None)
 
                 console.print(f"Delegation '{role_name}' removed.")
 
@@ -980,7 +1100,13 @@ def _configure_delegations_prompt(settings: _Settings) -> None:
                 "signing.\n"
                 "- **Custom Delegations**:\n"
                 "Allows the creation of delegated roles for specified paths,\n"
-                " utilizing both offline and online keys."
+                " utilizing both offline and online keys.\n\n"
+                "> Note: Custom delegations now support"
+                " nested hash-bin delegations. "
+                "Nested bins are created under a custom delegation role"
+                " signed by the online key, and are signed either by that"
+                " same online key or by a role-specific online key you"
+                " configure for them."
             )
         )
         console.print()
@@ -1115,33 +1241,120 @@ def _print_targets(targets: Metadata[Targets]):
     console.print(targets_table)
 
 
-def _print_delegation(delegations: Delegations):
-    """Pretty print target delegation metadata."""
+def _bit_length(num_bins: int) -> int:
+    return int(log(num_bins, 2))
+
+
+def _online_key_rows(online_key: Optional[Key]) -> List[Tuple[str, str, str]]:
+    """Row(s) describing the repository online key.
+
+    The ceremony configures delegations before the online key exists, so the
+    key is only shown once it is known; until then it is named, not detailed.
+    """
+    if online_key is None:
+        return [("-", "Online Key (repository)", "-")]
+    name = online_key.unrecognized_fields.get(KEY_NAME_FIELD, online_key.keyid)
+    return [(online_key.keyid, name, online_key.scheme)]
+
+
+def _delegation_bins_row(
+    delegation: DelegatedRole,
+    delegations: Delegations,
+    online_key: Optional[Key],
+) -> Optional[Tuple[str, str, Any]]:
+    """Build the hash-bin row nested below a custom delegated role."""
+    num_bins = delegation.unrecognized_fields.get(NESTED_BINS_FIELD)
+    if num_bins is None:
+        return None
+
+    role_online_keyid = delegation.unrecognized_fields.get(
+        ROLE_ONLINE_KEY_FIELD
+    )
+    key_table = Table("ID", "Name", "Signing Scheme")
+    role_key = delegations.keys.get(role_online_keyid or "")
+    if role_key is not None:
+        name = role_key.unrecognized_fields.get(KEY_NAME_FIELD, role_key.keyid)
+        key_table.add_row(
+            role_key.keyid, f"{name} (role online key)", role_key.scheme
+        )
+    else:
+        for row in _online_key_rows(online_key):
+            key_table.add_row(*row)
+
+    return (
+        "",
+        (
+            f"Hash bins for: {delegation.name}\n"
+            f"Expiration: {delegation.unrecognized_fields['x-rstuf-expire-policy']}\n"  # noqa
+            f"Threshold: 1\n"
+            f"Number of bins: {num_bins}\n"
+            f"Bit length: {_bit_length(num_bins)}"
+        ),
+        key_table,
+    )
+
+
+def _delegations_table(title: str = "Delegation Metadata") -> Table:
+    return Table(
+        "Role Name",
+        "Infos",
+        "Keys",
+        title=title,
+        show_lines=True,
+    )
+
+
+def _print_delegation(
+    delegations: Delegations, online_key: Optional[Key] = None
+):
+    """Pretty print target delegation metadata.
+
+    `online_key` is the repository online key, when it is already known. Hash
+    bins nested below a role are listed as their own row right after their
+    delegator: they are separate metadata, signed by their own key.
+    """
     if delegations.roles is None:
         console.print("No delegations")
         return None
 
-    delegations_table = Table(
-        "Role Name",
-        "Infos",
-        "Keys",
-        title="Delegation Metadata",
-        show_lines=True,
-    )
+    delegations_table = _delegations_table()
 
     for rolename, delegation in delegations.roles.items():
-        key_table: Optional[Table] = None
+        key_display: Any
         key_table = Table("ID", "Name", "Signing Scheme")
         for key in delegations.keys.values():
             if key.keyid in delegations.roles[rolename].keyids:
                 name = key.unrecognized_fields.get(KEY_NAME_FIELD)
                 key_table.add_row(key.keyid, name, key.scheme)
 
-        if len(key_table.rows) == 0:
-            key_table = None
+        if len(key_table.rows) == 0 and (
+            NESTED_BINS_FIELD in delegation.unrecognized_fields
+        ):
+            # Spell the repository online key out rather than printing the
+            # bare "Online Key" label: this role also names a key for its
+            # bins, and the two must be told apart.
+            for row in _online_key_rows(online_key):
+                key_table.add_row(*row)
+
+        # The role's bins key is listed here too, marked, so one row shows
+        # every key involved with the role: the repository key signs the role,
+        # the role key signs the bins beneath it.
+        role_key = delegations.keys.get(
+            delegation.unrecognized_fields.get(ROLE_ONLINE_KEY_FIELD) or ""
+        )
+        if role_key is not None:
+            name = role_key.unrecognized_fields.get(
+                KEY_NAME_FIELD, role_key.keyid
+            )
+            key_table.add_row(
+                role_key.keyid, f"{name} (role online key)", role_key.scheme
+            )
+
+        key_display = key_table if len(key_table.rows) else "Online Key"
 
         if delegation.paths is None:
             delegation.paths = []
+
         delegations_table.add_row(
             delegation.name,
             (
@@ -1149,10 +1362,39 @@ def _print_delegation(delegations: Delegations):
                 f"Threshold: {delegation.threshold}\n"
                 f"Paths: {', '.join(delegation.paths)}"
             ),
-            key_table or "Online Key",
+            key_display,
         )
 
+        bins_row = _delegation_bins_row(delegation, delegations, online_key)
+        if bins_row is not None:
+            delegations_table.add_row(*bins_row)
+
     console.print(delegations_table)
+
+
+def _print_bins(
+    bins_expiry: int, bins_number: int, online_key: Optional[Key] = None
+):
+    """Pretty print the hash bin delegations hanging off top-level targets."""
+    key_table = Table("ID", "Name", "Signing Scheme")
+    for row in _online_key_rows(online_key):
+        key_table.add_row(*row)
+
+    # No custom delegations exist on this path, so name the table for its
+    # only contents.
+    bins_table = _delegations_table(title="Hashbin Metadata")
+    bins_table.add_row(
+        "",
+        (
+            f"Hash bins for: {Targets.type}\n"
+            f"Expiration: {bins_expiry}\n"
+            f"Threshold: 1\n"
+            f"Number of bins: {bins_number}\n"
+            f"Bit length: {_bit_length(bins_number)}"
+        ),
+        key_table,
+    )
+    console.print(bins_table)
 
 
 def _filter_root_verification_results(
