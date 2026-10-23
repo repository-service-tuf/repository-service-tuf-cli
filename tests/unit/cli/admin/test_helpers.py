@@ -911,6 +911,7 @@ class TestHelpers:
                 f"{_HELPERS}._select",
                 side_effect=["Online Key (use the existing)", "continue"],
             ),
+            patch(f"{_HELPERS}._prompt_nested_bins", return_value=None),
         ):
             result = helpers._configure_delegations()
 
@@ -942,6 +943,7 @@ class TestHelpers:
                     "continue",  # main loop
                 ],
             ),
+            patch(f"{_HELPERS}._prompt_nested_bins", return_value=None),
         ):
             result = helpers._configure_delegations()
 
@@ -971,7 +973,117 @@ class TestHelpers:
                 ],
             ),
             patch(f"{_HELPERS}.Confirm.ask", return_value=True),
+            patch(f"{_HELPERS}._prompt_nested_bins", return_value=None),
         ):
             result = helpers._configure_delegations()
 
         assert "myrole" in result.roles
+
+    def test_prompt_nested_bins_declined(self):
+        with patch(f"{_HELPERS}.Confirm.ask", return_value=False) as confirm:
+            result = helpers._prompt_nested_bins("downloads")
+
+        assert result is None
+        confirm.assert_called_once_with(
+            (
+                "Do you want further hash‑bin delegations under this "
+                "downloads delegation (y/n)?"
+            ),
+            default=False,
+        )
+
+    def test_prompt_nested_bins_accepted(self):
+        with (
+            patch(f"{_HELPERS}.Confirm.ask", return_value=True),
+            patch(f"{_HELPERS}.IntPrompt.ask", return_value=16) as bins_prompt,
+        ):
+            result = helpers._prompt_nested_bins("releases")
+
+        assert result == 16
+        bins_prompt.assert_called_once_with(
+            "Number of bins (2/4/8/16/32/64/128/256/512/1024/2048/4096):",
+            default=helpers.DEFAULT_BINS_NUMBER,
+            choices=helpers.NESTED_BINS_CHOICES,
+            show_default=True,
+            show_choices=False,
+        )
+
+    def test_configure_delegations_with_nested_bins(self):
+        with (
+            patch(
+                f"{_HELPERS}._delegated_target_role_name_prompt",
+                return_value="downloads",
+            ),
+            patch(f"{_HELPERS}._expiry_prompt", return_value=(1, None)),
+            patch(f"{_HELPERS}._configure_delegations_paths"),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=[
+                    "Online Key (use the existing)",
+                    "continue",
+                ],
+            ),
+            patch(f"{_HELPERS}._prompt_nested_bins", return_value=16),
+        ):
+            delegations = helpers._configure_delegations()
+
+        role = delegations.roles["downloads"]
+        assert role.unrecognized_fields["x-rstuf-num-bins"] == 16
+        assert role.unrecognized_fields["x-rstuf-expire-policy"] == 1
+        assert role.keyids == []
+
+    def test_configure_delegations_nested_bins_skipped_for_offline_keys(
+        self, ed25519_key
+    ):
+        def fake_configure_keys(role, delegations):
+            role.keyids.append(ed25519_key.keyid)
+            delegations.keys[ed25519_key.keyid] = ed25519_key
+
+        with (
+            patch(
+                f"{_HELPERS}._delegated_target_role_name_prompt",
+                return_value="project-a",
+            ),
+            patch(f"{_HELPERS}._expiry_prompt", return_value=(7, None)),
+            patch(f"{_HELPERS}._configure_delegations_paths"),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=["Add Keys", "continue"],
+            ),
+            patch(f"{_HELPERS}._threshold_prompt", return_value=1),
+            patch(
+                f"{_HELPERS}._configure_delegations_keys",
+                side_effect=fake_configure_keys,
+            ),
+            patch(f"{_HELPERS}._prompt_nested_bins", return_value=256),
+        ):
+            delegations = helpers._configure_delegations()
+
+        role = delegations.roles["project-a"]
+        assert "x-rstuf-num-bins" not in role.unrecognized_fields
+        assert ed25519_key.keyid in role.keyids
+
+    def test_print_delegation_includes_hash_bin_structure(self, capsys):
+        delegations = Delegations(
+            keys={},
+            roles={
+                "downloads": DelegatedRole(
+                    name="downloads",
+                    threshold=1,
+                    keyids=[],
+                    terminating=True,
+                    paths=["downloads/*"],
+                    unrecognized_fields={
+                        "x-rstuf-expire-policy": 1,
+                        "x-rstuf-num-bins": 16,
+                    },
+                )
+            },
+        )
+
+        helpers._print_delegation(delegations)
+        output = capsys.readouterr().out
+
+        assert "downloads" in output
+        assert "Number of bins: 16" in output
+        assert "Bit length: 4" in output

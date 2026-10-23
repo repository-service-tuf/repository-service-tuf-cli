@@ -92,6 +92,9 @@ DEFAULT_EXPIRY = {
     "bins": 1,
 }
 DEFAULT_BINS_NUMBER = 256
+# Powers of two from 2 to 4096, matching the nested hash-bin feature file.
+NESTED_BINS_CHOICES = [str(2**i) for i in range(1, 13)]
+NESTED_BINS_CHOICES_PROMPT = "/".join(NESTED_BINS_CHOICES)
 
 # some known locations where we might find libykcs11.
 # These should all be _system_ locations (not user writable)
@@ -933,8 +936,20 @@ def _configure_delegations() -> Delegations:
                     paths=[],
                     unrecognized_fields={"x-rstuf-expire-policy": expire_days},
                 )
+
                 _configure_delegations_paths(delegated_role)
-                console.print("Select signing:")
+                console.print(
+                    Markdown(
+                        "### Select signing:\n"
+                        "> **Info:** We currently support only"
+                        " **online key** for both"
+                        " custom roles and its nested roles "
+                        "if opting for nested hash bins."
+                        " We don't support offline keys for this feature yet\n"
+                    )
+                )
+                # Blank line between the Info note and the signing choice.
+                console.print()
                 signing_method = _select(
                     ["Online Key (use the existing)", "Add Keys"]
                 )
@@ -943,6 +958,21 @@ def _configure_delegations() -> Delegations:
                         delegated_role.name
                     )
                     _configure_delegations_keys(delegated_role, delegations)
+
+                console.print(f"Delegated target role '{name}' configured")
+                num_nested_bins = _prompt_nested_bins(name)
+                if num_nested_bins:
+                    if delegated_role.keyids:
+                        console.print(
+                            "Nested hash-bin delegations currently require"
+                            " the global online key. Nested bins were not"
+                            " added for this role.",
+                            style="bold red",
+                        )
+                    else:
+                        delegated_role.unrecognized_fields[
+                            "x-rstuf-num-bins"
+                        ] = num_nested_bins
 
                 delegations.roles[delegated_role.name] = delegated_role
 
@@ -980,7 +1010,13 @@ def _configure_delegations_prompt(settings: _Settings) -> None:
                 "signing.\n"
                 "- **Custom Delegations**:\n"
                 "Allows the creation of delegated roles for specified paths,\n"
-                " utilizing both offline and online keys."
+                " utilizing both offline and online keys.\n\n"
+                "> Note: Custom delegations now support"
+                " nested hash-bin delegations. "
+                "Nested bins are created under a custom delegation"
+                " role, but they are always signed with the global online key"
+                " (the same online key used for top-level bins)"
+                " same as their parent custom role."
             )
         )
         console.print()
@@ -1125,6 +1161,7 @@ def _print_delegation(delegations: Delegations):
         "Role Name",
         "Infos",
         "Keys",
+        "Nested Bins",
         title="Delegation Metadata",
         show_lines=True,
     )
@@ -1142,6 +1179,16 @@ def _print_delegation(delegations: Delegations):
 
         if delegation.paths is None:
             delegation.paths = []
+
+        num_bins = delegation.unrecognized_fields.get("x-rstuf-num-bins")
+        if num_bins is not None:
+            nested_bins_str = (
+                f"Number of bins: {num_bins}\n"
+                f"Bit length: {num_bins.bit_length() - 1}"
+            )
+        else:
+            nested_bins_str = "None"
+
         delegations_table.add_row(
             delegation.name,
             (
@@ -1150,6 +1197,7 @@ def _print_delegation(delegations: Delegations):
                 f"Paths: {', '.join(delegation.paths)}"
             ),
             key_table or "Online Key",
+            nested_bins_str,
         )
 
     console.print(delegations_table)
@@ -1265,3 +1313,27 @@ def _get_latest_md(metadata_url: str, role_name: str) -> Metadata:
 
     except (OSError, RepositoryError, DownloadError):
         raise click.ClickException(f"Problem fetching latest {role_name}")
+
+
+def _prompt_nested_bins(delegation_name: str) -> Optional[int]:
+    """Ask whether to create nested hash-bin delegations
+    and return bins count.
+
+    Prompt wording follows the nested hash-bin feature file used by
+    functional tests.
+    """
+    prompt = (
+        "Do you want further hash‑bin delegations under this "
+        f"{delegation_name} delegation (y/n)?"
+    )
+    if not Confirm.ask(prompt, default=False):
+        return None
+
+    bins_number = IntPrompt.ask(
+        f"Number of bins ({NESTED_BINS_CHOICES_PROMPT}):",
+        default=DEFAULT_BINS_NUMBER,
+        choices=NESTED_BINS_CHOICES,
+        show_default=True,
+        show_choices=False,
+    )
+    return bins_number
