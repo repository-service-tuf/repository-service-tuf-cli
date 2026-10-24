@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 
 import json
+import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -46,6 +47,23 @@ def _create_test_context() -> Dict[str, Any]:
     test_settings = Dynaconf(settings_files=[setting_file])
     test_settings.HEADERS = None
     return {"settings": test_settings, "config": setting_file}
+
+
+@pytest.fixture(autouse=True)
+def _quiet_tuf_logs():
+    # python-tuf emits INFO logs (e.g. "No signature for keyid ...") during
+    # signing/verification. Under pytest's logging plugin those records can
+    # reassign sys.stdout mid CliRunner.invoke, diverting command output away
+    # from Result.stdout and breaking output assertions non-deterministically.
+    # Silence tuf below WARNING for the duration of each test so command output
+    # stays on the Result stream. Product logging behavior is unaffected.
+    logger = logging.getLogger("tuf")
+    previous = logger.level
+    logger.setLevel(logging.WARNING)
+    try:
+        yield
+    finally:
+        logger.setLevel(previous)
 
 
 @pytest.fixture

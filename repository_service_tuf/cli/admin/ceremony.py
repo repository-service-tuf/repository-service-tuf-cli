@@ -31,6 +31,9 @@ from repository_service_tuf.cli.admin.helpers import (
     _configure_online_key_prompt,
     _configure_root_keys_prompt,
     _expiry_prompt,
+    _get_online_key,
+    _print_bins,
+    _print_delegation,
     _print_root,
     _settings_prompt,
     _threshold_prompt,
@@ -108,6 +111,7 @@ def ceremony(
         bins = None
     else:
         delegations = None
+        bins = None
         if bs_settings.bins_expiry and bs_settings.bins_number:
             bins = BinsRole(bs_settings.bins_expiry, bs_settings.bins_number)
 
@@ -136,6 +140,11 @@ def ceremony(
     # Review Metadata
     console.print(Markdown("## Review"))
     _print_root(root)
+    online_key = _get_online_key(root)
+    if delegations:
+        _print_delegation(delegations, online_key)
+    elif bins:
+        _print_bins(bins.expiration, bins.number_of_delegated_bins, online_key)
     # TODO: ask to continue? or abort? or start over?
 
     ###########################################################################

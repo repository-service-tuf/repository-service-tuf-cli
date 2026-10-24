@@ -20,6 +20,14 @@ repository\_service\_tuf.cli.admin.delegations.new module
    :show-inheritance:
    :undoc-members:
 
+repository\_service\_tuf.cli.admin.delegations.update module
+------------------------------------------------------------
+
+.. automodule:: repository_service_tuf.cli.admin.delegations.update
+   :members:
+   :show-inheritance:
+   :undoc-members:
+
 Module contents
 ---------------
 
