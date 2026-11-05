@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 import json
+import os
+import tempfile
 
 import pretend
 
@@ -266,16 +268,21 @@ class TestSign:
         # locally and will not send payload to the API.
         # Given that "invoke_command" always saves a file, so the result can be
         # read we cannot use it.
-        with client.isolated_filesystem():
-            result = client.invoke(
-                sign.sign,
-                args=["--dry-run", "--in", sign_input_path],
-                input="\n".join(
-                    input_step1 + input_step2 + input_step3 + input_step4
-                ),
-                obj=test_context,
-                catch_exceptions=False,
-            )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            prev_dir = os.getcwd()
+            os.chdir(tmp_dir)
+            try:
+                result = client.invoke(
+                    sign.sign,
+                    args=["--dry-run", "--in", sign_input_path],
+                    input="\n".join(
+                        input_step1 + input_step2 + input_step3 + input_step4
+                    ),
+                    obj=test_context,
+                    catch_exceptions=False,
+                )
+            finally:
+                os.chdir(prev_dir)
 
         assert "Saved result to " not in result.stdout
         assert "Bootstrap completed." not in result.stdout
