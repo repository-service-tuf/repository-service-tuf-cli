@@ -3,6 +3,7 @@
 import os
 from hashlib import sha256
 from unittest.mock import mock_open, patch
+from urllib.error import HTTPError
 
 import pretend
 import pytest
@@ -123,6 +124,7 @@ class TestDownloadArtifacInteractionWithoutConfig:
                 ARTIFACT_NAME,
                 os.getcwd() + "/downloads",
                 updater_conf,
+                None,
             )
         ]
         assert test_result.exit_code == 0
@@ -140,6 +142,15 @@ class TestDownloadArtifacInteractionWithoutConfig:
         )
         monkeypatch.setattr(
             f"{SRC_PATH}._init_trusted_root",
+            pretend.call_recorder(lambda *a: None),
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}._load_trusted_root",
+            pretend.call_recorder(lambda root: b"fake-root-content"),
+        )
+        # validation is done in _check_root; skip it for this unit test
+        monkeypatch.setattr(
+            f"{SRC_PATH}._check_root",
             pretend.call_recorder(lambda *a: None),
         )
         fake__perform_tuf_ngclient_download_artifact = pretend.call_recorder(
@@ -179,6 +190,7 @@ class TestDownloadArtifacInteractionWithoutConfig:
                 ARTIFACT_NAME,
                 os.getcwd() + "/downloads",
                 updater_conf,
+                b"fake-root-content",
             )
         ]
         assert test_result.exit_code == 0
@@ -262,6 +274,7 @@ class TestDownloadArtifacInteractionWithoutConfig:
                 artifact_path,
                 os.getcwd() + "/downloads",
                 updater_conf,
+                None,
             )
         ]
 
@@ -528,3 +541,34 @@ class TestDownloadArtifactOptions:
             )
 
         assert result is None
+
+    def test_load_trusted_root_invalid_metadata(self):
+        with pytest.raises(download.click.ClickException) as excinfo:
+            download._load_trusted_root("not-json")
+
+        assert "Invalid trusted root metadata" in str(excinfo.value)
+
+    def test_load_root_from_url_http_error(self):
+        fake_http_error = HTTPError(
+            "http://example.com/1.root.json",
+            404,
+            "Not Found",
+            hdrs=None,
+            fp=None,
+        )
+
+        with patch(
+            f"{SRC_PATH}.request.urlopen",
+            pretend.raiser(fake_http_error),
+        ):
+            with pytest.raises(download.click.ClickException) as excinfo:
+                download._load_root_from_url("http://example.com/1.root.json")
+
+        assert "Failed to download trusted root" in str(excinfo.value)
+        assert "404" in str(excinfo.value)
+
+    def test_load_root_from_url_invalid_url(self):
+        with pytest.raises(download.click.ClickException) as excinfo:
+            download._load_root_from_url("not-a-valid-url")
+
+        assert "Please provide a valid trusted root URL" in str(excinfo.value)

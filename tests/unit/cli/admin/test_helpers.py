@@ -666,7 +666,11 @@ class TestHelpers:
                 self.name = fake_dir_name
 
         monkeypatch.setattr(f"{_HELPERS}.TemporaryDirectory", FakeTempDir)
-        fake_response = pretend.stub(status_code=200, text="foo bar")
+        fake_response = pretend.stub(
+            status_code=200,
+            text="foo bar",
+            content=b"foo bar",
+        )
         fake_requests = pretend.stub(
             get=pretend.call_recorder(lambda *a, **kw: fake_response)
         )
@@ -693,8 +697,11 @@ class TestHelpers:
             helpers.__builtins__, "open", lambda *a: FakeFileDescriptor(*a)
         )
 
+        created_updaters: list[dict] = []
+
         class FakeUpdater:
             def __init__(self, **kw) -> None:
+                created_updaters.append(kw)
                 self.new_args = kw
                 self.refresh_calls_amount = 0
 
@@ -719,7 +726,14 @@ class TestHelpers:
             pretend.call(f"{fake_url}/1.root.json", timeout=300)
         ]
         assert fake_destination_file.write.calls == [
-            pretend.call(fake_response.text)
+            pretend.call(fake_response.content)
+        ]
+        assert created_updaters == [
+            {
+                "metadata_dir": fake_dir_name,
+                "metadata_base_url": fake_url,
+                "bootstrap": fake_response.content,
+            }
         ]
         assert fake_metadata.from_bytes.calls == [
             pretend.call(FakeUpdater._load_local_metadata(Root.type))
