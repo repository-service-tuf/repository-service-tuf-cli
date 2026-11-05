@@ -341,6 +341,7 @@ class TestMetadataUpdate:
             "JoeCocker's Key",  # Please enter a key name
             "y",  # Do you want to change the online key? [y/n] (y)
             "New Online Key",  # Please enter a key name
+            "",  # Do you want to change unrecognized fields? (N)
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
             f"{_PEMS / 'JJ.ecdsa'}",  # Please enter path to encrypted private key  # noqa
             f"{_PEMS / 'JC.rsa'}",  # Please enter path to encrypted private key  # noqa
