@@ -159,17 +159,30 @@ class TestHelpers:
 
         # return None - key in use
         fake_key = pretend.stub(keyid="123")
-        with patch(
-            f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
+        with (
+            patch(
+                f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
+            ),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=[helpers.ROOT_SIGNERS.KEY_PEM],
+            ),
         ):
-            key = helpers._load_key_prompt(fake_root)
+            key = helpers._load_key_prompt(fake_root.keys, duplicate=False)
 
         assert key is None
 
         # return None - cannot load key
         for err in [OSError, ValueError]:
-            with patch(
-                f"{_HELPERS}._load_key_from_file_prompt", side_effect=err()
+            with (
+                patch(
+                    f"{_HELPERS}._load_key_from_file_prompt",
+                    side_effect=err(),
+                ),
+                patch(
+                    f"{_HELPERS}._select",
+                    side_effect=[helpers.ROOT_SIGNERS.KEY_PEM],
+                ),
             ):
                 key = helpers._load_key_prompt(fake_root)
                 assert key is None
