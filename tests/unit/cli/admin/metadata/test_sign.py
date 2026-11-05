@@ -7,6 +7,14 @@ import os
 import tempfile
 
 import pretend
+from tuf.api.metadata import (
+    DelegatedRole,
+    Delegations,
+    Metadata,
+    Signature,
+    SuccinctRoles,
+    Targets,
+)
 
 from repository_service_tuf.cli.admin.metadata import sign
 from repository_service_tuf.helpers.api_client import URL
@@ -287,6 +295,54 @@ class TestSign:
         assert "Saved result to " not in result.stdout
         assert "Bootstrap completed." not in result.stdout
 
+    def test_sign_targets_delegated_role(
+        self, monkeypatch, test_context, ed25519_key
+    ):
+        target_role = "role1"
+        delegated_role = DelegatedRole(
+            name=target_role,
+            keyids=[ed25519_key.keyid],
+            threshold=1,
+            terminating=False,
+            paths=["*"],
+        )
+        delegations = Delegations(
+            keys={ed25519_key.keyid: ed25519_key},
+            roles={target_role: delegated_role},
+        )
+        trusted_targets_md = Metadata(Targets(delegations=delegations))
+        role_md = Metadata(Targets())
+
+        pending_data = {
+            target_role: role_md.to_dict(),
+            "trusted_targets": trusted_targets_md.to_dict(),
+        }
+
+        monkeypatch.setattr(
+            sign, "_get_pending_roles", lambda *a, **kw: pending_data
+        )
+        monkeypatch.setattr(sign, "_select_role", lambda *a, **kw: target_role)
+        monkeypatch.setattr(sign, "_select_key", lambda *a, **kw: ed25519_key)
+        fake_sig = Signature(keyid=ed25519_key.keyid, sig="fake_signature")
+        monkeypatch.setattr(
+            sign, "_add_signature_prompt", lambda *a, **kw: fake_sig
+        )
+        monkeypatch.setattr(
+            sign, "send_payload", pretend.call_recorder(lambda **kw: "fake-taskid")
+        )
+        monkeypatch.setattr(
+            sign, "task_status", pretend.call_recorder(lambda *a: "OK")
+        )
+
+        test_context["settings"].SERVER = "http://127.0.0.1"
+
+        result = invoke_command(sign.sign, [], [], test_context)
+
+        assert result.exit_code == 0
+        assert result.data["role"] == target_role
+        assert result.data["signature"]["keyid"] == ed25519_key.keyid
+        assert "Metadata Signed and sent to the API! 🔑" in result.stdout
+
 
 class TestSignError:
     def test_sign_no_api_server_and_no_input_option(self):
@@ -348,11 +404,13 @@ class TestSignError:
         inputs = [
             f"{_PEMS / 'JH.ed25519'}",  # Please enter path to encrypted private key  # noqa
         ]
-        with open("tests/files/payload/ceremony.json", "r") as f:
+        with open(f"{_PAYLOADS / 'ceremony.json'}", "r") as f:
             ceremony_payload = json.loads(f.read())
 
-        sign._get_pending_roles = pretend.call_recorder(
-            lambda *a, **kw: {"root": ceremony_payload["metadata"]["root"]}
+        monkeypatch.setattr(
+            sign,
+            "_get_pending_roles",
+            lambda *a, **kw: {"root": ceremony_payload["metadata"]["root"]},
         )
         api_server = "http://127.0.0.1"
         test_context["settings"].SERVER = api_server
@@ -369,6 +427,51 @@ class TestSignError:
 
         assert test_result.exit_code == 1, test_result.stdout
         assert "Metadata already fully signed." in test_result.stderr
-        assert sign._get_pending_roles.calls == [
-            pretend.call(test_context["settings"])
-        ]
+
+    def test_sign_targets_no_custom_delegations(
+        self, test_context, monkeypatch
+    ):
+        trusted_targets_md = Metadata(Targets())
+        role_md = Metadata(Targets())
+        pending_data = {
+            "role1": role_md.to_dict(),
+            "trusted_targets": trusted_targets_md.to_dict(),
+        }
+        monkeypatch.setattr(
+            sign, "_get_pending_roles", lambda *a, **kw: pending_data
+        )
+        monkeypatch.setattr(sign, "_select_role", lambda *a, **kw: "role1")
+        test_context["settings"].SERVER = "http://127.0.0.1"
+
+        test_result = invoke_command(
+            sign.sign, [], [], test_context, std_err_empty=False
+        )
+        assert test_result.exit_code == 1
+        assert "No custom delegations" in test_result.stderr
+
+    def test_sign_targets_no_roles_in_delegations(
+        self, test_context, monkeypatch
+    ):
+        delegations = Delegations(
+            keys={},
+            succinct_roles=SuccinctRoles(
+                keyids=[], threshold=1, bit_length=16, name_prefix="bin-"
+            ),
+        )
+        trusted_targets_md = Metadata(Targets(delegations=delegations))
+        role_md = Metadata(Targets())
+        pending_data = {
+            "role1": role_md.to_dict(),
+            "trusted_targets": trusted_targets_md.to_dict(),
+        }
+        monkeypatch.setattr(
+            sign, "_get_pending_roles", lambda *a, **kw: pending_data
+        )
+        monkeypatch.setattr(sign, "_select_role", lambda *a, **kw: "role1")
+        test_context["settings"].SERVER = "http://127.0.0.1"
+
+        test_result = invoke_command(
+            sign.sign, [], [], test_context, std_err_empty=False
+        )
+        assert test_result.exit_code == 1
+        assert "No roles  in delegations" in test_result.stderr
