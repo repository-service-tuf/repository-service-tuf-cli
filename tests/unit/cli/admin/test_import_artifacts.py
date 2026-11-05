@@ -12,6 +12,17 @@ import pytest
 from repository_service_tuf.cli.admin import import_artifacts
 from tests.conftest import invoke_command
 
+try:
+    import sqlalchemy  # noqa: F401
+    HAS_SQLALCHEMY = True
+except ModuleNotFoundError:
+    HAS_SQLALCHEMY = False
+
+require_sqlalchemy = pytest.mark.skipif(
+    not HAS_SQLALCHEMY,
+    reason="SQLAlchemy is not installed (run pip install .[sqlalchemy])",
+)
+
 
 class TestImportArtifactsFunctions:
     def test__check_csv_files(self, monkeypatch):
@@ -119,6 +130,7 @@ class TestImportArtifactsFunctions:
             pretend.call("path/file2"),
         ]
 
+    @require_sqlalchemy
     def test__import_csv_to_rstuf(self):
         fake_rstuf_files = pretend.stub(
             insert=pretend.call_recorder(lambda: None)
@@ -162,6 +174,7 @@ class TestImportArtifactsFunctions:
             pretend.call(),
         ]
 
+    @require_sqlalchemy
     def test__import_csv_to_rstuf_duplicate_artifacts(self):
         # Required to raise an exception type from import inside a function
         from sqlalchemy.exc import IntegrityError
@@ -257,6 +270,7 @@ class TestImportArtifactsFunctions:
 
 
 class TestImportArtifactsGroupCLI:
+    @require_sqlalchemy
     def test_import_artifacts(self, test_context):
         # Required to properly mock functions imported inside import_artifacts
         import sqlalchemy
@@ -330,6 +344,7 @@ class TestImportArtifactsGroupCLI:
             )
         ]
 
+    @require_sqlalchemy
     def test_import_artifacts_no_api_server_config_no_param(self):
         args = [
             "--db-uri",
@@ -345,6 +360,7 @@ class TestImportArtifactsGroupCLI:
         assert result.exit_code == 1, result.output
         assert "Requires '--api-server' " in result.stderr
 
+    @require_sqlalchemy
     def test_import_artifacts_skip_publish_artifacts(self, test_context):
         # Required to properly mock functions imported inside import_artifacts
         import sqlalchemy
@@ -442,6 +458,7 @@ class TestImportArtifactsGroupCLI:
         builtins.__import__ = real_import
         assert "pip install repository-service-tuf[sqlalchemy" in str(exc)
 
+    @require_sqlalchemy
     def test_import_artifacts_bootstrap_check_failed(self, test_context):
 
         import_artifacts.bootstrap_status = pretend.raiser(
@@ -468,6 +485,7 @@ class TestImportArtifactsGroupCLI:
         assert result.exit_code == 1
         assert "Server ERROR" in result.stderr, result.stderr
 
+    @require_sqlalchemy
     def test_import_artifacts_without_bootstrap(self, test_context):
 
         import_artifacts.bootstrap_status = pretend.call_recorder(

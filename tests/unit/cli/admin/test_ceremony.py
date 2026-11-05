@@ -1,9 +1,11 @@
 import json
+import os
+import tempfile
 
 import pretend
-from tuf.api.metadata import Signature
+from tuf.api.metadata import DelegatedRole, Delegations, Signature
 
-from repository_service_tuf.cli.admin import ceremony
+from repository_service_tuf.cli.admin import ceremony, helpers
 from tests.conftest import (
     _HELPERS,
     _PAYLOADS,
@@ -468,19 +470,92 @@ class TestCeremony:
         # locally and will not send payload to the API.
         # Given that "invoke_command" always saves a file, so the result can be
         # read we cannot use it.
-        with client.isolated_filesystem():
-            result = client.invoke(
-                ceremony.ceremony,
-                args=["--dry-run"],
-                input="\n".join(
-                    input_step1 + input_step2 + input_step3 + input_step4
-                ),
-                obj=test_context,
-                catch_exceptions=False,
-            )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            prev_dir = os.getcwd()
+            os.chdir(tmp_dir)
+            try:
+                result = client.invoke(
+                    ceremony.ceremony,
+                    args=["--dry-run"],
+                    input="\n".join(
+                        input_step1 + input_step2 + input_step3 + input_step4
+                    ),
+                    obj=test_context,
+                    catch_exceptions=False,
+                )
+            finally:
+                os.chdir(prev_dir)
 
         assert "Saved result to " not in result.stdout
         assert "Bootstrap completed." not in result.stdout
+
+    def test_ceremony_with_custom_delegations(
+        self,
+        monkeypatch,
+        ceremony_inputs,
+        test_context,
+        patch_getpass,
+        patch_utcnow,
+        ceremony_pubkey_prompt,
+        ceremony_privkey_prompt,
+    ):
+        custom_selection_options = iter(
+            (
+                helpers.DELEGATIONS_TYPE.CUSTOM_DELEGATIONS.value,
+                "Key PEM File",
+                "add",
+                "Key PEM File",
+                "add",
+                "Key PEM File",
+                "remove",
+                "my rsa key",
+                "continue",
+                "Key PEM File",
+                "JimiHendrix's Key",
+                "Key PEM File",
+                "JanisJoplin's Key",
+                "Key PEM File",
+                "continue",
+            )
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._select",
+            lambda *a: next(custom_selection_options),
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", ceremony_pubkey_prompt
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", ceremony_privkey_prompt
+        )
+        fake_delegations = Delegations(
+            keys={},
+            roles={
+                "myrole": DelegatedRole(
+                    name="myrole",
+                    keyids=[],
+                    threshold=1,
+                    terminating=False,
+                    paths=[],
+                )
+            },
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._configure_delegations",
+            lambda: fake_delegations,
+        )
+
+        _, input_step2, input_step3, input_step4 = ceremony_inputs
+        step1_inputs = ["", "", "", ""]
+        result = invoke_command(
+            ceremony.ceremony,
+            step1_inputs + input_step2 + input_step3 + input_step4,
+            args=["--dry-run"],
+            test_context=test_context,
+        )
+        assert result.exit_code == 0
+        assert "roles" in result.data["settings"]["roles"]["delegations"]
+        assert result.data["settings"]["roles"]["bins"] is None
 
 
 class TestCeremonyError:

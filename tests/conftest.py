@@ -305,28 +305,32 @@ def invoke_command(
     if not test_context:
         test_context = _create_test_context()
 
-    with client.isolated_filesystem():
-        result_obj = client.invoke(
-            cmd,
-            args=args + out_args,
-            input="\n".join(inputs),
-            obj=test_context,
-            catch_exceptions=False,
-        )
-
-        result_obj.context = test_context  # type: ignore
-        if std_err_empty:
-            assert (
-                result_obj.stderr == "" or result_obj.stderr == "\nAborted.\n"
+    with TemporaryDirectory() as tmp_dir:
+        prev_dir = os.getcwd()
+        os.chdir(tmp_dir)
+        try:
+            result_obj = client.invoke(
+                cmd,
+                args=args + out_args,
+                input="\n".join(inputs),
+                obj=test_context,
+                catch_exceptions=False,
             )
-            if len(out_args) > 0:
-                # There are commands that doesn't save a file like
-                # 'import_artifacts'. For them out_args is empty.
-                # Only try to read output file if it exists
-                import os
 
-                if os.path.exists(out_file_name):
-                    with open(out_file_name) as f:
-                        result_obj.data = json.load(f)  # type: ignore
+            result_obj.context = test_context  # type: ignore
+            if std_err_empty:
+                assert (
+                    result_obj.stderr == ""
+                    or result_obj.stderr == "\nAborted.\n"
+                )
+                if len(out_args) > 0:
+                    # There are commands that doesn't save a file like
+                    # 'import_artifacts'. For them out_args is empty.
+                    # Only try to read output file if it exists
+                    if os.path.exists(out_file_name):
+                        with open(out_file_name) as f:
+                            result_obj.data = json.load(f)  # type: ignore
+        finally:
+            os.chdir(prev_dir)
 
     return result_obj

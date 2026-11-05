@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 import json
+import os
+import tempfile
 from datetime import datetime, timedelta, timezone
 
 import pretend
@@ -303,14 +305,19 @@ class TestMetadataUpdate:
         # locally and will not send payload to the API.
         # Given that "invoke_command" always saves a file, so the result can be
         # read we cannot use it.
-        with client.isolated_filesystem():
-            result = client.invoke(
-                update.update,
-                args=args,
-                input="\n".join(update_inputs),
-                obj=test_context,
-                catch_exceptions=False,
-            )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            prev_dir = os.getcwd()
+            os.chdir(tmp_dir)
+            try:
+                result = client.invoke(
+                    update.update,
+                    args=args,
+                    input="\n".join(update_inputs),
+                    obj=test_context,
+                    catch_exceptions=False,
+                )
+            finally:
+                os.chdir(prev_dir)
 
         assert "Saved result to " not in result.stdout
         assert "Bootstrap completed." not in result.stdout

@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: MIT
 
+import os
+import tempfile
+
 import pretend  # type: ignore
 
 from repository_service_tuf.cli.artifact import delete
@@ -26,11 +29,16 @@ class TestDeleteArtifactInteraction:
 
         delete.send_payload = pretend.call_recorder(lambda *a, **kw: "123")
 
-        with client.isolated_filesystem():
-            with open(artifact_path, "w") as f:
-                f.write("Dummy Artifact")
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            prev_dir = os.getcwd()
+            os.chdir(tmp_dir)
+            try:
+                with open(artifact_path, "w") as f:
+                    f.write("Dummy Artifact")
 
-            result = client.invoke(delete.delete, input, obj=test_context)
+                result = client.invoke(delete.delete, input, obj=test_context)
+            finally:
+                os.chdir(prev_dir)
 
         assert result.exit_code == 0, result.output
         assert "Successfully submitted task" in result.output
@@ -66,11 +74,16 @@ class TestDeleteArtifactInteraction:
 
         delete.send_payload = pretend.call_recorder(lambda *a, **kw: "123")
 
-        with client.isolated_filesystem():
-            with open(artifact_path, "w") as f:
-                f.write("Dummy Artifact")
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            prev_dir = os.getcwd()
+            os.chdir(tmp_dir)
+            try:
+                with open(artifact_path, "w") as f:
+                    f.write("Dummy Artifact")
 
-            result = client.invoke(delete.delete, input, obj=test_context)
+                result = client.invoke(delete.delete, input, obj=test_context)
+            finally:
+                os.chdir(prev_dir)
 
         assert result.exit_code == 0, result.output
         assert "Successfully submitted task" in result.output

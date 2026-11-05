@@ -3,7 +3,7 @@
 import os
 from hashlib import sha256
 from unittest.mock import mock_open, patch
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 
 import pretend
 import pytest
@@ -572,3 +572,64 @@ class TestDownloadArtifactOptions:
             download._load_root_from_url("not-a-valid-url")
 
         assert "Please provide a valid trusted root URL" in str(excinfo.value)
+
+    def test_load_root_from_url_url_error(self):
+        fake_url_error = URLError("connection refused")
+
+        with patch(
+            f"{SRC_PATH}.request.urlopen",
+            pretend.raiser(fake_url_error),
+        ):
+            with pytest.raises(download.click.ClickException) as excinfo:
+                download._load_root_from_url("http://example.com/1.root.json")
+
+        assert "Failed to download trusted root" in str(excinfo.value)
+        assert "connection refused" in str(excinfo.value)
+
+    def test_load_trusted_root_from_file(self, monkeypatch):
+        fake_check = pretend.call_recorder(lambda data: None)
+        monkeypatch.setattr(f"{SRC_PATH}._check_root", fake_check)
+        with (
+            patch("os.path.isfile", return_value=True),
+            patch(
+                "builtins.open",
+                new_callable=mock_open,
+                read_data=b"file_bytes",
+            ),
+        ):
+            res = download._load_trusted_root("path/to/root.json")
+        assert res == b"file_bytes"
+        assert fake_check.calls == [pretend.call(b"file_bytes")]
+
+    def test_load_trusted_root_from_url(self, monkeypatch):
+        fake_load_url = pretend.call_recorder(lambda u: b"url_bytes")
+        monkeypatch.setattr(f"{SRC_PATH}._load_root_from_url", fake_load_url)
+        with patch("os.path.isfile", return_value=False):
+            res = download._load_trusted_root("http://example.com/root.json")
+        assert res == b"url_bytes"
+        assert fake_load_url.calls == [
+            pretend.call("http://example.com/root.json")
+        ]
+
+    def test_perform_tuf_ngclient_download_artifact_repository_error(
+        self, monkeypatch
+    ):
+        class FakeUpdater:
+            def __init__(self, **kw):
+                pass
+
+            def refresh(self):
+                raise download.RepositoryError("repo error")
+
+        monkeypatch.setattr(f"{SRC_PATH}.Updater", FakeUpdater)
+        with pytest.raises(download.click.FileError) as excinfo:
+            download._perform_tuf_ngclient_download_artifact(
+                "http://meta",
+                "dir",
+                "http://art",
+                "art.txt",
+                "down",
+                UpdaterConfig(),
+                None,
+            )
+        assert "Failed to download artifact art.txt" in excinfo.value.format_message()

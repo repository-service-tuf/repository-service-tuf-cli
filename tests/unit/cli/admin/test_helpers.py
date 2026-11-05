@@ -13,7 +13,15 @@ from email_validator import EmailNotValidError
 from PyKCS11 import CKR_USER_NOT_LOGGED_IN, PyKCS11Error  # type: ignore
 from securesystemslib.exceptions import UnverifiedSignatureError
 from securesystemslib.signer import CryptoSigner, SigstoreKey, SSlibKey
-from tuf.api.metadata import DelegatedRole, Delegations, Metadata, Root
+from tuf.api.metadata import (
+    DelegatedRole,
+    Delegations,
+    Metadata,
+    Root,
+    SuccinctRoles,
+    TargetFile,
+    Targets,
+)
 
 from repository_service_tuf.cli.admin import helpers
 from repository_service_tuf.helpers.api_client import URL, Methods
@@ -159,17 +167,30 @@ class TestHelpers:
 
         # return None - key in use
         fake_key = pretend.stub(keyid="123")
-        with patch(
-            f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
+        with (
+            patch(
+                f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
+            ),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=[helpers.ROOT_SIGNERS.KEY_PEM],
+            ),
         ):
-            key = helpers._load_key_prompt(fake_root)
+            key = helpers._load_key_prompt(fake_root.keys, duplicate=False)
 
         assert key is None
 
         # return None - cannot load key
         for err in [OSError, ValueError]:
-            with patch(
-                f"{_HELPERS}._load_key_from_file_prompt", side_effect=err()
+            with (
+                patch(
+                    f"{_HELPERS}._load_key_from_file_prompt",
+                    side_effect=err(),
+                ),
+                patch(
+                    f"{_HELPERS}._select",
+                    side_effect=[helpers.ROOT_SIGNERS.KEY_PEM],
+                ),
             ):
                 key = helpers._load_key_prompt(fake_root)
                 assert key is None
@@ -975,3 +996,96 @@ class TestHelpers:
             result = helpers._configure_delegations()
 
         assert "myrole" in result.roles
+
+    def test_configure_delegations_prompt_bins(self, monkeypatch):
+        settings = helpers._Settings(1, 1, 365)
+        monkeypatch.setattr(
+            f"{_HELPERS}._select",
+            lambda *_: helpers.DELEGATIONS_TYPE.BINS,
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._expiry_prompt",
+            lambda *_: (2, None),
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}.IntPrompt.ask",
+            lambda *a, **kw: 256,
+        )
+
+        helpers._configure_delegations_prompt(settings)
+
+        assert settings.bins_expiry == 2
+        assert settings.bins_number == 256
+
+    def test_configure_delegations_prompt_custom(self, monkeypatch):
+        settings = helpers._Settings(1, 1, 365)
+        fake_delegations = Delegations(keys={}, roles={})
+        monkeypatch.setattr(
+            f"{_HELPERS}._select",
+            lambda *_: helpers.DELEGATIONS_TYPE.CUSTOM_DELEGATIONS,
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._configure_delegations",
+            lambda: fake_delegations,
+        )
+
+        helpers._configure_delegations_prompt(settings)
+
+        assert settings.delegations == fake_delegations
+
+    def test_print_targets(self):
+        targets = Metadata(
+            Targets(
+                targets={
+                    "test_file": TargetFile(
+                        length=10,
+                        hashes={"sha256": "abc"},
+                        path="test_file",
+                    )
+                }
+            )
+        )
+        # Verify it runs without error
+        helpers._print_targets(targets)
+
+    def test_print_delegation(self, ed25519_key):
+        # Case 1: delegations.roles is None
+        empty_delegations = Delegations(
+            keys={},
+            succinct_roles=SuccinctRoles(
+                keyids=[], threshold=1, bit_length=16, name_prefix="bin-"
+            ),
+        )
+        assert helpers._print_delegation(empty_delegations) is None
+
+        # Case 2: delegation with key and delegation without key (online)
+        role1 = DelegatedRole(
+            name="role1",
+            keyids=[ed25519_key.keyid],
+            threshold=1,
+            terminating=False,
+            paths=["a/*"],
+            unrecognized_fields={"x-rstuf-expire-policy": "30"},
+        )
+        role2 = DelegatedRole(
+            name="role2",
+            keyids=[],
+            threshold=1,
+            terminating=False,
+            path_hash_prefixes=["prefix/"],
+            unrecognized_fields={"x-rstuf-expire-policy": "60"},
+        )
+        ed25519_key.unrecognized_fields[helpers.KEY_NAME_FIELD] = "my_key"
+        delegations = Delegations(
+            keys={ed25519_key.keyid: ed25519_key},
+            roles={"role1": role1, "role2": role2},
+        )
+        helpers._print_delegation(delegations)
+
+    def test_print_missing_key_info(self):
+        helpers._print_missing_key_info(2, 1)
+        helpers._print_missing_key_info(3, 2)
+        helpers._print_missing_key_info(2, 0)
+
+    def test_warn_no_save(self):
+        helpers._warn_no_save()

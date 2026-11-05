@@ -47,6 +47,12 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    # Suppress FutureWarning from google-api-core about unsupported Python versions
+    "ignore::FutureWarning:google.api_core",
+]
+
 [tool.mypy]
 exclude = "docs/"
 
