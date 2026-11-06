@@ -947,10 +947,8 @@ def _configure_delegations() -> Delegations:
                 delegations.roles[delegated_role.name] = delegated_role
 
             case "remove delegation":
-                if delegations.roles is None:
-                    console.print("Delegations is empty")
-                    continue
-
+                # delegation.roles is NOT None here, this is to satisfy linters
+                assert delegations.roles is not None
                 role_name = _select(list(delegations.roles.keys()))
                 removed_role = delegations.roles[role_name]
 
