@@ -6,10 +6,10 @@ import copy
 import json
 
 import pretend
-from tuf.api.metadata import Root, Targets
-
 import repository_service_tuf.cli.admin.metadata.stop_sign as stop_sign
 from repository_service_tuf.helpers.api_client import URL
+from tuf.api.metadata import Root, Targets
+
 from tests.conftest import _HELPERS, _PAYLOADS, invoke_command
 
 

@@ -4,16 +4,21 @@
 # SPDX-License-Identifier: MIT
 
 import datetime
+import sys
 from datetime import timezone
+from types import ModuleType
+from unittest.mock import MagicMock, patch
 
+import click
 import pretend
 import pytest
-
 from repository_service_tuf.cli.admin import import_artifacts
+
 from tests.conftest import invoke_command
 
 try:
     import sqlalchemy  # noqa: F401
+
     HAS_SQLALCHEMY = True
 except ModuleNotFoundError:
     HAS_SQLALCHEMY = False
@@ -22,6 +27,9 @@ require_sqlalchemy = pytest.mark.skipif(
     not HAS_SQLALCHEMY,
     reason="SQLAlchemy is not installed (run pip install .[sqlalchemy])",
 )
+
+
+SRC_PATH = "repository_service_tuf.cli.admin.import_artifacts"
 
 
 class TestImportArtifactsFunctions:
@@ -95,7 +103,7 @@ class TestImportArtifactsFunctions:
             now=pretend.call_recorder(lambda a: fake_time)
         )
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.import_artifacts.datetime",
+            f"{SRC_PATH}.datetime",
             fake_datetime,
         )
         succinct_roles = pretend.stub(
@@ -129,6 +137,78 @@ class TestImportArtifactsFunctions:
             pretend.call("path/file1"),
             pretend.call("path/file2"),
         ]
+
+    def test_import_csv_to_rstuf_success(self, monkeypatch):
+        """Test successful execution of _import_csv_to_rstuf."""
+        import sys
+
+        db_client = MagicMock()
+        rstuf_target_files = MagicMock()
+        rstuf_target_roles = MagicMock()
+        csv_files = ["artifacts.csv"]
+        succinct_roles = MagicMock()
+        mock_parsed_data = [{"path": "file1.txt"}]
+
+        monkeypatch.setitem(
+            sys.modules, "sqlalchemy.exc", MagicMock(IntegrityError=Exception)
+        )
+
+        with (
+            patch(
+                f"{SRC_PATH}._parse_csv_data", return_value=mock_parsed_data
+            ),
+            patch(f"{SRC_PATH}.console.print"),
+        ):
+
+            import_artifacts._import_csv_to_rstuf(
+                db_client,
+                rstuf_target_files,
+                rstuf_target_roles,
+                csv_files,
+                succinct_roles,
+            )
+            db_client.execute.assert_called_once()
+
+    def test_import_csv_to_rstuf_integrity_error(self, monkeypatch):
+        """Test _import_csv_to_rstuf raises ClickException on IntegrityError (lines 92-97)."""
+
+        # Create a realistic mock module structure for sqlalchemy and sqlalchemy.exc
+        sa_module = ModuleType("sqlalchemy")
+        sa_exc_module = ModuleType("sqlalchemy.exc")
+
+        class MockIntegrityError(Exception):
+            pass
+
+        sa_exc_module.IntegrityError = MockIntegrityError
+
+        monkeypatch.setitem(sys.modules, "sqlalchemy", sa_module)
+        monkeypatch.setitem(sys.modules, "sqlalchemy.exc", sa_exc_module)
+
+        db_client = MagicMock()
+        db_client.execute.side_effect = MockIntegrityError("duplicate path")
+
+        rstuf_target_files = MagicMock()
+        rstuf_target_roles = MagicMock()
+        csv_files = ["artifacts.csv"]
+        succinct_roles = MagicMock()
+        mock_parsed_data = [{"path": "file1.txt"}]
+
+        with (
+            patch(
+                f"{SRC_PATH}._parse_csv_data", return_value=mock_parsed_data
+            ),
+            patch(f"{SRC_PATH}.console.print"),
+            pytest.raises(
+                click.ClickException, match="ABORTED due duplicated artifacts"
+            ),
+        ):
+            import_artifacts._import_csv_to_rstuf(
+                db_client,
+                rstuf_target_files,
+                rstuf_target_roles,
+                csv_files,
+                succinct_roles,
+            )
 
     @require_sqlalchemy
     def test__import_csv_to_rstuf(self):
@@ -517,3 +597,173 @@ class TestImportArtifactsGroupCLI:
         assert import_artifacts.bootstrap_status.calls == [
             pretend.call(result.context["settings"])
         ]
+
+    def test_import_artifacts_command_success(self, monkeypatch):
+        """Test successful execution of import_artifacts command."""
+        import sys
+
+        args = ["--db-uri", "sqlite:///:memory:", "--csv", "artifacts.csv"]
+
+        mock_engine = MagicMock()
+        mock_conn = MagicMock()
+        mock_engine.connect.return_value = mock_conn
+
+        mock_sqlalchemy = MagicMock()
+        mock_sqlalchemy.create_engine.return_value = mock_engine
+        mock_sqlalchemy.Table = MagicMock()
+        monkeypatch.setitem(sys.modules, "sqlalchemy", mock_sqlalchemy)
+
+        monkeypatch.setattr(
+            f"{SRC_PATH}._get_succinct_roles", lambda server_url: MagicMock()
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}._check_csv_files", lambda *args, **kwargs: None
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}._import_csv_to_rstuf", lambda *args, **kwargs: None
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}.bootstrap_status",
+            lambda *args, **kwargs: {"data": {"bootstrap": True}},
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}.publish_artifacts",
+            lambda *args, **kwargs: "task-id-456",
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}.task_status", lambda *args, **kwargs: "completed"
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}.console.print", lambda *args, **kwargs: None
+        )
+
+        # Use a MagicMock or an object with attributes for settings so settings.SERVER works
+        mock_settings = MagicMock()
+        mock_settings.get.side_effect = lambda key, default=None: (
+            "https://api.rstuf.example.com" if key == "SERVER" else default
+        )
+        mock_settings.SERVER = "https://api.rstuf.example.com"
+
+        test_context = {"settings": mock_settings}
+
+        result = invoke_command(
+            import_artifacts.import_artifacts,
+            [],
+            args,
+            test_context=test_context,
+        )
+
+        assert result.exit_code == 0
+        mock_conn.commit.assert_called_once()
+
+    def test_import_artifacts_missing_server(self, monkeypatch):
+        """Test import_artifacts raises ClickException when SERVER config is missing."""
+        import sys
+
+        args = ["--db-uri", "sqlite:///:memory:", "--csv", "artifacts.csv"]
+
+        # Mock sqlalchemy so the optional import check succeeds
+        mock_sqlalchemy = MagicMock()
+        mock_sqlalchemy.create_engine.return_value = MagicMock()
+        mock_sqlalchemy.Table = MagicMock()
+        monkeypatch.setitem(sys.modules, "sqlalchemy", mock_sqlalchemy)
+
+        test_context = {"settings": {}}  # No SERVER configured
+
+        result = invoke_command(
+            import_artifacts.import_artifacts,
+            [],
+            args,
+            test_context=test_context,
+            std_err_empty=False,
+        )
+        assert result.exit_code != 0
+        assert "Requires '--api-server'" in result.output
+
+    def test_import_artifacts_not_bootstrapped(self, monkeypatch):
+        """Test import_artifacts raises ClickException when bootstrap is False (lines 186-189)."""
+        import sys
+
+        args = ["--db-uri", "sqlite:///:memory:", "--csv", "artifacts.csv"]
+
+        mock_sqlalchemy = MagicMock()
+        monkeypatch.setitem(sys.modules, "sqlalchemy", mock_sqlalchemy)
+
+        # Mock bootstrap_status to return bootstrap = False
+        monkeypatch.setattr(
+            f"{SRC_PATH}.bootstrap_status",
+            lambda *args, **kwargs: {
+                "data": {"bootstrap": False},
+                "message": "Not bootstrapped",
+            },
+        )
+
+        test_context = {
+            "settings": {"SERVER": "https://api.rstuf.example.com"}
+        }
+
+        result = invoke_command(
+            import_artifacts.import_artifacts,
+            [],
+            args,
+            test_context=test_context,
+            std_err_empty=False,
+        )
+        assert result.exit_code != 0
+        assert "requires bootstrap process done" in result.output
+
+    def test_import_artifacts_skip_publish(self, monkeypatch):
+        """Test import_artifacts execution with --skip-publish-artifacts flag (lines 216-218)."""
+        import sys
+
+        args = [
+            "--db-uri",
+            "sqlite:///:memory:",
+            "--csv",
+            "artifacts.csv",
+            "--skip-publish-artifacts",
+        ]
+
+        mock_engine = MagicMock()
+        mock_conn = MagicMock()
+        mock_engine.connect.return_value = mock_conn
+
+        mock_sqlalchemy = MagicMock()
+        mock_sqlalchemy.create_engine.return_value = mock_engine
+        mock_sqlalchemy.Table = MagicMock()
+        monkeypatch.setitem(sys.modules, "sqlalchemy", mock_sqlalchemy)
+
+        mock_settings = MagicMock()
+        mock_settings.get.side_effect = lambda key, default=None: (
+            "https://api.rstuf.example.com" if key == "SERVER" else default
+        )
+        mock_settings.SERVER = "https://api.rstuf.example.com"
+
+        monkeypatch.setattr(
+            f"{SRC_PATH}._get_succinct_roles", lambda server_url: MagicMock()
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}._check_csv_files", lambda *args, **kwargs: None
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}._import_csv_to_rstuf", lambda *args, **kwargs: None
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}.bootstrap_status",
+            lambda *args, **kwargs: {"data": {"bootstrap": True}},
+        )
+        monkeypatch.setattr(
+            f"{SRC_PATH}.console.print", lambda *args, **kwargs: None
+        )
+
+        test_context = {"settings": mock_settings}
+
+        result = invoke_command(
+            import_artifacts.import_artifacts,
+            [],
+            args,
+            test_context=test_context,
+        )
+
+        assert result.exit_code == 0
+        mock_conn.commit.assert_called_once()

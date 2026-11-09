@@ -3,9 +3,9 @@ import os
 import tempfile
 
 import pretend
+from repository_service_tuf.cli.admin import ceremony, helpers
 from tuf.api.metadata import DelegatedRole, Delegations, Signature
 
-from repository_service_tuf.cli.admin import ceremony, helpers
 from tests.conftest import (
     _HELPERS,
     _PAYLOADS,

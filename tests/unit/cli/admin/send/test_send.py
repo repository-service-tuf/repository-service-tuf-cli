@@ -1,6 +1,5 @@
 import pretend
 import pytest
-
 from repository_service_tuf.cli.admin import click, send
 
 

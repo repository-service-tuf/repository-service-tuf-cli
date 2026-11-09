@@ -4,7 +4,6 @@ import os
 import tempfile
 
 import pretend  # type: ignore
-
 from repository_service_tuf.cli.artifact import delete
 from repository_service_tuf.helpers.api_client import URL
 

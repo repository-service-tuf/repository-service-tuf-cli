@@ -1,9 +1,9 @@
 import json
 
 import pretend
-
 from repository_service_tuf.cli.admin.send import update
 from repository_service_tuf.helpers.api_client import URL
+
 from tests.conftest import _PAYLOADS, invoke_command
 
 PATH = "repository_service_tuf.cli.admin.send.update"

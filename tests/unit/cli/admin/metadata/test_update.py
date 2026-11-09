@@ -8,9 +8,9 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 
 import pretend
+from repository_service_tuf.cli.admin.metadata import update
 from tuf.api.metadata import Metadata, Root
 
-from repository_service_tuf.cli.admin.metadata import update
 from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 MOCK_PATH = "repository_service_tuf.cli.admin.metadata.update"
@@ -394,6 +394,70 @@ class TestMetadataUpdate:
         assert res_root["expires"] == exp_date.strftime("%Y-%m-%dT%H:%M:%SZ")
         # Make sure new threshold is the same .
         assert res_root["roles"]["root"]["threshold"] == 3
+
+    def test_update_command_send_to_server(
+        self,
+        monkeypatch,
+        update_inputs,
+        update_key_selection,
+        patch_getpass,
+        update_pubkey_prompt,
+        update_privkey_prompt,
+    ):
+        """Test metadata update command sending payload to the API server."""
+        args = ["--in", f"{_ROOTS / 'v1.json'}"]
+
+        monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", update_privkey_prompt
+        )
+
+        monkeypatch.setattr(
+            f"{MOCK_PATH}.Confirm.ask", lambda *args, **kwargs: False
+        )
+        monkeypatch.setattr(
+            f"{MOCK_PATH}._expiry_prompt",
+            lambda *args, **kwargs: (
+                30,
+                datetime.now(timezone.utc) + timedelta(days=30),
+            ),
+        )
+        monkeypatch.setattr(
+            f"{MOCK_PATH}._threshold_prompt", lambda *args, **kwargs: 1
+        )
+        monkeypatch.setattr(
+            f"{MOCK_PATH}._configure_root_keys_prompt",
+            lambda *args, **kwargs: None,
+        )
+        monkeypatch.setattr(
+            f"{MOCK_PATH}._configure_online_key_prompt",
+            lambda *args, **kwargs: None,
+        )
+        monkeypatch.setattr(
+            f"{MOCK_PATH}._add_root_signatures_prompt",
+            lambda *args, **kwargs: None,
+        )
+
+        mock_send_payload = pretend.call_recorder(
+            lambda **kwargs: "task-id-123"
+        )
+        monkeypatch.setattr(f"{MOCK_PATH}.send_payload", mock_send_payload)
+
+        mock_task_status = pretend.call_recorder(lambda *args, **kwargs: None)
+        monkeypatch.setattr(f"{MOCK_PATH}.task_status", mock_task_status)
+
+        test_context = {"settings": {"SERVER": "https://api.example.com"}}
+
+        result = invoke_command(
+            update.update, update_inputs, args, test_context=test_context
+        )
+
+        assert result.exit_code == 0
+        assert len(mock_send_payload.calls) == 1
+        assert len(mock_task_status.calls) == 1
 
 
 class TestUpdateError:

@@ -6,7 +6,6 @@ import tempfile
 from typing import Iterator
 
 import pytest
-
 from repository_service_tuf.helpers.cli import (
     calculate_blake2b_256,
     create_artifact_add_payload_from_filepath,

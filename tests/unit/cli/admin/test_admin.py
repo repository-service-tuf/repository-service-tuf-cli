@@ -5,14 +5,11 @@ import tempfile
 import pretend
 import pytest
 from click import ClickException
-from tuf.api.metadata import DelegatedRole, Delegations
-
 from repository_service_tuf.cli.admin import _set_settings
-from repository_service_tuf.cli.admin.delegations import (
-    delete as del_cmd,
-    new as new_cmd,
-)
+from repository_service_tuf.cli.admin.delegations import delete as del_cmd
+from repository_service_tuf.cli.admin.delegations import new as new_cmd
 from repository_service_tuf.helpers.api_client import URL
+from tuf.api.metadata import DelegatedRole, Delegations
 
 
 class TestAdmin:
@@ -153,9 +150,7 @@ class TestDelegationsDelete:
             assert result.exit_code == 0, result.output
             with open(out_path) as f:
                 payload = json.load(f)
-            assert payload == {
-                "delegations": {"roles": [{"name": "role-a"}]}
-            }
+            assert payload == {"delegations": {"roles": [{"name": "role-a"}]}}
         assert fake_send_payload.calls == []
 
     def test_delete_real_run_calls_api(
@@ -229,9 +224,7 @@ class TestDelegationsNew:
         assert result.exit_code == 1
         assert "Either '--api-sever'" in result.output
 
-    def test_new_dry_run_writes_file(
-        self, client, test_context, monkeypatch
-    ):
+    def test_new_dry_run_writes_file(self, client, test_context, monkeypatch):
         """Dry-run writes the new delegation payload locally."""
         fake_delegations = Delegations(
             keys={},
@@ -266,9 +259,7 @@ class TestDelegationsNew:
                 r["name"] == "myrole" for r in payload["delegations"]["roles"]
             )
 
-    def test_new_real_run_calls_api(
-        self, client, test_context, monkeypatch
-    ):
+    def test_new_real_run_calls_api(self, client, test_context, monkeypatch):
         """When SERVER is set and not dry-run, the API endpoint is called."""
         fake_delegations = Delegations(
             keys={},

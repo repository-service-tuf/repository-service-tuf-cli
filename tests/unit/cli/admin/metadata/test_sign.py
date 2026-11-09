@@ -7,6 +7,8 @@ import os
 import tempfile
 
 import pretend
+from repository_service_tuf.cli.admin.metadata import sign
+from repository_service_tuf.helpers.api_client import URL
 from tuf.api.metadata import (
     DelegatedRole,
     Delegations,
@@ -16,8 +18,6 @@ from tuf.api.metadata import (
     Targets,
 )
 
-from repository_service_tuf.cli.admin.metadata import sign
-from repository_service_tuf.helpers.api_client import URL
 from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 
@@ -328,7 +328,9 @@ class TestSign:
             sign, "_add_signature_prompt", lambda *a, **kw: fake_sig
         )
         monkeypatch.setattr(
-            sign, "send_payload", pretend.call_recorder(lambda **kw: "fake-taskid")
+            sign,
+            "send_payload",
+            pretend.call_recorder(lambda **kw: "fake-taskid"),
         )
         monkeypatch.setattr(
             sign, "task_status", pretend.call_recorder(lambda *a: "OK")
