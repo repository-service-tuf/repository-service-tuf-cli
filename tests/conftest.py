@@ -19,6 +19,9 @@ from cryptography.hazmat.primitives.serialization import (
 )
 from cryptography.x509 import load_pem_x509_certificate
 from dynaconf import Dynaconf
+from securesystemslib.signer import CryptoSigner, SSlibKey
+from tuf.api.metadata import Metadata, Root
+
 from repository_service_tuf.cli.admin.import_artifacts import import_artifacts
 from repository_service_tuf.cli.admin.metadata.stop_sign import stop_sign
 from repository_service_tuf.cli.admin.send.bootstrap import (
@@ -26,8 +29,6 @@ from repository_service_tuf.cli.admin.send.bootstrap import (
 )
 from repository_service_tuf.cli.admin.send.sign import sign as send_sign
 from repository_service_tuf.cli.admin.send.update import update as send_update
-from securesystemslib.signer import CryptoSigner, SSlibKey
-from tuf.api.metadata import Metadata, Root
 
 _FILES = Path(os.path.dirname(__file__)) / "files"
 _ROOTS = _FILES / "root"

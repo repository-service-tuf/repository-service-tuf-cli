@@ -11,8 +11,6 @@ import pretend
 import pytest
 from email_validator import EmailNotValidError
 from PyKCS11 import CKR_USER_NOT_LOGGED_IN, PyKCS11Error  # type: ignore
-from repository_service_tuf.cli.admin import helpers
-from repository_service_tuf.helpers.api_client import URL, Methods
 from securesystemslib.exceptions import UnverifiedSignatureError
 from securesystemslib.signer import CryptoSigner, SigstoreKey, SSlibKey
 from tuf.api.metadata import (
@@ -26,6 +24,8 @@ from tuf.api.metadata import (
     Timestamp,
 )
 
+from repository_service_tuf.cli.admin import helpers
+from repository_service_tuf.helpers.api_client import URL, Methods
 from tests.conftest import _HELPERS, _PEMS, _PROMPT, _PROMPT_TOOLKIT
 
 
@@ -320,13 +320,14 @@ class TestHelpers:
             assert result == "my-delegated-role"
 
     def test_delegated_target_role_name_retry_on_empty(self):
-        """Test an empty input triggers warning and loops until a valid input"""
+        """Test an empty in leadin to warning and loops until a valid in"""
         with patch(
             "rich.prompt.Prompt.ask", side_effect=["", "", "my-delegated-role"]
         ) as mock_ask:
             result = helpers._delegated_target_role_name_prompt()
 
-            # Prompt.ask is called 3 times: twice for empty strings, once for the valid name
+            # Prompt.ask is called 3 times: twice for empty strings,
+            # once for the valid name
             assert mock_ask.call_count == 3
             assert result == "my-delegated-role"
 
@@ -593,17 +594,6 @@ class TestHelpers:
         root.add_key(ed25519_key, "timestamp")
         assert helpers._get_online_key(root) == ed25519_key
 
-    def test_get_online_key_with_keyids(self):
-        """Test _get_online_key when timestamp role has keyids."""
-        mock_root = MagicMock()
-        mock_key = MagicMock()
-        mock_root.roles = {Timestamp.type: MagicMock(keyids=["key1"])}
-        mock_root.get_key.return_value = mock_key
-
-        key = helpers._get_online_key(mock_root)
-        assert key == mock_key
-        mock_root.get_key.assert_called_once_with("key1")
-
     def test_get_online_key_without_keyids(self):
         """Test _get_online_key when timestamp role has empty keyids."""
         mock_root = MagicMock()
@@ -625,7 +615,8 @@ class TestHelpers:
         assert "No metadata available for signing" in str(e)
 
     def test_parse_pending_data_unsupported_role_type(self):
-        """Test _parse_pending_data raises ClickException for unsupported pending role types (line 1039)."""
+        """Test _parse_pending_data raises ClickException for unsupported
+        pending role types."""
         response = {
             "data": {
                 "metadata": {
@@ -652,14 +643,6 @@ class TestHelpers:
         key = helpers._get_online_key(mock_root)
         assert key == mock_key
         mock_root.get_key.assert_called_once_with("key1")
-
-    def test_get_online_key_without_keyids(self):
-        """Test _get_online_key when timestamp role has empty keyids."""
-        mock_root = MagicMock()
-        mock_root.roles = {Timestamp.type: MagicMock(keyids=[])}
-
-        key = helpers._get_online_key(mock_root)
-        assert key is None
 
     def test__get_pending_roles_request(self, monkeypatch):
         fake_settings = pretend.stub(SERVER=None, HEADERS=None)
@@ -1073,75 +1056,8 @@ class TestHelpers:
             patch(f"{_HELPERS}._print_delegation"),
         ):
 
-            result = helpers._configure_delegations()
+            helpers._configure_delegations()
             assert "new-role" in mock_delegations.roles
-
-    def test_configure_delegations_overwrite_decline_and_continue(self):
-        """Test declining to overwrite an existing delegation name."""
-        delegations = Delegations(keys={}, roles={})
-        existing_role = DelegatedRole(
-            name="existing-role",
-            keyids=[],
-            threshold=1,
-            terminating=True,
-            paths=[],
-        )
-        delegations.roles["existing-role"] = existing_role
-
-        def side_effect_delegations(*args, **kwargs):
-            return delegations
-
-        with (
-            patch(
-                f"{_HELPERS}.Delegations", side_effect=side_effect_delegations
-            ),
-            patch(f"{_HELPERS}._select", side_effect=["continue"]),
-            patch(
-                f"{_HELPERS}._delegated_target_role_name_prompt",
-                return_value="existing-role",
-            ),
-            patch("rich.prompt.Confirm.ask", return_value=False),
-            patch(f"{_HELPERS}._print_delegation"),
-        ):
-
-            result = helpers._configure_delegations()
-            assert result == delegations
-
-    def test_configure_delegations_remove_role_with_unused_key(self):
-        """Test removing a delegation owning a key not used by other roles."""
-        key_id = "unique-key-id"
-        mock_key = MagicMock()
-
-        removed_role = DelegatedRole(
-            name="role-to-remove",
-            keyids=[key_id],
-            threshold=1,
-            terminating=True,
-            paths=[],
-        )
-
-        delegations = Delegations(
-            keys={key_id: mock_key}, roles={"role-to-remove": removed_role}
-        )
-
-        with (
-            patch("tuf.api.metadata.Delegations", return_value=delegations),
-            patch(f"{_HELPERS}._print_delegation"),
-            patch(
-                f"{_HELPERS}._delegated_target_role_name_prompt",
-                return_value="dummy-role",
-            ),
-            patch(f"{_HELPERS}._expiry_prompt", return_value=(30, None)),
-            patch(f"{_HELPERS}._configure_delegations_paths"),
-            patch(
-                f"{_HELPERS}._select",
-                side_effect=["role-to-remove", "continue"],
-            ),
-        ):
-
-            result = helpers._configure_delegations()
-            # Verify the unique key was popped from delegations.keys
-            assert key_id not in result.keys
 
     def test_configure_delegations_keys_remove_raises_not_implemented(self):
         """Test selecting 'remove' in delegation keys raises."""
@@ -1203,6 +1119,7 @@ class TestHelpers:
             # can verify it breaks out cleanly on "continue".
             result = helpers._configure_delegations()
             assert isinstance(result, Delegations)
+            mock_print_del.assert_called_once()
 
     def test_configure_delegations_add_keys_flow(self):
         """Test add a new delegation with 'Add Keys' signing method"""
@@ -1313,42 +1230,6 @@ class TestHelpers:
 
             result = helpers._configure_delegations()
             assert result is delegations
-
-    def test_configure_delegations_remove_role_with_unused_key(self):
-        """Test removing a delegation owning a key not used by other roles."""
-        key_id = "unique-key-id"
-        mock_key = MagicMock()
-
-        removed_role = DelegatedRole(
-            name="role-to-remove",
-            keyids=[key_id],
-            threshold=1,
-            terminating=True,
-            paths=[],
-        )
-
-        delegations = Delegations(
-            keys={key_id: mock_key}, roles={"role-to-remove": removed_role}
-        )
-
-        with (
-            patch("tuf.api.metadata.Delegations", return_value=delegations),
-            patch(f"{_HELPERS}._print_delegation"),
-            patch(
-                f"{_HELPERS}._delegated_target_role_name_prompt",
-                return_value="dummy-role",
-            ),
-            patch(f"{_HELPERS}._expiry_prompt", return_value=(30, None)),
-            patch(f"{_HELPERS}._configure_delegations_paths"),
-            patch(
-                f"{_HELPERS}._select",
-                side_effect=["role-to-remove", "continue"],
-            ),
-        ):
-
-            result = helpers._configure_delegations()
-            # Verify the unique key was popped from delegations.keys
-            assert key_id not in result.keys
 
     def test_configure_delegations_remove_role_with_unused_key(self):
         """Test removing a delegation that owns an unused key."""
@@ -1509,7 +1390,8 @@ class TestHelpers:
         assert settings.delegations == fake_delegations
 
     def test_configure_delegations_prompt_none_selection(self):
-        """Test _configure_delegations_prompt when _select returns None first."""
+        """Test _configure_delegations_prompt when _select returns None
+        first"""
         settings = MagicMock()
 
         with (

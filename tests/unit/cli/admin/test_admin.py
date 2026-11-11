@@ -5,11 +5,14 @@ import tempfile
 import pretend
 import pytest
 from click import ClickException
+from tuf.api.metadata import DelegatedRole, Delegations
+
 from repository_service_tuf.cli.admin import _set_settings
 from repository_service_tuf.cli.admin.delegations import delete as del_cmd
 from repository_service_tuf.cli.admin.delegations import new as new_cmd
 from repository_service_tuf.helpers.api_client import URL
-from tuf.api.metadata import DelegatedRole, Delegations
+
+SRC_PATH = "repository_service_tuf.cli.admin.delegations"
 
 
 class TestAdmin:
@@ -73,8 +76,7 @@ class TestDelegationsDelete:
             )
         )
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.delegations.delete._get_latest_md",
-            lambda *_: dummy,
+            f"{SRC_PATH}.delete._get_latest_md", lambda *_: dummy
         )
         test_context["settings"].SERVER = None
         result = client.invoke(
@@ -95,8 +97,7 @@ class TestDelegationsDelete:
             )
         )
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.delegations.delete._get_latest_md",
-            lambda *_: dummy,
+            f"{SRC_PATH}.delete._get_latest_md", lambda *_: dummy
         )
         test_context["settings"].SERVER = None
         result = client.invoke(
@@ -119,17 +120,15 @@ class TestDelegationsDelete:
             )
         )
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.delegations.delete._get_latest_md",
-            lambda *_: dummy,
+            f"{SRC_PATH}.delete._get_latest_md", lambda *_: dummy
         )
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.delegations.delete.select_multiple",
+            f"{SRC_PATH}.delete.select_multiple",
             pretend.call_recorder(lambda *_: ["role-a"]),
         )
         fake_send_payload = pretend.call_recorder(lambda *a, **kw: None)
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.delegations.delete.send_payload",
-            fake_send_payload,
+            f"{SRC_PATH}.delete.send_payload", fake_send_payload
         )
 
         test_context["settings"].SERVER = None
@@ -165,25 +164,19 @@ class TestDelegationsDelete:
             )
         )
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.delegations.delete._get_latest_md",
-            lambda *_: dummy,
+            f"{SRC_PATH}.delete._get_latest_md", lambda *_: dummy
         )
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.delegations.delete.select_multiple",
-            lambda *_: ["role-c"],
+            f"{SRC_PATH}.delete.select_multiple", lambda *_: ["role-c"]
         )
         fake_send_payload = pretend.call_recorder(
             lambda *a, **kw: "task-id-123"
         )
         fake_task_status = pretend.call_recorder(lambda *a, **kw: None)
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.delegations.delete.send_payload",
-            fake_send_payload,
+            f"{SRC_PATH}.delete.send_payload", fake_send_payload
         )
-        monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.delegations.delete.task_status",
-            fake_task_status,
-        )
+        monkeypatch.setattr(f"{SRC_PATH}.delete.task_status", fake_task_status)
         test_context["settings"].SERVER = "https://api.example.com"
         result = client.invoke(
             del_cmd.delete,
@@ -239,7 +232,7 @@ class TestDelegationsNew:
             },
         )
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.delegations.new._configure_delegations",
+            f"{SRC_PATH}.new._configure_delegations",
             lambda: fake_delegations,
         )
         test_context["settings"].SERVER = None
@@ -274,21 +267,14 @@ class TestDelegationsNew:
             },
         )
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.delegations.new._configure_delegations",
-            lambda: fake_delegations,
+            f"{SRC_PATH}.new._configure_delegations", lambda: fake_delegations
         )
         fake_send_payload = pretend.call_recorder(
             lambda *a, **kw: "task-id-new"
         )
         fake_task_status = pretend.call_recorder(lambda *a, **kw: None)
-        monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.delegations.new.send_payload",
-            fake_send_payload,
-        )
-        monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.delegations.new.task_status",
-            fake_task_status,
-        )
+        monkeypatch.setattr(f"{SRC_PATH}.new.send_payload", fake_send_payload)
+        monkeypatch.setattr(f"{SRC_PATH}.new.task_status", fake_task_status)
         test_context["settings"].SERVER = "https://api.example.com"
         result = client.invoke(
             new_cmd.new,
@@ -332,8 +318,7 @@ class TestDelegationsNew:
             json=lambda: {"data": {"metadata": {"role1": {}}}},
         )
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.delegations.new.request_server",
-            lambda *a, **kw: fake_resp,
+            f"{SRC_PATH}.new.request_server", lambda *a, **kw: fake_resp
         )
         res = new_cmd._get_pending_roles(fake_settings)
         assert res == {"role1": {}}
@@ -342,8 +327,7 @@ class TestDelegationsNew:
         fake_settings = pretend.stub(SERVER="http://localhost", HEADERS=None)
         fake_resp = pretend.stub(status_code=500, text="internal error")
         monkeypatch.setattr(
-            "repository_service_tuf.cli.admin.delegations.new.request_server",
-            lambda *a, **kw: fake_resp,
+            f"{SRC_PATH}.new.request_server", lambda *a, **kw: fake_resp
         )
         with pytest.raises(ClickException) as err:
             new_cmd._get_pending_roles(fake_settings)

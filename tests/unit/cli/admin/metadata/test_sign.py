@@ -7,8 +7,6 @@ import os
 import tempfile
 
 import pretend
-from repository_service_tuf.cli.admin.metadata import sign
-from repository_service_tuf.helpers.api_client import URL
 from tuf.api.metadata import (
     DelegatedRole,
     Delegations,
@@ -18,6 +16,8 @@ from tuf.api.metadata import (
     Targets,
 )
 
+from repository_service_tuf.cli.admin.metadata import sign
+from repository_service_tuf.helpers.api_client import URL
 from tests.conftest import _HELPERS, _PAYLOADS, _PEMS, _ROOTS, invoke_command
 
 

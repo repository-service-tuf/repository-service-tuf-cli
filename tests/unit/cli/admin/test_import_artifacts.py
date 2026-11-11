@@ -12,8 +12,8 @@ from unittest.mock import MagicMock, patch
 import click
 import pretend
 import pytest
-from repository_service_tuf.cli.admin import import_artifacts
 
+from repository_service_tuf.cli.admin import import_artifacts
 from tests.conftest import invoke_command
 
 try:
@@ -140,8 +140,6 @@ class TestImportArtifactsFunctions:
 
     def test_import_csv_to_rstuf_success(self, monkeypatch):
         """Test successful execution of _import_csv_to_rstuf."""
-        import sys
-
         db_client = MagicMock()
         rstuf_target_files = MagicMock()
         rstuf_target_roles = MagicMock()
@@ -170,9 +168,10 @@ class TestImportArtifactsFunctions:
             db_client.execute.assert_called_once()
 
     def test_import_csv_to_rstuf_integrity_error(self, monkeypatch):
-        """Test _import_csv_to_rstuf raises ClickException on IntegrityError (lines 92-97)."""
+        """Test _import_csv_to_rstuf raises IntegrityError."""
 
-        # Create a realistic mock module structure for sqlalchemy and sqlalchemy.exc
+        # Create a realistic mock module structure for sqlalchemy and
+        # sqlalchemy.exc
         sa_module = ModuleType("sqlalchemy")
         sa_exc_module = ModuleType("sqlalchemy.exc")
 
@@ -352,9 +351,6 @@ class TestImportArtifactsFunctions:
 class TestImportArtifactsGroupCLI:
     @require_sqlalchemy
     def test_import_artifacts(self, test_context):
-        # Required to properly mock functions imported inside import_artifacts
-        import sqlalchemy
-
         import_artifacts.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": True}, "message": "some msg"}
         )
@@ -443,8 +439,6 @@ class TestImportArtifactsGroupCLI:
     @require_sqlalchemy
     def test_import_artifacts_skip_publish_artifacts(self, test_context):
         # Required to properly mock functions imported inside import_artifacts
-        import sqlalchemy
-
         import_artifacts.bootstrap_status = pretend.call_recorder(
             lambda *a: {"data": {"bootstrap": True}, "message": "some msg"}
         )
@@ -600,8 +594,6 @@ class TestImportArtifactsGroupCLI:
 
     def test_import_artifacts_command_success(self, monkeypatch):
         """Test successful execution of import_artifacts command."""
-        import sys
-
         args = ["--db-uri", "sqlite:///:memory:", "--csv", "artifacts.csv"]
 
         mock_engine = MagicMock()
@@ -637,7 +629,8 @@ class TestImportArtifactsGroupCLI:
             f"{SRC_PATH}.console.print", lambda *args, **kwargs: None
         )
 
-        # Use a MagicMock or an object with attributes for settings so settings.SERVER works
+        # Use a MagicMock or an object with attributes for settings so
+        # settings.SERVER works
         mock_settings = MagicMock()
         mock_settings.get.side_effect = lambda key, default=None: (
             "https://api.rstuf.example.com" if key == "SERVER" else default
@@ -657,9 +650,7 @@ class TestImportArtifactsGroupCLI:
         mock_conn.commit.assert_called_once()
 
     def test_import_artifacts_missing_server(self, monkeypatch):
-        """Test import_artifacts raises ClickException when SERVER config is missing."""
-        import sys
-
+        """Test import_artifacts raises when SERVER config is missing."""
         args = ["--db-uri", "sqlite:///:memory:", "--csv", "artifacts.csv"]
 
         # Mock sqlalchemy so the optional import check succeeds
@@ -681,9 +672,7 @@ class TestImportArtifactsGroupCLI:
         assert "Requires '--api-server'" in result.output
 
     def test_import_artifacts_not_bootstrapped(self, monkeypatch):
-        """Test import_artifacts raises ClickException when bootstrap is False (lines 186-189)."""
-        import sys
-
+        """Test import_artifacts raises when bootstrap is False"""
         args = ["--db-uri", "sqlite:///:memory:", "--csv", "artifacts.csv"]
 
         mock_sqlalchemy = MagicMock()
@@ -713,9 +702,7 @@ class TestImportArtifactsGroupCLI:
         assert "requires bootstrap process done" in result.output
 
     def test_import_artifacts_skip_publish(self, monkeypatch):
-        """Test import_artifacts execution with --skip-publish-artifacts flag (lines 216-218)."""
-        import sys
-
+        """Test import_artifacts execution with --skip-publish-artifacts."""
         args = [
             "--db-uri",
             "sqlite:///:memory:",

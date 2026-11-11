@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import pretend
 import pytest
+
 from repository_service_tuf.cli.artifact import repository
 
 _PATH = "repository_service_tuf.cli.artifact.repository"

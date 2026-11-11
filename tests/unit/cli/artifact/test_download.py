@@ -8,9 +8,10 @@ from urllib.error import HTTPError, URLError
 import click
 import pretend
 import pytest
-from repository_service_tuf.cli.artifact import download
 from tuf.api.exceptions import UnsignedMetadataError
 from tuf.ngclient import UpdaterConfig
+
+from repository_service_tuf.cli.artifact import download
 
 METADATA_URL = "http://localhost:8080"
 ARTIFACT_URL = "http://localhost:8081"
@@ -34,7 +35,17 @@ class TestDownloadArtifactdownload:
 
     def test_check_root_invalid_metadata(self):
         """Test _check_root raises ClickException on invalid/unsigned md."""
-        invalid_json_bytes = b'{"signed": {"_type": "Root", "spec_version": "1.0", "version": 1, "expires": "2030-01-01T00:00:00Z", "keys": {}, "roles": {}}, "signatures": []}'
+        invalid_json_bytes = b"""{
+            "signed": {
+                "_type": "Root",
+                "spec_version": "1.0",
+                "version": 1,
+                "expires": "2030-01-01T00:00:00Z",
+                "keys": {},
+                "roles": {}
+            },
+            "signatures": []
+        }"""
 
         with (
             patch(
@@ -48,10 +59,21 @@ class TestDownloadArtifactdownload:
             download._check_root(invalid_json_bytes)
 
     def test_check_root_unverified_delegate(self):
-        """Test _check_root raises ClickException when verify_delegate fails (line 37)."""
-        valid_json_bytes = b'{"signed": {"_type": "Root", "spec_version": "1.0", "version": 1, "expires": "2030-01-01T00:00:00Z", "keys": {}, "roles": {}}, "signatures": []}'
+        """Test _check_root raises when verify_delegate fails."""
+        valid_json_bytes = b"""{
+            "signed": {
+                "_type": "Root",
+                "spec_version": "1.0",
+                "version": 1,
+                "expires": "2030-01-01T00:00:00Z",
+                "keys": {},
+                "roles": {}
+            },
+            "signatures": []
+        }"""
 
-        # Create a mock Metadata object to return from from_dict so line 36 passes successfully
+        # Create a mock Metadata object to return from from_dict so passes
+        # successfully
         mock_root_md = MagicMock()
         mock_root_md.verify_delegate.side_effect = UnsignedMetadataError(
             "unsigned"
@@ -75,7 +97,17 @@ class TestDownloadArtifactdownload:
 
     def test_load_root_from_url_success(self):
         """Test func successfully downloads and checks root data."""
-        valid_root_data = b'{"signed": {"_type": "Root", "spec_version": "1.0", "version": 1, "expires": "2030-01-01T00:00:00Z", "keys": {}, "roles": {}}, "signatures": []}'
+        valid_root_data = b"""{
+            "signed": {
+                "_type": "Root",
+                "spec_version": "1.0",
+                "version": 1,
+                "expires": "2030-01-01T00:00:00Z",
+                "keys": {},
+                "roles": {}
+            },
+            "signatures": []
+        }"""
 
         mock_response = MagicMock()
         mock_response.read.return_value = valid_root_data
@@ -95,8 +127,18 @@ class TestDownloadArtifactdownload:
             mock_check.assert_called_once_with(valid_root_data)
 
     def test_load_trusted_root_from_json_string(self):
-        """Test _load_trusted_root parses a direct JSON string input (line 84)."""
-        valid_root_json = '{"signed": {"_type": "Root", "spec_version": "1.0", "version": 1, "expires": "2030-01-01T00:00:00Z", "keys": {}, "roles": {}}, "signatures": []}'
+        """Test _load_trusted_root parses a direct JSON string input."""
+        valid_root_json = """{
+            "signed": {
+                "_type": "Root",
+                "spec_version": "1.0",
+                "version": 1,
+                "expires": "2030-01-01T00:00:00Z",
+                "keys": {},
+                "roles": {}
+            },
+            "signatures": []
+        }"""
 
         with (
             patch(f"{SRC_PATH}.os.path.isfile", return_value=False),

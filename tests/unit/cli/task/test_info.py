@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 
 import pretend  # type: ignore
+
 from repository_service_tuf.cli.task import info
 
 

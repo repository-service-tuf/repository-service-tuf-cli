@@ -6,6 +6,7 @@ from unittest.mock import Mock
 
 import pretend
 import pytest
+
 from repository_service_tuf.helpers import api_client
 
 
