@@ -8,7 +8,7 @@ import platform
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from tempfile import TemporaryDirectory
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, cast
 
 import beaupy  # type: ignore
 import click
@@ -576,7 +576,9 @@ def _threshold_prompt(role: str) -> int:
 
 
 def _select(options: List[str]) -> str:
-    return beaupy.select(options=options, cursor=">", cursor_style="cyan")
+    return cast(
+        str, beaupy.select(options=options, cursor=">", cursor_style="cyan")
+    )
 
 
 def _select_key(keys: List[Key]) -> Key:
