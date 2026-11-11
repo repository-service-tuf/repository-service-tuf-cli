@@ -948,7 +948,7 @@ def _configure_delegations() -> Delegations:
 
             case "remove delegation":
                 # delegation.roles is NOT None here, this is to satisfy linters
-                assert delegations.roles is not None
+                assert delegations.roles is not None  # nosec B101
                 role_name = _select(list(delegations.roles.keys()))
                 removed_role = delegations.roles[role_name]
 
