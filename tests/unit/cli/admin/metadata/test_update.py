@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: MIT
 
 import json
+import os
+import tempfile
 from datetime import datetime, timedelta, timezone
 
 import pretend
@@ -303,14 +305,19 @@ class TestMetadataUpdate:
         # locally and will not send payload to the API.
         # Given that "invoke_command" always saves a file, so the result can be
         # read we cannot use it.
-        with client.isolated_filesystem():
-            result = client.invoke(
-                update.update,
-                args=args,
-                input="\n".join(update_inputs),
-                obj=test_context,
-                catch_exceptions=False,
-            )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            prev_dir = os.getcwd()
+            os.chdir(tmp_dir)
+            try:
+                result = client.invoke(
+                    update.update,
+                    args=args,
+                    input="\n".join(update_inputs),
+                    obj=test_context,
+                    catch_exceptions=False,
+                )
+            finally:
+                os.chdir(prev_dir)
 
         assert "Saved result to " not in result.stdout
         assert "Bootstrap completed." not in result.stdout
@@ -387,6 +394,70 @@ class TestMetadataUpdate:
         assert res_root["expires"] == exp_date.strftime("%Y-%m-%dT%H:%M:%SZ")
         # Make sure new threshold is the same .
         assert res_root["roles"]["root"]["threshold"] == 3
+
+    def test_update_command_send_to_server(
+        self,
+        monkeypatch,
+        update_inputs,
+        update_key_selection,
+        patch_getpass,
+        update_pubkey_prompt,
+        update_privkey_prompt,
+    ):
+        """Test metadata update command sending payload to the API server."""
+        args = ["--in", f"{_ROOTS / 'v1.json'}"]
+
+        monkeypatch.setattr(f"{_HELPERS}._select", update_key_selection)
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_public_key", update_pubkey_prompt
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._prompt_private_key", update_privkey_prompt
+        )
+
+        monkeypatch.setattr(
+            f"{MOCK_PATH}.Confirm.ask", lambda *args, **kwargs: False
+        )
+        monkeypatch.setattr(
+            f"{MOCK_PATH}._expiry_prompt",
+            lambda *args, **kwargs: (
+                30,
+                datetime.now(timezone.utc) + timedelta(days=30),
+            ),
+        )
+        monkeypatch.setattr(
+            f"{MOCK_PATH}._threshold_prompt", lambda *args, **kwargs: 1
+        )
+        monkeypatch.setattr(
+            f"{MOCK_PATH}._configure_root_keys_prompt",
+            lambda *args, **kwargs: None,
+        )
+        monkeypatch.setattr(
+            f"{MOCK_PATH}._configure_online_key_prompt",
+            lambda *args, **kwargs: None,
+        )
+        monkeypatch.setattr(
+            f"{MOCK_PATH}._add_root_signatures_prompt",
+            lambda *args, **kwargs: None,
+        )
+
+        mock_send_payload = pretend.call_recorder(
+            lambda **kwargs: "task-id-123"
+        )
+        monkeypatch.setattr(f"{MOCK_PATH}.send_payload", mock_send_payload)
+
+        mock_task_status = pretend.call_recorder(lambda *args, **kwargs: None)
+        monkeypatch.setattr(f"{MOCK_PATH}.task_status", mock_task_status)
+
+        test_context = {"settings": {"SERVER": "https://api.example.com"}}
+
+        result = invoke_command(
+            update.update, update_inputs, args, test_context=test_context
+        )
+
+        assert result.exit_code == 0
+        assert len(mock_send_payload.calls) == 1
+        assert len(mock_task_status.calls) == 1
 
 
 class TestUpdateError:

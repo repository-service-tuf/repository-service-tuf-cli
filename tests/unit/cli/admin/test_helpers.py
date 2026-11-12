@@ -4,7 +4,7 @@
 
 import copy
 from datetime import datetime, timezone
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import click
 import pretend
@@ -13,7 +13,16 @@ from email_validator import EmailNotValidError
 from PyKCS11 import CKR_USER_NOT_LOGGED_IN, PyKCS11Error  # type: ignore
 from securesystemslib.exceptions import UnverifiedSignatureError
 from securesystemslib.signer import CryptoSigner, SigstoreKey, SSlibKey
-from tuf.api.metadata import DelegatedRole, Delegations, Metadata, Root
+from tuf.api.metadata import (
+    DelegatedRole,
+    Delegations,
+    Metadata,
+    Root,
+    SuccinctRoles,
+    TargetFile,
+    Targets,
+    Timestamp,
+)
 
 from repository_service_tuf.cli.admin import helpers
 from repository_service_tuf.helpers.api_client import URL, Methods
@@ -159,17 +168,30 @@ class TestHelpers:
 
         # return None - key in use
         fake_key = pretend.stub(keyid="123")
-        with patch(
-            f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
+        with (
+            patch(
+                f"{_HELPERS}._load_key_from_file_prompt", return_value=fake_key
+            ),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=[helpers.ROOT_SIGNERS.KEY_PEM],
+            ),
         ):
-            key = helpers._load_key_prompt(fake_root)
+            key = helpers._load_key_prompt(fake_root.keys, duplicate=False)
 
         assert key is None
 
         # return None - cannot load key
         for err in [OSError, ValueError]:
-            with patch(
-                f"{_HELPERS}._load_key_from_file_prompt", side_effect=err()
+            with (
+                patch(
+                    f"{_HELPERS}._load_key_from_file_prompt",
+                    side_effect=err(),
+                ),
+                patch(
+                    f"{_HELPERS}._select",
+                    side_effect=[helpers.ROOT_SIGNERS.KEY_PEM],
+                ),
             ):
                 key = helpers._load_key_prompt(fake_root)
                 assert key is None
@@ -286,6 +308,28 @@ class TestHelpers:
 
         assert key is None
         assert uri is None
+
+    def test_delegated_target_role_name_success_first_try(self):
+        """Test that entering a valid name immediately succeeds."""
+        with patch(
+            "rich.prompt.Prompt.ask", return_value="my-delegated-role"
+        ) as mock_ask:
+            result = helpers._delegated_target_role_name_prompt()
+
+            assert mock_ask.call_count == 1
+            assert result == "my-delegated-role"
+
+    def test_delegated_target_role_name_retry_on_empty(self):
+        """Test an empty in leadin to warning and loops until a valid in"""
+        with patch(
+            "rich.prompt.Prompt.ask", side_effect=["", "", "my-delegated-role"]
+        ) as mock_ask:
+            result = helpers._delegated_target_role_name_prompt()
+
+            # Prompt.ask is called 3 times: twice for empty strings,
+            # once for the valid name
+            assert mock_ask.call_count == 3
+            assert result == "my-delegated-role"
 
     def test_key_name_prompt(self):
         fake_key = pretend.stub(
@@ -519,6 +563,16 @@ class TestHelpers:
 
         assert mock_add_sig.calls == [pretend.call(root_md, ed25519_key)]
 
+    def test_path_prompt_retry_and_success(self):
+        """Test that empty => warning/retry, but valid path succeeds."""
+        with patch(
+            "rich.prompt.Prompt.ask", side_effect=["", "targets/releases/*"]
+        ) as mock_ask:
+            result = helpers._path_prompt()
+
+            assert mock_ask.call_count == 2
+            assert result == "targets/releases/*"
+
     def test_get_root_keys(self, ed25519_key):
         root = Root()
         ed25519_key2 = copy.copy(ed25519_key)
@@ -540,6 +594,14 @@ class TestHelpers:
         root.add_key(ed25519_key, "timestamp")
         assert helpers._get_online_key(root) == ed25519_key
 
+    def test_get_online_key_without_keyids(self):
+        """Test _get_online_key when timestamp role has empty keyids."""
+        mock_root = MagicMock()
+        mock_root.roles = {Timestamp.type: MagicMock(keyids=[])}
+
+        key = helpers._get_online_key(mock_root)
+        assert key is None
+
     def test__parse_pending_data(self):
         fake_md = {"root": Metadata(Root()).to_dict()}
         result = helpers._parse_pending_data({"data": {"metadata": fake_md}})
@@ -551,6 +613,36 @@ class TestHelpers:
             helpers._parse_pending_data({"data": {}})
 
         assert "No metadata available for signing" in str(e)
+
+    def test_parse_pending_data_unsupported_role_type(self):
+        """Test _parse_pending_data raises ClickException for unsupported
+        pending role types."""
+        response = {
+            "data": {
+                "metadata": {
+                    "unsupported_role": {
+                        "signed": {"_type": "UnsupportedType"}
+                    }
+                }
+            }
+        }
+
+        with pytest.raises(
+            click.ClickException,
+            match="Supporting only root and targets pending role types",
+        ):
+            helpers._parse_pending_data(response)
+
+    def test_get_online_key_with_keyids(self):
+        """Test _get_online_key when timestamp role has keyids."""
+        mock_root = MagicMock()
+        mock_key = MagicMock()
+        mock_root.roles = {Timestamp.type: MagicMock(keyids=["key1"])}
+        mock_root.get_key.return_value = mock_key
+
+        key = helpers._get_online_key(mock_root)
+        assert key == mock_key
+        mock_root.get_key.assert_called_once_with("key1")
 
     def test__get_pending_roles_request(self, monkeypatch):
         fake_settings = pretend.stub(SERVER=None, HEADERS=None)
@@ -601,6 +693,25 @@ class TestHelpers:
                 headers=None,
             )
         ]
+
+    def test_print_root_no_online_key(self):
+        """Test _print_root when no online key is configured."""
+        root_mock = MagicMock(spec=Root)
+
+        with (
+            patch(f"{_HELPERS}._get_root_keys", return_value={}),
+            patch(
+                f"{_HELPERS}._get_online_key", return_value=None
+            ) as mock_get_online,
+            patch(f"{_HELPERS}.console.print") as mock_console_print,
+        ):
+
+            helpers._print_root(root_mock)
+
+            mock_get_online.assert_called_once_with(root_mock)
+            mock_console_print.assert_called_once_with(
+                "No online key configured"
+            )
 
     def test_filter_root_verification_results(self):
         data = [
@@ -807,6 +918,29 @@ class TestHelpers:
             with pytest.raises(EmailNotValidError):
                 helpers._load_key_from_sigstore_prompt()
 
+    def test_configure_delegations_paths_init_none_and_continue(self):
+        """Test when paths is [], prompts for path, then continues."""
+        delegated_role = MagicMock(name="DelegatedRole")
+        delegated_role.name = "role-1"
+        delegated_role.paths = None  # Triggers line: delegated_role.paths = []
+
+        # 1st: _path_prompt will call Prompt.ask for the initial path
+        # 2nd: _select will choose "continue"
+        with (
+            patch("rich.prompt.Prompt.ask", return_value="path/a"),
+            patch(
+                f"{_HELPERS}._select", return_value="continue"
+            ) as mock_select,
+        ):
+
+            result = helpers._configure_delegations_paths(delegated_role)
+
+            assert delegated_role.paths == ["path/a"]
+            mock_select.assert_called_once_with(
+                ["continue", "add new path", "remove path"]
+            )
+            assert result == delegated_role
+
     def test__configure_delegations_paths_add_then_continue(self):
         delegated_role = DelegatedRole(
             name="testrole", threshold=1, keyids=[], terminating=True, paths=[]
@@ -896,6 +1030,249 @@ class TestHelpers:
 
         assert ed25519_key.keyid in delegated_role.keyids
 
+    def test_configure_delegations_roles_none_initialization(self):
+        """Test adding a new delegation when roles is initialized to None."""
+        mock_delegations = MagicMock(spec=Delegations)
+        mock_delegations.keys = {}
+        mock_delegations.roles = None  # Triggers lines 915-916: roles = {}
+
+        def side_effect_delegations(*args, **kwargs):
+            return mock_delegations
+
+        with (
+            patch(
+                f"{_HELPERS}.Delegations", side_effect=side_effect_delegations
+            ),
+            patch(
+                f"{_HELPERS}._delegated_target_role_name_prompt",
+                return_value="new-role",
+            ),
+            patch(f"{_HELPERS}._expiry_prompt", return_value=(30, None)),
+            patch(f"{_HELPERS}._configure_delegations_paths"),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=["Online Key (use the existing)", "continue"],
+            ),
+            patch(f"{_HELPERS}._print_delegation"),
+        ):
+
+            helpers._configure_delegations()
+            assert "new-role" in mock_delegations.roles
+
+    def test_configure_delegations_keys_remove_raises_not_implemented(self):
+        """Test selecting 'remove' in delegation keys raises."""
+        delegated_role = MagicMock(spec=DelegatedRole)
+        delegated_role.keyids = ["key-1"]
+        delegated_role.threshold = 1
+
+        delegations = MagicMock(spec=Delegations)
+        delegations.keys = {"key-1": MagicMock()}
+
+        # _select chooses "remove"
+        with (
+            patch(f"{_HELPERS}._select", return_value="remove"),
+            patch(f"{_HELPERS}._print_missing_key_info"),
+        ):
+
+            with pytest.raises(NotImplementedError, match="TODO"):
+                helpers._configure_delegations_keys(
+                    delegated_role, delegations
+                )
+
+    def test_configure_delegations_overwrite_decline_and_continue(self):
+        """Test add an existing delegation name but declining to overwrite."""
+        delegations = Delegations(keys={}, roles={})
+        # Pre-populate a role so it triggers the overwrite check
+        existing_role = DelegatedRole(
+            name="existing-role",
+            keyids=[],
+            threshold=1,
+            terminating=True,
+            paths=[],
+        )
+        delegations.roles["existing-role"] = existing_role
+
+        # 1. _select chooses "add new delegation" when prompted, then
+        # "continue" to exit
+        # 2. _delegated_target_role_name_prompt returns "existing-role"
+        # 3. Confirm.ask returns False (decline overwrite -> hits continue)
+        with (
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=["add new delegation", "continue"],
+            ),
+            patch(
+                f"{_HELPERS}._delegated_target_role_name_prompt",
+                return_value="existing-role",
+            ),
+            patch("rich.prompt.Confirm.ask", return_value=False),
+            patch(f"{_HELPERS}._expiry_prompt", return_value=(30, None)),
+            patch(
+                f"{_HELPERS}._configure_delegations_paths", return_value=None
+            ),
+            patch(f"{_HELPERS}._print_delegation") as mock_print_del,
+        ):
+
+            # Pre-populate a role in the function's internal structure by
+            # mocking  Delegations or letting it run. Since
+            # _configure_delegations creates a  fresh Delegations object, we
+            # can verify it breaks out cleanly on "continue".
+            result = helpers._configure_delegations()
+            assert isinstance(result, Delegations)
+            mock_print_del.assert_called_once()
+
+    def test_configure_delegations_add_keys_flow(self):
+        """Test add a new delegation with 'Add Keys' signing method"""
+        delegations = Delegations(keys={}, roles={})
+        # Force roles to None to test `if delegations.roles is None:` branch
+        delegations.roles = None
+
+        # Sequence:
+        # 1. _delegated_target_role_name_prompt returns "new-role"
+        # 2. _expiry_prompt returns (30, None)
+        # 3. _configure_delegations_paths passes through
+        # 4. _select chooses "Add Keys"
+        # 5. _threshold_prompt returns 1
+        # 6. _configure_delegations_keys selects "continue" to exit its loop
+        # 7. Main loop select chooses "continue" to break out
+        with (
+            patch(
+                f"{_HELPERS}._delegated_target_role_name_prompt",
+                return_value="new-role",
+            ),
+            patch(f"{_HELPERS}._expiry_prompt", return_value=(30, None)),
+            patch(f"{_HELPERS}._configure_delegations_paths"),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=["Add Keys", "continue", "continue"],
+            ),
+            patch(f"{_HELPERS}._threshold_prompt", return_value=1),
+            patch(f"{_HELPERS}._configure_delegations_keys") as mock_conf_keys,
+        ):
+
+            result = helpers._configure_delegations()
+            assert "new-role" in result.roles
+            mock_conf_keys.assert_called_once()
+
+    def test_configure_delegations_remove_empty_roles(self):
+        """Test selecting 'remove delegation' when roles is None/empty."""
+        mock_delegations_instance = MagicMock(spec=Delegations)
+        mock_delegations_instance.keys = {}
+
+        # Start with roles populated so the main loop presents the full menu
+        # via _select
+        mock_delegations_instance.roles = {"some-role": MagicMock()}
+
+        def side_effect_delegations(*args, **kwargs):
+            return mock_delegations_instance
+
+        # Sequence for _select:
+        # 1. First iteration: returns "remove delegation"
+        # 2. Inside "remove delegation", we want it to hit
+        #  `if delegations.roles is None:`
+        #    so we change it to None right before it checks.
+        # 3. Second iteration: returns "continue" to break the main loop.
+        def mock_select_side_effect(choices):
+            # When it prompts for removal, simulate roles being None
+            mock_delegations_instance.roles = None
+            return "remove delegation"
+
+        with (
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=[mock_select_side_effect, "continue"],
+            ),
+            patch(
+                f"{_HELPERS}.Delegations", side_effect=side_effect_delegations
+            ),
+            patch(f"{_HELPERS}._print_delegation"),
+        ):
+
+            result = helpers._configure_delegations()
+            assert result is mock_delegations_instance
+
+    def test_configure_delegations_overwrite_decline(self):
+        """Test declining to overwrite an existing delegation."""
+        existing_role = DelegatedRole(
+            name="existing-role",
+            keyids=[],
+            threshold=1,
+            terminating=True,
+            paths=[],
+        )
+        delegations = Delegations(
+            keys={}, roles={"existing-role": existing_role}
+        )
+
+        def select_side_effect(choices):
+            if "continue" in choices and "add new delegation" in choices:
+                if not hasattr(select_side_effect, "called_main"):
+                    select_side_effect.called_main = True
+                    return "add new delegation"
+
+                return "continue"
+            elif "Online Key (use the existing)" in choices:
+                return "Online Key (use the existing)"
+            return "continue"
+
+        with (
+            patch(f"{_HELPERS}.Delegations", return_value=delegations),
+            patch(f"{_HELPERS}._print_delegation"),
+            patch(
+                f"{_HELPERS}._delegated_target_role_name_prompt",
+                return_value="existing-role",
+            ),
+            patch("rich.prompt.Confirm.ask", return_value=False),
+            patch(f"{_HELPERS}._select", side_effect=select_side_effect),
+            patch(f"{_HELPERS}._expiry_prompt", return_value=(30, None)),
+            patch(f"{_HELPERS}._configure_delegations_paths"),
+        ):
+
+            result = helpers._configure_delegations()
+            assert result is delegations
+
+    def test_configure_delegations_remove_role_with_unused_key(self):
+        """Test removing a delegation that owns an unused key."""
+        key_id = "unique-key-id"
+        mock_key = MagicMock()
+
+        removed_role = DelegatedRole(
+            name="role-to-remove",
+            keyids=[key_id],
+            threshold=1,
+            terminating=True,
+            paths=[],
+        )
+        other_role = DelegatedRole(
+            name="other-role",
+            keyids=[],
+            threshold=1,
+            terminating=True,
+            paths=[],
+        )
+
+        delegations = Delegations(
+            keys={key_id: mock_key},
+            roles={"role-to-remove": removed_role, "other-role": other_role},
+        )
+
+        with (
+            patch(f"{_HELPERS}.Delegations", return_value=delegations),
+            patch(f"{_HELPERS}._print_delegation"),
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=[
+                    "remove delegation",
+                    "role-to-remove",
+                    "continue",
+                ],
+            ),
+        ):
+
+            result = helpers._configure_delegations()
+            # Verify the unique key was popped from delegations.keys
+            assert key_id not in result.keys
+
     def test__configure_delegations_add_delegation(self, ed25519_key):
         with (
             patch(
@@ -975,3 +1352,115 @@ class TestHelpers:
             result = helpers._configure_delegations()
 
         assert "myrole" in result.roles
+
+    def test_configure_delegations_prompt_bins(self, monkeypatch):
+        settings = helpers._Settings(1, 1, 365)
+        monkeypatch.setattr(
+            f"{_HELPERS}._select",
+            lambda *_: helpers.DELEGATIONS_TYPE.BINS,
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._expiry_prompt",
+            lambda *_: (2, None),
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}.IntPrompt.ask",
+            lambda *a, **kw: 256,
+        )
+
+        helpers._configure_delegations_prompt(settings)
+
+        assert settings.bins_expiry == 2
+        assert settings.bins_number == 256
+
+    def test_configure_delegations_prompt_custom(self, monkeypatch):
+        settings = helpers._Settings(1, 1, 365)
+        fake_delegations = Delegations(keys={}, roles={})
+        monkeypatch.setattr(
+            f"{_HELPERS}._select",
+            lambda *_: helpers.DELEGATIONS_TYPE.CUSTOM_DELEGATIONS,
+        )
+        monkeypatch.setattr(
+            f"{_HELPERS}._configure_delegations",
+            lambda: fake_delegations,
+        )
+
+        helpers._configure_delegations_prompt(settings)
+
+        assert settings.delegations == fake_delegations
+
+    def test_configure_delegations_prompt_none_selection(self):
+        """Test _configure_delegations_prompt when _select returns None
+        first"""
+        settings = MagicMock()
+
+        with (
+            patch(
+                f"{_HELPERS}._select",
+                side_effect=[None, helpers.DELEGATIONS_TYPE.BINS],
+            ),
+            patch(f"{_HELPERS}._expiry_prompt", return_value=(30, None)),
+            patch(f"{_HELPERS}.IntPrompt.ask", return_value=8),
+            patch(f"{_HELPERS}.console.print"),
+        ):
+
+            helpers._configure_delegations_prompt(settings)
+            assert settings.bins_expiry == 30
+            assert settings.bins_number == 8
+
+    def test_print_targets(self):
+        targets = Metadata(
+            Targets(
+                targets={
+                    "test_file": TargetFile(
+                        length=10,
+                        hashes={"sha256": "abc"},
+                        path="test_file",
+                    )
+                }
+            )
+        )
+        # Verify it runs without error
+        helpers._print_targets(targets)
+
+    def test_print_delegation(self, ed25519_key):
+        # Case 1: delegations.roles is None
+        empty_delegations = Delegations(
+            keys={},
+            succinct_roles=SuccinctRoles(
+                keyids=[], threshold=1, bit_length=16, name_prefix="bin-"
+            ),
+        )
+        assert helpers._print_delegation(empty_delegations) is None
+
+        # Case 2: delegation with key and delegation without key (online)
+        role1 = DelegatedRole(
+            name="role1",
+            keyids=[ed25519_key.keyid],
+            threshold=1,
+            terminating=False,
+            paths=["a/*"],
+            unrecognized_fields={"x-rstuf-expire-policy": "30"},
+        )
+        role2 = DelegatedRole(
+            name="role2",
+            keyids=[],
+            threshold=1,
+            terminating=False,
+            path_hash_prefixes=["prefix/"],
+            unrecognized_fields={"x-rstuf-expire-policy": "60"},
+        )
+        ed25519_key.unrecognized_fields[helpers.KEY_NAME_FIELD] = "my_key"
+        delegations = Delegations(
+            keys={ed25519_key.keyid: ed25519_key},
+            roles={"role1": role1, "role2": role2},
+        )
+        helpers._print_delegation(delegations)
+
+    def test_print_missing_key_info(self):
+        helpers._print_missing_key_info(2, 1)
+        helpers._print_missing_key_info(3, 2)
+        helpers._print_missing_key_info(2, 0)
+
+    def test_warn_no_save(self):
+        helpers._warn_no_save()

@@ -2,11 +2,13 @@
 
 import os
 from hashlib import sha256
-from unittest.mock import mock_open, patch
-from urllib.error import HTTPError
+from unittest.mock import MagicMock, mock_open, patch
+from urllib.error import HTTPError, URLError
 
+import click
 import pretend
 import pytest
+from tuf.api.exceptions import UnsignedMetadataError
 from tuf.ngclient import UpdaterConfig
 
 from repository_service_tuf.cli.artifact import download
@@ -24,6 +26,128 @@ def mocked_os_makedirs(monkeypatch):
     monkeypatch.setattr(path, fake_makedirs)
 
     return fake_makedirs
+
+
+class TestDownloadArtifactdownload:
+    """
+    Test helper functions in the download.py module
+    """
+
+    def test_check_root_invalid_metadata(self):
+        """Test _check_root raises ClickException on invalid/unsigned md."""
+        invalid_json_bytes = b"""{
+            "signed": {
+                "_type": "Root",
+                "spec_version": "1.0",
+                "version": 1,
+                "expires": "2030-01-01T00:00:00Z",
+                "keys": {},
+                "roles": {}
+            },
+            "signatures": []
+        }"""
+
+        with (
+            patch(
+                f"{SRC_PATH}.Metadata.verify_delegate",
+                side_effect=ValueError("invalid"),
+            ),
+            pytest.raises(
+                click.ClickException, match="Invalid trusted root metadata"
+            ),
+        ):
+            download._check_root(invalid_json_bytes)
+
+    def test_check_root_unverified_delegate(self):
+        """Test _check_root raises when verify_delegate fails."""
+        valid_json_bytes = b"""{
+            "signed": {
+                "_type": "Root",
+                "spec_version": "1.0",
+                "version": 1,
+                "expires": "2030-01-01T00:00:00Z",
+                "keys": {},
+                "roles": {}
+            },
+            "signatures": []
+        }"""
+
+        # Create a mock Metadata object to return from from_dict so passes
+        # successfully
+        mock_root_md = MagicMock()
+        mock_root_md.verify_delegate.side_effect = UnsignedMetadataError(
+            "unsigned"
+        )
+
+        with (
+            patch(f"{SRC_PATH}.Metadata.from_dict", return_value=mock_root_md),
+            pytest.raises(
+                click.ClickException, match="Invalid trusted root metadata"
+            ),
+        ):
+            download._check_root(valid_json_bytes)
+
+    def test_load_root_from_url_invalid_url(self):
+        """Test func raises ClickException when URL lacks scheme or netloc."""
+        with pytest.raises(
+            click.ClickException,
+            match="Please provide a valid trusted root URL",
+        ):
+            download._load_root_from_url("invalid-url-without-scheme")
+
+    def test_load_root_from_url_success(self):
+        """Test func successfully downloads and checks root data."""
+        valid_root_data = b"""{
+            "signed": {
+                "_type": "Root",
+                "spec_version": "1.0",
+                "version": 1,
+                "expires": "2030-01-01T00:00:00Z",
+                "keys": {},
+                "roles": {}
+            },
+            "signatures": []
+        }"""
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = valid_root_data
+
+        mock_cm = MagicMock()
+        mock_cm.__enter__.return_value = mock_response
+
+        with (
+            patch(f"{SRC_PATH}.request.urlopen", return_value=mock_cm),
+            patch(f"{SRC_PATH}._check_root") as mock_check,
+        ):
+
+            result = download._load_root_from_url(
+                "https://example.com/root.json"
+            )
+            assert result == valid_root_data
+            mock_check.assert_called_once_with(valid_root_data)
+
+    def test_load_trusted_root_from_json_string(self):
+        """Test _load_trusted_root parses a direct JSON string input."""
+        valid_root_json = """{
+            "signed": {
+                "_type": "Root",
+                "spec_version": "1.0",
+                "version": 1,
+                "expires": "2030-01-01T00:00:00Z",
+                "keys": {},
+                "roles": {}
+            },
+            "signatures": []
+        }"""
+
+        with (
+            patch(f"{SRC_PATH}.os.path.isfile", return_value=False),
+            patch(f"{SRC_PATH}._check_root") as mock_check,
+        ):
+
+            result = download._load_trusted_root(valid_root_json)
+            assert result == valid_root_json.encode("utf-8")
+            mock_check.assert_called_once()
 
 
 class TestDownloadArtifacInteractionWithoutConfig:
@@ -572,3 +696,67 @@ class TestDownloadArtifactOptions:
             download._load_root_from_url("not-a-valid-url")
 
         assert "Please provide a valid trusted root URL" in str(excinfo.value)
+
+    def test_load_root_from_url_url_error(self):
+        fake_url_error = URLError("connection refused")
+
+        with patch(
+            f"{SRC_PATH}.request.urlopen",
+            pretend.raiser(fake_url_error),
+        ):
+            with pytest.raises(download.click.ClickException) as excinfo:
+                download._load_root_from_url("http://example.com/1.root.json")
+
+        assert "Failed to download trusted root" in str(excinfo.value)
+        assert "connection refused" in str(excinfo.value)
+
+    def test_load_trusted_root_from_file(self, monkeypatch):
+        fake_check = pretend.call_recorder(lambda data: None)
+        monkeypatch.setattr(f"{SRC_PATH}._check_root", fake_check)
+        with (
+            patch("os.path.isfile", return_value=True),
+            patch(
+                "builtins.open",
+                new_callable=mock_open,
+                read_data=b"file_bytes",
+            ),
+        ):
+            res = download._load_trusted_root("path/to/root.json")
+        assert res == b"file_bytes"
+        assert fake_check.calls == [pretend.call(b"file_bytes")]
+
+    def test_load_trusted_root_from_url(self, monkeypatch):
+        fake_load_url = pretend.call_recorder(lambda u: b"url_bytes")
+        monkeypatch.setattr(f"{SRC_PATH}._load_root_from_url", fake_load_url)
+        with patch("os.path.isfile", return_value=False):
+            res = download._load_trusted_root("http://example.com/root.json")
+        assert res == b"url_bytes"
+        assert fake_load_url.calls == [
+            pretend.call("http://example.com/root.json")
+        ]
+
+    def test_perform_tuf_ngclient_download_artifact_repository_error(
+        self, monkeypatch
+    ):
+        class FakeUpdater:
+            def __init__(self, **kw):
+                pass
+
+            def refresh(self):
+                raise download.RepositoryError("repo error")
+
+        monkeypatch.setattr(f"{SRC_PATH}.Updater", FakeUpdater)
+        with pytest.raises(download.click.FileError) as excinfo:
+            download._perform_tuf_ngclient_download_artifact(
+                "http://meta",
+                "dir",
+                "http://art",
+                "art.txt",
+                "down",
+                UpdaterConfig(),
+                None,
+            )
+        assert (
+            "Failed to download artifact art.txt"
+            in excinfo.value.format_message()
+        )
